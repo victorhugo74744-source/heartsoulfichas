@@ -155,7 +155,7 @@ if ('serviceWorker' in navigator) {
     position:absolute;
     border-radius:50%; border:2px solid var(--gold); box-shadow:0 2px 8px rgba(0,0,0,.6);
     background:var(--panel-2); cursor:grab; overflow:hidden; touch-action:none;
-    box-sizing:border-box; transition:left .06s linear, top .06s linear;
+    box-sizing:border-box; transition:left .09s linear, top .09s linear;
   }
   .token.dragging{ transition:none; z-index:5; cursor:grabbing; }
   .token.mine{ border-color:var(--seal-bright); }
@@ -212,6 +212,15 @@ if ('serviceWorker' in navigator) {
   }
   .token-hp-edit .hp-part{ display:flex; align-items:center; gap:4px; }
   .token-hp-edit .hp-part input{ width:42px; font-size:11.5px; padding:3px 4px; text-align:center; }
+  /* Adicionar XP a um jogador, direto na lista de tokens (Mestre). */
+  .token-row .tr-tools .tr-xp-add{ display:flex; align-items:center; gap:3px; }
+  .token-row .tr-tools input.xp-add-input{
+    width:44px; padding:3px 4px; font-size:11.5px; text-align:center;
+    background:var(--panel-2); border:1px solid var(--hairline-soft); border-radius:5px; color:var(--ink);
+  }
+  .token-row .tr-tools input.xp-add-input:focus{ border-color:var(--gold-dim); outline:none; }
+  .token-row .tr-tools input.xp-add-input::-webkit-inner-spin-button,
+  .token-row .tr-tools input.xp-add-input::-webkit-outer-spin-button{ opacity:0.5; }
 
   /* ===== Ver ficha (modal) ===== */
   .sheet-modal-overlay{
@@ -420,8 +429,9 @@ if ('serviceWorker' in navigator) {
   /* ===== Aura (estilo Owlbear Rodeo) ===== */
   .token-aura{
     position:absolute; border-radius:50%; pointer-events:none; z-index:3;
-    transition:width .12s linear, height .12s linear, margin .12s linear;
+    transition:width .12s linear, height .12s linear, margin .12s linear, left .09s linear, top .09s linear;
   }
+  .token-aura.dragging{ transition:none; }
 
   /* ===== Swatch de cor (abre a roda cromática) ===== */
   .color-swatch{
@@ -430,6 +440,19 @@ if ('serviceWorker' in navigator) {
   }
   .color-swatch:hover{ border-color:var(--gold); }
   .my-color-row{ display:flex; align-items:center; gap:8px; margin:8px 0; font-size:12.5px; color:var(--ink-mute); }
+  /* Estamina/Energia rápidas do meu personagem na mesa (sem abrir a ficha). */
+  .my-resources-box{ margin-top:14px; padding-top:14px; border-top:1px solid var(--hairline); }
+  .my-resources-box h4{ font-family:'Cinzel',serif; color:var(--gold); font-size:14px; margin:0 0 10px; }
+  .resource-row{ display:flex; align-items:center; gap:7px; margin-bottom:8px; font-size:13px; color:var(--ink-dim); }
+  .resource-row:last-child{ margin-bottom:0; }
+  .resource-row .res-label{ flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .resource-row button{
+    background:none; border:1px solid var(--hairline-soft); color:var(--ink-mute); cursor:pointer;
+    width:26px; height:26px; border-radius:6px; font-size:14px; line-height:1; flex-shrink:0;
+  }
+  .resource-row button:hover{ border-color:var(--gold-dim); color:var(--gold); }
+  .resource-row input{ width:46px; padding:5px 4px; text-align:center; font-size:13px; flex-shrink:0; }
+  .resource-row .res-sep{ color:var(--ink-mute); flex-shrink:0; }
 
   /* ===== Popover da roda cromática ===== */
   .wheel-popover{
@@ -566,7 +589,12 @@ if ('serviceWorker' in navigator) {
     .token-row button{ font-size:14px; padding:8px 8px; min-height:38px; min-width:38px; }
     .token-row .tr-tools{ gap:6px; }
     .token-row .tr-tools input.aura-radius-input{ padding:8px 4px; min-height:38px; font-size:13px; }
+    .token-row .tr-tools input.xp-add-input{ padding:8px 4px; min-height:38px; font-size:13px; width:54px; }
     #myTokenPanel select, #myTokenPanel input[type=file]{ padding:11px 12px; }
+    /* Botões −/+ e campos de Estamina/Energia: mesma folga de toque dos
+       outros controles da mesa no celular. */
+    .resource-row button{ width:38px; height:38px; font-size:16px; }
+    .resource-row input{ padding:8px 4px; min-height:38px; font-size:14px; width:52px; }
     #dicePanel .dice-log{ max-height:240px; }
     /* BUG: "Entrar na mesa com esta ficha" (~31px) e "📜 Ver ficha" (~34px)
        usam a classe global .btn.small, pensada pro mouse (padding menor) —

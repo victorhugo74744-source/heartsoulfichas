@@ -79,6 +79,15 @@ service cloud.firestore {
       // presente contra o token de outro, sincronize o dano/cura direto na
       // ficha do alvo (ficha-editor.html/ficha-view.html), do mesmo jeito
       // que já acontece hoje com o campo "hp" do token em /tables/.../tokens.
+      // Exceção adicional: XP também pode ser dado por QUALQUER Mestre
+      // (não só o dono da pasta desta ficha específica) — nos mesmos
+      // moldes da exceção do HP acima. Isso é o que permite ao Mestre
+      // dar XP para um jogador direto na tela da Mesa (lista de tokens),
+      // sem abrir a ficha, mesmo quando a Mesa (js/mesa.js) e a
+      // pasta/campanha da ficha (js/editor.js) não têm o mesmo dono —
+      // são dois conceitos independentes no sistema. Continua restrito a
+      // contas de Mestre (isMaster()), então um jogador não consegue se
+      // dar XP por essa via; só o campo "xp" pode mudar, nada mais.
       allow update: if isSignedIn() && (
         (isMaster() && resource.data.masterId == request.auth.uid) ||
         (resource.data.ownerId == request.auth.uid &&
@@ -86,6 +95,10 @@ service cloud.firestore {
         (
           request.resource.data.diff(resource.data).affectedKeys().hasOnly(['resources', 'updatedAt']) &&
           request.resource.data.resources.diff(resource.data.resources).affectedKeys().hasOnly(['hp'])
+        ) ||
+        (
+          isMaster() &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['xp', 'updatedAt'])
         )
       );
       allow delete: if isSignedIn() && (

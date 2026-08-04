@@ -26,7 +26,8 @@ function sheetSectionHtml() {
     <button class="btn small" id="enterBoardBtn" style="width:auto;">Entrar na mesa com esta ficha</button>
     <button class="btn secondary small" id="viewSheetBtn" style="width:auto; margin-top:8px;">📜 Ver ficha</button>
     <button class="btn secondary small hidden" id="leaveBoardBtn" style="width:auto; margin-top:8px;">Sair da mesa</button>
-    <div class="error-msg hidden" id="enterErr"></div>`;
+    <div class="error-msg hidden" id="enterErr"></div>
+    <div id="myResourcesBox"></div>`;
 }
 function wireSheetSection() {
   if (mySheets.length === 0) return;
@@ -92,6 +93,95 @@ function updateMyTokenUiState(hasToken) {
   if (!enterBtn || !leaveBtn) return;
   enterBtn.textContent = hasToken ? 'Atualizar aparência na mesa' : 'Entrar na mesa com esta ficha';
   leaveBtn.classList.toggle('hidden', !hasToken);
+}
+
+// -------------------------------------------- RECURSOS RÁPIDOS (EU) --
+// Estamina e Energia da própria ficha, editáveis direto na mesa (sem abrir
+// a ficha) — mesma ideia do mini-editor de HP na lista de tokens, só que
+// aqui é sobre o personagem com quem EU estou na mesa (tok = meu próprio
+// token, id = meu uid). Chamado sempre que os tokens são renderizados
+// (renderAllTokens), pra aparecer assim que eu entrar na mesa com uma
+// ficha e sumir se eu sair.
+function myResourceRowHtml(resKey, label, cur, max) {
+  cur = cur || 0; max = max || 0;
+  return `
+    <div class="resource-row">
+      <span class="res-label">${escapeHtml(label)}</span>
+      <button type="button" data-res-delta="${resKey}" data-delta="-1" title="Gastar 1 de ${escapeHtml(label)}">−</button>
+      <input type="number" data-res-cur="${resKey}" value="${cur}" title="${escapeHtml(label)} atual">
+      <span class="res-sep">/</span>
+      <input type="number" data-res-max="${resKey}" value="${max}" title="${escapeHtml(label)} máxima">
+      <button type="button" data-res-delta="${resKey}" data-delta="1" title="Recuperar 1 de ${escapeHtml(label)}">+</button>
+    </div>`;
+}
+
+function renderMyResourcesBox() {
+  const box = document.getElementById('myResourcesBox');
+  if (!box) return;
+  const tok = liveTokens[curUser.uid];
+  const sheet = (tok && tok.sheetId) ? mySheets.find(s => s.id === tok.sheetId) : null;
+  if (!sheet) { box.innerHTML = ''; return; }
+  const res = sheet.resources || {};
+  const energyLabel = sheet.energyType ? `Energia (${sheet.energyType})` : 'Energia';
+  box.innerHTML = `
+    <div class="my-resources-box">
+      <h4>Seus recursos</h4>
+      ${myResourceRowHtml('estamina', 'Estamina', res.estaminaCur, res.estaminaMax)}
+      ${myResourceRowHtml('vigor', energyLabel, res.vigorCur, res.vigorMax)}
+    </div>`;
+  box.querySelectorAll('[data-res-delta]').forEach(b => {
+    b.addEventListener('click', () => adjustMyResource(sheet.id, b.dataset.resDelta, parseInt(b.dataset.delta, 10)));
+  });
+  box.querySelectorAll('[data-res-cur]').forEach(inp => {
+    inp.addEventListener('click', (e) => e.stopPropagation());
+    inp.addEventListener('keydown', (e) => { if (e.key === 'Enter') inp.blur(); });
+    inp.addEventListener('change', () => setMyResourceField(sheet.id, inp.dataset.resCur + 'Cur', inp.value));
+  });
+  box.querySelectorAll('[data-res-max]').forEach(inp => {
+    inp.addEventListener('click', (e) => e.stopPropagation());
+    inp.addEventListener('keydown', (e) => { if (e.key === 'Enter') inp.blur(); });
+    inp.addEventListener('change', () => setMyResourceField(sheet.id, inp.dataset.resMax + 'Max', inp.value));
+  });
+}
+
+// +1/-1 rápido: lê o cache local (mySheets) só pra saber o máximo atual e
+// não deixar passar dos limites (0 e o máximo).
+function adjustMyResource(sheetId, resKey, delta) {
+  const sheet = mySheets.find(s => s.id === sheetId); if (!sheet) return;
+  const res = sheet.resources || {};
+  const curField = resKey + 'Cur';
+  const max = res[resKey + 'Max'] || 0;
+  const next = Math.max(0, Math.min(max, (res[curField] || 0) + delta));
+  setMyResourceField(sheetId, curField, next);
+}
+
+// Grava um único campo de resources (ex.: "estaminaCur") direto no
+// documento da ficha, com notação de ponto — igual a syncTokenHpToSheet
+// faz com "resources.hp". Só mexe no campo pedido (e no "*Cur"
+// correspondente, se o máximo estiver sendo reduzido abaixo do atual), pra
+// nunca sobrescrever outros campos de resources (como o HP, que pode ter
+// mudado nesse meio tempo por uma rolagem de outro jogador) com o cache
+// local de mySheets, que só é carregado uma vez ao abrir a mesa.
+async function setMyResourceField(sheetId, field, rawValue) {
+  const sheet = mySheets.find(s => s.id === sheetId); if (!sheet) return;
+  const value = parseInt(rawValue, 10);
+  if (isNaN(value) || value < 0) { renderMyResourcesBox(); return; }
+  sheet.resources = sheet.resources || {};
+  sheet.resources[field] = value;
+  const payload = { ['resources.' + field]: value, updatedAt: firebase.firestore.FieldValue.serverTimestamp() };
+  if (field.endsWith('Max')) {
+    const curKey = field.slice(0, -3) + 'Cur';
+    if ((sheet.resources[curKey] || 0) > value) {
+      sheet.resources[curKey] = value;
+      payload['resources.' + curKey] = value;
+    }
+  }
+  renderMyResourcesBox();
+  try {
+    await db.collection('sheets').doc(sheetId).update(payload);
+  } catch (err) {
+    console.error('Erro ao atualizar recursos da ficha:', err);
+  }
 }
 
 async function enterBoardAsSheet(sheetId) {
@@ -266,17 +356,28 @@ function renderAllTokens() {
       auraEl.remove();
     }
 
+    // Só refaz o HTML interno (imagem/nome/HP) quando algo além da posição
+    // muda. Com o movimento em tempo real (acima), a posição agora é
+    // atualizada várias vezes por segundo enquanto um token é arrastado —
+    // se recriássemos a tag <img> a cada uma dessas atualizações, a
+    // imagem piscaria continuamente pros outros jogadores vendo o token se
+    // mover. x/y ficam de fora de propósito desta "assinatura".
     const rot = tok.rot || 0;
-    el.innerHTML = tok.image
-      ? `<img src="${escapeHtml(tok.image)}" alt="" style="transform:rotate(${rot}deg);">`
-      : `<div class="token-ph" style="transform:rotate(${rot}deg);">👤</div>`;
-    el.innerHTML += `<span class="token-label">${escapeHtml(tok.name || '')}</span>`;
-    el.innerHTML += tokenHpBarHtml(tok);
+    const sig = JSON.stringify([tok.image || '', tok.name || '', rot, tok.hp || null]);
+    if (el.dataset.sig !== sig) {
+      el.dataset.sig = sig;
+      el.innerHTML = tok.image
+        ? `<img src="${escapeHtml(tok.image)}" alt="" style="transform:rotate(${rot}deg);">`
+        : `<div class="token-ph" style="transform:rotate(${rot}deg);">👤</div>`;
+      el.innerHTML += `<span class="token-label">${escapeHtml(tok.name || '')}</span>`;
+      el.innerHTML += tokenHpBarHtml(tok);
+    }
   });
 
   renderTokenListPanel();
   renderDiceTargetOptions();
   updateSelectionHandles();
+  renderMyResourcesBox();
 
   if (!isTableOwner()) {
     updateMyTokenUiState(!!liveTokens[curUser.uid]);
@@ -303,6 +404,11 @@ function renderTokenListPanel() {
         ${sumMax ? `<span class="tr-hp-summary" title="HP total (soma das partes)">❤ ${sumCur}/${sumMax}</span>` : ''}
         ${canEdit && !elsewhere ? `<button data-hp-toggle="${t.id}" title="Ver/editar HP por parte">${expanded ? '❤︎ fechar' : '❤ HP'}</button>` : ''}
         ${elsewhere && canManage ? `<button data-bring-scene="${t.id}" title="Trazer este NPC para a cena atual">📥 trazer</button>` : ''}
+        ${canManage && t.sheetId ? `
+          <span class="tr-xp-add">
+            <input type="number" class="xp-add-input" data-xp-input="${t.id}" placeholder="± XP" title="Quantidade de XP para dar (ou tirar, com número negativo)">
+            <button data-xp-add="${t.id}" title="Adicionar XP à ficha deste jogador">🌟 XP</button>
+          </span>` : ''}
         ${canEdit && !elsewhere ? `
           <button data-tcolor="${t.id}" style="background:${t.color || '#c9a15c'}; width:14px; height:14px; border-radius:50%; padding:0; border:1px solid var(--hairline-soft);" title="Cor do token"></button>
           <button data-aura-toggle="${t.id}" title="${t.auraOn ? 'Desligar aura' : 'Ligar aura'}">${t.auraOn ? '💡' : '🕯'}</button>
@@ -381,6 +487,15 @@ function renderTokenListPanel() {
       db.collection('tables').doc(curTable.id).collection('tokens').doc(b.dataset.remove).delete()
     ));
   }
+  body.querySelectorAll('[data-xp-input]').forEach(inp => {
+    inp.addEventListener('click', (e) => e.stopPropagation());
+    inp.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); addXpToToken(inp.dataset.xpInput, inp); } });
+  });
+  body.querySelectorAll('[data-xp-add]').forEach(b => b.addEventListener('click', () => {
+    const id = b.dataset.xpAdd;
+    const input = body.querySelector(`[data-xp-input="${id}"]`);
+    if (input) addXpToToken(id, input);
+  }));
   body.querySelectorAll('[data-hp-toggle]').forEach(b => b.addEventListener('click', () => {
     const id = b.dataset.hpToggle;
     if (hpEditExpanded.has(id)) hpEditExpanded.delete(id); else hpEditExpanded.add(id);
@@ -418,6 +533,46 @@ async function setTokenHpPart(tokenId, partKey, field, rawValue) {
     console.error('Erro ao editar HP do token:', err);
     renderTokenListPanel();
   }
+}
+
+// Dá (ou tira, com número negativo) XP à ficha de um jogador direto pela
+// lista de tokens da mesa, sem o Mestre precisar abrir a ficha dele. Usa
+// incremento atômico (FieldValue.increment) e não lê a ficha antes de
+// escrever — assim funciona mesmo quando essa ficha não está numa
+// pasta/campanha deste Mestre (Mesa e pasta são conceitos independentes
+// no sistema; ver a exceção correspondente em firestore.rules, nos mesmos
+// moldes da já existente para "resources.hp"). O jogador vê o efeito
+// (inclusive uma possível subida de nível) na próxima vez que abrir a
+// própria ficha.
+async function addXpToToken(tokenId, input) {
+  const tok = liveTokens[tokenId]; if (!tok || !tok.sheetId) return;
+  const amount = parseInt(input.value, 10);
+  if (!amount) { input.focus(); return; }
+  input.disabled = true;
+  try {
+    await db.collection('sheets').doc(tok.sheetId).update({
+      xp: firebase.firestore.FieldValue.increment(amount),
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    input.value = '';
+    flashXpFeedback(tokenId, amount);
+  } catch (err) {
+    console.error('Erro ao adicionar XP:', err);
+    alert('Erro ao dar XP: ' + err.message);
+  } finally {
+    input.disabled = false;
+  }
+}
+
+// Feedback visual rápido e discreto no próprio botão (some sozinho) — a
+// lista de tokens já se redesenha com frequência (a cada atualização de
+// qualquer token na mesa), então não vale a pena guardar esse estado.
+function flashXpFeedback(tokenId, amount) {
+  const btn = document.querySelector(`[data-xp-add="${tokenId}"]`);
+  if (!btn) return;
+  const prev = btn.textContent;
+  btn.textContent = amount > 0 ? `✓ +${amount} XP` : `✓ ${amount} XP`;
+  setTimeout(() => { if (btn.isConnected) btn.textContent = prev; }, 1600);
 }
 
 async function toggleTokenAura(tokenId) {
@@ -618,6 +773,59 @@ function snapAxisToGrid(value, axisPx, cellScreen) {
   return Math.min(1, Math.max(0, snappedPx / axisPx));
 }
 
+// -------------------------------------- MOVIMENTO EM TEMPO REAL (arrasto) --
+// Antigamente o Firestore só era atualizado quando o jogador SOLTAVA o
+// token — então, pra qualquer outra pessoa na mesa, o token "teleportava"
+// direto pra posição final, sem mostrar o caminho percorrido. Aqui, durante
+// o próprio arrasto, mandamos a posição em intervalos curtos (throttle),
+// além da escrita final de sempre — assim todo mundo vê o token deslizando
+// pelo mapa ao vivo, sem precisar encaixar numa casa da grade pra "existir"
+// visualmente pros outros, igual ao Owlbear Rodeo. A posição transmitida
+// aqui é sempre a bruta (sem encaixe de grade); o encaixe final continua
+// acontecendo só ao soltar, como já era.
+// Cada atualização troca só x/y (sem tocar em updatedAt nem em outros
+// campos), pra manter o custo de escrita no Firestore o menor possível — o
+// intervalo padrão (~11 atualizações/seg) já basta pra parecer fluido
+// graças à transição CSS de left/top que os tokens já tinham (.token,
+// em mesa.html). Se a mesa tiver muitos jogadores movendo token ao mesmo
+// tempo e isso pesar na cota do Firestore, aumentar LIVE_MOVE_INTERVAL_MS
+// é o primeiro ajuste a tentar.
+const LIVE_MOVE_INTERVAL_MS = 90;
+let liveMoveLastSent = {}; // tokenId -> timestamp (ms) do último envio
+let liveMovePending = {};  // tokenId -> {x,y} mais recente ainda não enviado
+let liveMoveTimer = {};    // tokenId -> setTimeout agendado pra mandar o "pending"
+
+function broadcastLiveTokenPosition(tokenId, x, y) {
+  liveMovePending[tokenId] = { x, y };
+  const now = performance.now();
+  const last = liveMoveLastSent[tokenId] || 0;
+  if (now - last >= LIVE_MOVE_INTERVAL_MS) {
+    flushLiveTokenPosition(tokenId);
+  } else if (!liveMoveTimer[tokenId]) {
+    liveMoveTimer[tokenId] = setTimeout(() => flushLiveTokenPosition(tokenId), LIVE_MOVE_INTERVAL_MS - (now - last));
+  }
+}
+
+function flushLiveTokenPosition(tokenId) {
+  if (liveMoveTimer[tokenId]) { clearTimeout(liveMoveTimer[tokenId]); liveMoveTimer[tokenId] = null; }
+  const pos = liveMovePending[tokenId];
+  if (!pos) return;
+  liveMovePending[tokenId] = null;
+  liveMoveLastSent[tokenId] = performance.now();
+  db.collection('tables').doc(curTable.id).collection('tokens').doc(tokenId)
+    .update({ x: pos.x, y: pos.y })
+    .catch(err => console.warn('Erro ao transmitir posição ao vivo do token:', err));
+}
+
+// Cancela qualquer atualização "ao vivo" ainda pendente pra este token —
+// chamado assim que o arrasto termina, pra um envio atrasado do throttle
+// não sobrescrever por engano a posição final (já encaixada na grade) logo
+// depois dela ser salva.
+function cancelLiveTokenPosition(tokenId) {
+  if (liveMoveTimer[tokenId]) { clearTimeout(liveMoveTimer[tokenId]); liveMoveTimer[tokenId] = null; }
+  liveMovePending[tokenId] = null;
+}
+
 function attachTokenDragHandlers(el, tokenId) {
   el.addEventListener('pointerdown', (e) => {
     const tok = liveTokens[tokenId];
@@ -640,8 +848,13 @@ function attachTokenDragHandlers(el, tokenId) {
     const localH = surface.offsetHeight || baseMapH;
 
     // Aura do próprio token (se tiver): precisa se mover junto durante o
-    // arrasto, senão fica "grudada" na posição antiga até soltar.
+    // arrasto, senão fica "grudada" na posição antiga até soltar. Também
+    // ganha a classe "dragging" (mesma ideia do token) pra não herdar a
+    // transição de left/top — essa transição existe pra suavizar o
+    // movimento em tempo real visto pelos OUTROS jogadores; pra quem está
+    // arrastando, o próprio movimento tem que ser instantâneo, 1:1 com o dedo/cursor.
     const auraEl = surface.querySelector(`.token-aura[data-aura-id="${tokenId}"]`);
+    if (auraEl) auraEl.classList.add('dragging');
 
     const move = (ev) => {
       const rect = surface.getBoundingClientRect();
@@ -657,6 +870,7 @@ function attachTokenDragHandlers(el, tokenId) {
       }
       el._lastX = x; el._lastY = y;
       el._freePlace = ev.altKey; // segurar Alt/Option solta sem encaixar na grade
+      broadcastLiveTokenPosition(tokenId, x, y); // outros jogadores veem o token deslizando, em tempo real
     };
 
     const up = async (ev) => {
@@ -664,7 +878,9 @@ function attachTokenDragHandlers(el, tokenId) {
       el.removeEventListener('pointerup', up);
       el.removeEventListener('pointercancel', up);
       el.classList.remove('dragging');
+      if (auraEl) auraEl.classList.remove('dragging');
       draggingTokenId = null;
+      cancelLiveTokenPosition(tokenId); // a escrita final abaixo já cobre a posição; evita um envio atrasado sobrescrevê-la
 
       // Um clique simples (quase sem arrastar) seleciona/deseleciona o
       // token em vez de mover — é o que abre as alças de girar/redimensionar
