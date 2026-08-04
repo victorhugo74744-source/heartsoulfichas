@@ -1,0 +1,32 @@
+{
+  "name": "Heartsoul — Fichas",
+  "short_name": "Heartsoul",
+  "description": "Fichas de personagem, mesa de tabletop e livro de regras do sistema Heartsoul.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#120F0C",
+  "theme_color": "#120F0C",
+  "lang": "pt-BR",
+  "icons": [
+    {
+      "src": "assets/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "assets/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "assets/icon-512-maskable.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}

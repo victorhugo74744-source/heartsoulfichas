@@ -1,0 +1,926 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Mesa — Heartsoul</title>
+<link rel="icon" href="assets/favicon-32.png" type="image/png">
+<link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#120F0C">
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').catch(() => {});
+  });
+}
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,600;1,400&family=Cinzel:wght@500;600&family=JetBrains+Mono&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+<style>
+  /* ===== Lobby ===== */
+  .table-card{
+    display:flex; align-items:center; justify-content:space-between; gap:14px;
+    background:var(--panel); border:1px solid var(--hairline); border-radius:var(--radius);
+    padding:16px 18px; margin-bottom:12px;
+  }
+  .table-card h3{ font-family:'Cinzel',serif; color:var(--gold); font-size:16px; margin:0 0 4px; }
+  .table-card .tc-meta{ font-size:12.5px; color:var(--ink-mute); }
+  .create-table-form{
+    background:var(--panel-2); border:1px solid var(--hairline); border-radius:var(--radius);
+    padding:18px; margin-bottom:22px;
+  }
+  /* No desktop (tela larga o bastante pra caber 2 cartões lado a lado sem
+     apertar o conteúdo de cada um), a lista de mesas vira um grid em vez de
+     uma coluna única — antes cada mesa ocupava a largura toda do .shell
+     mesmo sobrando bastante espaço horizontal, o que forçava rolagem
+     vertical desnecessária quando havia várias mesas criadas. */
+  @media (min-width:660px){
+    #tablesList{
+      display:grid; grid-template-columns:repeat(auto-fill, minmax(300px, 1fr));
+      gap:12px; align-items:stretch;
+    }
+    #tablesList .table-card{ margin-bottom:0; height:100%; }
+    #tablesList .empty-state{ grid-column:1 / -1; }
+  }
+  /* BUG: o botão "Entrar" de cada mesa media ~31px de altura no celular —
+     abaixo do alvo de toque confortável. Em telas estreitas o cartão
+     também vira coluna (nome em cima, botões embaixo, largura toda),
+     em vez de espremer os dois lado a lado. */
+  @media (max-width:480px){
+    .table-card{ flex-direction:column; align-items:stretch; gap:10px; }
+    .table-card > div:last-child{ width:100%; }
+    .table-card > div:last-child button, .table-card > div:last-child .btn-link{
+      flex:1; padding:10px 14px; min-height:42px;
+    }
+  }
+
+  /* ===== Board ===== */
+  #boardView{ display:none; }
+  #boardView.fullscreen-mode .board-side{ display:none; }
+  #boardView.fullscreen-mode .board-wrap{ height:calc(100vh - 130px); }
+  #boardView.fullscreen-mode #boardTitleRow{ display:none; }
+  .board-toolbar{
+    display:flex; align-items:center; gap:8px; flex-wrap:wrap;
+    margin-bottom:10px;
+  }
+  .board-toolbar .zoom-group{ display:flex; align-items:center; gap:2px; background:var(--panel); border:1px solid var(--hairline); border-radius:var(--radius); padding:4px; }
+  .board-toolbar button{
+    background:none; border:1px solid var(--hairline-soft); color:var(--ink-dim); cursor:pointer;
+    font-size:14px; padding:8px 13px; border-radius:6px; font-family:'EB Garamond', serif;
+  }
+  .board-toolbar .zoom-group button{ border:none; padding:8px 12px; }
+  .board-toolbar button:hover{ border-color:var(--gold-dim); color:var(--gold); }
+  .board-toolbar .zoom-label{ font-size:12px; color:var(--ink-mute); min-width:42px; text-align:center; }
+  .board-toolbar .spacer{ flex:1; }
+  /* Mesa maior no desktop: a área do mapa e o painel de ferramentas ao lado
+     crescem, e a página usa uma largura própria (mais ampla que o --content-max
+     padrão do resto do site) — ver .shell.shell-board logo abaixo. */
+  .shell.shell-board{ max-width:1440px; }
+  .board-layout{ display:flex; gap:18px; align-items:flex-start; }
+  .board-wrap{
+    position:relative; flex:1 1 auto; min-width:0; overflow:hidden; height:78vh; min-height:520px;
+    background:repeating-linear-gradient(45deg, var(--panel-2), var(--panel-2) 10px, var(--bg-alt) 10px, var(--bg-alt) 20px);
+    border:1px solid var(--hairline); border-radius:var(--radius);
+    cursor:grab; touch-action:none; overscroll-behavior:contain;
+  }
+  /* Em telas bem largas, a mesa e o painel lateral crescem um pouco mais
+     (antes o painel ficava fixo em 340px sempre, o que sobrava demais em
+     monitores grandes e apertava demais em notebooks/janelas médias). */
+  @media (min-width:1680px){
+    .shell.shell-board{ max-width:1680px; }
+    .board-side{ flex-basis:400px; }
+  }
+  /* Notebooks e janelas médias (entre o mobile e o desktop largo): o painel
+     lateral encolhe um pouco pra sobrar mais espaço pro mapa em si. */
+  @media (max-width:1180px) and (min-width:821px){
+    .board-side{ flex-basis:290px; }
+    .board-layout{ gap:12px; }
+  }
+  /* Monitores bem largos: o painel lateral tem 7 seções sanfonadas (Sua
+     ficha, Cenas, Mapa, Dados, Fichas na mesa, Iniciativa, Presença) que,
+     numa coluna só, obrigavam a rolar bastante pra chegar nas de baixo —
+     mesmo sobrando espaço horizontal de sobra ao lado do mapa. Aqui elas se
+     organizam em 2 colunas.
+
+     BUG (corrigido): a versão anterior usava CSS multi-coluna
+     (column-count:2), que calcula onde cada painel entra UMA vez, no
+     primeiro layout. Só que essas sanfonas mudam de altura depois disso —
+     abrem/fecham no clique, e o conteúdo de várias delas (Cenas, Mapa,
+     Fichas na mesa, Iniciativa) só chega depois, via listener do Firestore.
+     Quando a altura mudava depois daquele primeiro cálculo, o navegador nem
+     sempre recolocava os painéis nas colunas — um painel ficava "preso" na
+     posição antiga, desenhado por cima do painel seguinte (o texto
+     sobreposto/borrado que aparecia no sidebar, em telas de PC largas).
+     CSS Grid com grid-auto-flow:column não tem esse problema: cada painel
+     ocupa uma célula própria, recalculada a cada mudança de conteúdo, então
+     nunca fica sobreposto — mantendo o mesmo efeito visual de "preenche a
+     coluna 1 de cima a baixo, depois a coluna 2" (linhas de sobra na coluna
+     2 quando alguma sanfona está oculta/fechada são esperadas e inofensivas). */
+  @media (min-width:1500px){
+    .shell.shell-board{ max-width:1780px; }
+    .board-side{ flex-basis:400px; }
+  }
+  @media (min-width:1920px){
+    .shell.shell-board{ max-width:1900px; }
+    .board-wrap{ height:82vh; }
+    .board-side{ flex-basis:420px; }
+  }
+  .board-wrap.panning{ cursor:grabbing; }
+  /* Indicador de carregamento do mapa (ver renderBoardBackground em mesa.js):
+     um spinner simples centralizado, some sozinho quando a imagem termina
+     de carregar (ou dá erro). Fica por cima do quadriculado de fundo. */
+  .board-wrap.map-loading::after{
+    content:''; position:absolute; top:50%; left:50%; width:34px; height:34px;
+    margin:-17px 0 0 -17px; border-radius:50%;
+    border:3px solid var(--hairline); border-top-color:var(--gold);
+    animation:boardMapSpin .8s linear infinite; z-index:10; pointer-events:none;
+  }
+  @keyframes boardMapSpin{ to{ transform:rotate(360deg); } }
+  /* O mapa (board-surface) tem tamanho "natural" fixo (sem zoom) e é
+     movido/escalado inteiramente via transform (translate + scale) —
+     é isso que permite arrastar com o dedo/mouse para qualquer direção
+     e usar a roda do mouse / pinça pra zoom, no estilo Owlbear Rodeo,
+     em vez de depender da barra de rolagem nativa do navegador. */
+  .board-surface{
+    position:absolute; top:0; left:0; transform-origin:0 0;
+    user-select:none; touch-action:none; will-change:transform;
+  }
+  .board-surface img.map-bg{ display:block; width:100%; height:100%; pointer-events:none; }
+  /* O tamanho do token (width/height/margin) é definido dinamicamente via JS,
+     sempre igual ao tamanho atual da célula da grade (célula × zoom) — não
+     fixar px aqui, senão o token perde a proporção com o grid ao mudar o zoom. */
+  .token{
+    position:absolute;
+    border-radius:50%; border:2px solid var(--gold); box-shadow:0 2px 8px rgba(0,0,0,.6);
+    background:var(--panel-2); cursor:grab; overflow:hidden; touch-action:none;
+    box-sizing:border-box; transition:left .06s linear, top .06s linear;
+  }
+  .token.dragging{ transition:none; z-index:5; cursor:grabbing; }
+  .token.mine{ border-color:var(--seal-bright); }
+  .token:active{ cursor:grabbing; }
+  .token img{ width:100%; height:100%; object-fit:cover; display:block; }
+  .token .token-ph{ display:flex; align-items:center; justify-content:center; height:100%; font-size:22px; }
+  .token .token-label{
+    position:absolute; bottom:-19px; left:50%; transform:translateX(-50%);
+    font-size:11px; color:var(--ink); background:rgba(10,8,6,.75); padding:1px 6px; border-radius:8px;
+    white-space:nowrap; pointer-events:none;
+  }
+  .token .token-hp-bar{
+    position:absolute; bottom:3px; left:10%;
+    width:80%; height:4px; background:rgba(10,8,6,.65); border-radius:3px;
+    overflow:hidden; pointer-events:none; z-index:2;
+  }
+  .token .token-hp-bar-fill{ height:100%; transition:width .25s ease; }
+  .board-side{ flex:0 0 clamp(300px, 24vw, 340px); max-height:calc(78vh + 10px); overflow-y:auto; }
+  /* Rolagem mais discreta no painel lateral, pra não brigar visualmente com
+     o mapa ao lado (usa a mesma cor do site, só mais fina que o padrão). */
+  .board-side::-webkit-scrollbar{ width:7px; }
+  .side-panel{
+    background:var(--panel); border:1px solid var(--hairline); border-radius:var(--radius);
+    padding:18px; margin-bottom:14px;
+  }
+  .side-panel h4{ font-family:'Cinzel',serif; color:var(--gold); font-size:15px; margin:0 0 12px; }
+  /* ===== Painéis sanfonados (clica no título pra abrir/fechar) ===== */
+  .side-panel > h4:first-child{
+    cursor:pointer; user-select:none; display:flex; align-items:center; justify-content:space-between;
+    gap:8px;
+  }
+  .side-panel > h4:first-child::after{
+    content:'▾'; font-size:12px; color:var(--ink-mute); transition:transform .15s ease; flex:0 0 auto;
+  }
+  .side-panel.collapsed{ padding-bottom:18px; }
+  .side-panel.collapsed > h4:first-child{ margin-bottom:0; }
+  .side-panel.collapsed > h4:first-child::after{ transform:rotate(-90deg); }
+  .side-panel.collapsed > *{ display:none !important; }
+  .side-panel.collapsed > h4:first-child{ display:flex !important; }
+  .token-row{
+    display:flex; align-items:center; justify-content:space-between; gap:8px;
+    font-size:13.5px; color:var(--ink-dim); padding:5px 0; border-bottom:1px solid var(--hairline-soft);
+  }
+  .token-row:last-child{ border-bottom:none; }
+  .token-row.token-row-elsewhere{ opacity:.6; }
+  .token-row .tr-name{ cursor:pointer; }
+  .token-row .tr-name:hover{ color:var(--gold); }
+  .token-row button{ background:none; border:none; color:var(--ink-mute); cursor:pointer; font-size:12px; }
+  .token-row button:hover{ color:var(--seal-bright); }
+  .token-row .tr-hp-summary{ font-size:11px; color:var(--ink-mute); margin-left:4px; }
+  .token-hp-edit{
+    display:flex; flex-wrap:wrap; gap:6px 10px; padding:6px 0 8px; border-bottom:1px solid var(--hairline-soft);
+    font-size:11.5px; color:var(--ink-mute);
+  }
+  .token-hp-edit .hp-part{ display:flex; align-items:center; gap:4px; }
+  .token-hp-edit .hp-part input{ width:42px; font-size:11.5px; padding:3px 4px; text-align:center; }
+
+  /* ===== Ver ficha (modal) ===== */
+  .sheet-modal-overlay{
+    display:none; position:fixed; inset:0; background:rgba(8,6,4,.78); z-index:200;
+    align-items:center; justify-content:center; padding:16px;
+  }
+  .sheet-modal-overlay.open{ display:flex; }
+  .sheet-modal-box{
+    background:#16110c; border:1px solid var(--hairline); border-radius:var(--radius);
+    width:min(880px, 100%); height:min(86vh, 900px); position:relative; overflow:hidden;
+    box-shadow:0 10px 40px rgba(0,0,0,.6);
+  }
+  .sheet-modal-box iframe{ width:100%; height:100%; border:none; }
+  .sheet-modal-close{
+    position:absolute; top:8px; right:10px; z-index:2; background:var(--panel); border:1px solid var(--hairline);
+    color:var(--ink); width:32px; height:32px; border-radius:50%; cursor:pointer; font-size:16px; line-height:1;
+  }
+  .sheet-modal-close:hover{ color:var(--seal-bright); border-color:var(--seal-bright); }
+
+  /* ===== Dados na mesa ===== */
+  #dicePanel .dice-quick-row{ display:flex; flex-wrap:wrap; gap:6px; margin-bottom:10px; }
+  #dicePanel .dice-quick-row button{
+    background:none; border:1px solid var(--hairline-soft); color:var(--ink-dim);
+    padding:5px 9px; border-radius:6px; cursor:pointer; font-size:12px;
+  }
+  #dicePanel .dice-quick-row button:hover{ border-color:var(--gold-dim); color:var(--gold); }
+  #dicePanel .dice-cmd-row{ display:flex; gap:6px; margin-bottom:6px; }
+  #dicePanel .dice-cmd-row input{ flex:1; font-family:'JetBrains Mono', monospace; font-size:13px; padding:8px 10px; }
+  #dicePanel .dice-cmd-row button{ width:auto; padding:8px 14px; flex-shrink:0; }
+  #dicePanel .dice-target-row{ display:flex; gap:6px; margin-bottom:6px; }
+  #dicePanel .dice-target-row select{ flex:1; font-size:12.5px; padding:7px 8px; }
+  #dicePanel .dice-part-row{ display:flex; gap:6px; margin-bottom:6px; }
+  #dicePanel .dice-part-row select{ flex:1; font-size:12.5px; padding:7px 8px; }
+  #dicePanel .dice-target-hp{
+    font-size:11.5px; color:var(--ink-mute); margin:-2px 0 8px; padding:5px 8px;
+    background:var(--panel-2); border:1px solid var(--hairline-soft); border-radius:6px;
+  }
+  #dicePanel .dice-entry .de-apply{
+    margin-top:4px; padding-top:4px; border-top:1px dashed var(--hairline-soft);
+    font-size:11.5px; color:var(--ink-mute);
+  }
+  #dicePanel .dice-entry .de-apply .dmg{ color:#c9564f; }
+  #dicePanel .dice-entry .de-apply .heal{ color:#7fb27a; }
+  #dicePanel .dice-hide-row{
+    display:flex; align-items:center; gap:7px; font-size:11.5px; color:var(--ink-mute);
+    margin-bottom:8px; cursor:pointer; text-transform:none; letter-spacing:0;
+  }
+  #dicePanel .dice-hide-row input{ width:auto; flex-shrink:0; }
+  #dicePanel .dice-err{ color:#e0a5a5; font-size:12px; margin:2px 0 6px; display:none; }
+  #dicePanel .dice-log{ max-height:190px; overflow-y:auto; overscroll-behavior-y:contain; display:flex; flex-direction:column-reverse; gap:6px; }
+  #dicePanel .dice-entry{
+    padding:7px 10px; background:var(--panel-2); border:1px solid var(--hairline-soft); border-radius:8px;
+    font-size:12.5px; animation:rollIn .2s ease;
+  }
+  @keyframes rollIn{ from{ opacity:0; transform:translateY(4px);} to{ opacity:1; transform:translateY(0);} }
+  #dicePanel .de-head{ display:flex; justify-content:space-between; gap:8px; }
+  #dicePanel .de-cmd{ color:var(--ink-mute); font-family:'JetBrains Mono', monospace; }
+  #dicePanel .de-total{ font-family:'Cinzel',serif; color:var(--gold); font-size:17px; }
+  #dicePanel .de-total.crit{ color:#e8c76a; }
+  #dicePanel .de-total.fail{ color:#c9564f; }
+  #dicePanel .de-detail{ color:var(--ink-dim); font-size:11px; margin-top:2px; }
+  #dicePanel .dice-empty{ color:var(--ink-mute); font-style:italic; font-size:12px; text-align:center; padding:10px 0; }
+  #dicePanel .dice-entry.de-hidden{ border-style:dashed; opacity:.85; }
+
+  /* ===== Ferramentas do mapa (régua, desenho, névoa, marcar) ===== */
+  .tool-toolbar{ display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin-bottom:10px; }
+  .tool-toolbar button{
+    background:none; border:1px solid var(--hairline-soft); color:var(--ink-dim); cursor:pointer;
+    font-size:13px; padding:7px 12px; border-radius:6px; font-family:'EB Garamond', serif;
+  }
+  .tool-toolbar button:hover{ border-color:var(--gold-dim); color:var(--gold); }
+  .tool-toolbar button.tool-active{ border-color:var(--gold); color:var(--gold); background:rgba(201,161,92,.12); }
+  .tool-toolbar .tt-sep{ width:1px; align-self:stretch; background:var(--hairline); margin:0 4px; }
+  /* "m/casa" — quantos metros vale uma casa da grade, usado para converter
+     os números da régua e das áreas de ataque (círculo/cone/linha) de
+     casas para metros. Fica no mesmo visual dos botões da barra. */
+  .cell-unit-label{
+    display:flex; align-items:center; gap:6px; font-size:12.5px; color:var(--ink-mute);
+    border:1px solid var(--hairline-soft); border-radius:6px; padding:5px 10px 5px 12px;
+  }
+  .cell-unit-label input{
+    width:52px; background:none; border:1px solid var(--hairline-soft); color:var(--ink-dim);
+    font-size:12.5px; padding:3px 4px; border-radius:5px; text-align:center;
+    -moz-appearance:textfield;
+  }
+  .cell-unit-label input::-webkit-inner-spin-button,
+  .cell-unit-label input::-webkit-outer-spin-button{ opacity:.5; }
+  .cell-unit-label input:focus{ border-color:var(--gold-dim); color:var(--gold); outline:none; }
+
+  .board-wrap.tool-draw, .board-wrap.tool-fog, .board-wrap.tool-template{ cursor:crosshair; }
+  .board-wrap.tool-ruler{ cursor:cell; }
+  .board-wrap.tool-ping{ cursor:pointer; }
+
+  /* ===== Cenas (seletor de cenas, estilo Owlbear Rodeo) ===== */
+  .scene-new-row{ display:flex; gap:6px; margin-bottom:12px; }
+  .scene-new-row input{ flex:1; padding:8px 10px; font-size:14px; }
+  .scene-new-row button{ width:auto; flex-shrink:0; padding:8px 12px; font-size:13px; }
+  .scene-list{ display:flex; flex-direction:column; gap:8px; max-height:340px; overflow-y:auto; overscroll-behavior-y:contain; }
+  .scene-card{
+    display:flex; gap:10px; align-items:center; background:var(--panel-2);
+    border:1px solid var(--hairline-soft); border-radius:8px; padding:8px;
+  }
+  .scene-card.scene-active{ border-color:var(--gold-dim); background:rgba(201,161,92,.08); }
+  .scene-thumb{
+    width:52px; height:38px; flex-shrink:0; border-radius:4px; background:var(--bg-alt) center/cover no-repeat;
+    border:1px solid var(--hairline-soft); display:flex; align-items:center; justify-content:center;
+    color:var(--ink-mute); font-size:16px;
+  }
+  .scene-info{ flex:1; min-width:0; }
+  .scene-name-input{
+    width:100%; background:none; border:none; padding:2px 0; font-size:13.5px; color:var(--ink);
+    font-family:'EB Garamond', serif; border-bottom:1px dashed transparent;
+  }
+  .scene-name-input:hover, .scene-name-input:focus{ border-bottom-color:var(--hairline-soft); }
+  .scene-card .tc-meta{ font-size:11px; }
+  .scene-actions{ display:flex; flex-direction:column; gap:3px; flex-shrink:0; }
+  .scene-actions-row{ display:flex; gap:3px; }
+  .scene-actions button{
+    background:none; border:1px solid var(--hairline-soft); color:var(--ink-mute); cursor:pointer;
+    font-size:11px; padding:3px 7px; border-radius:5px; font-family:'EB Garamond', serif;
+  }
+  .scene-actions button:hover{ border-color:var(--gold-dim); color:var(--gold); }
+  .scene-actions button.scene-use-btn.is-active{ border-color:var(--gold); color:var(--gold); cursor:default; }
+  .scene-actions button.scene-del-btn:hover{ border-color:var(--seal-bright); color:var(--seal-bright); }
+
+  #drawSvgLayer{ z-index:2; }
+  .fog-rect{ position:absolute; background:#0a0806; box-sizing:border-box; z-index:3; }
+  .fog-rect.fog-master{ background:rgba(10,8,6,.55); border:1px dashed rgba(201,161,92,.5); }
+  /* Áreas de efeito ficam por cima da névoa (pra sempre se ver a forma), mas
+     por baixo dos tokens (pra não tampar quem está em cima dela). */
+  #templateSvgLayer{ z-index:3.5; }
+  .token{ z-index:4; }
+  .token.dragging{ z-index:5; }
+
+  .ping-mark{
+    position:absolute; width:34px; height:34px; margin-left:-17px; margin-top:-17px;
+    border-radius:50%; border:3px solid var(--seal-bright); pointer-events:none;
+    animation:pingPulse 1.6s ease-out forwards; z-index:6;
+  }
+  @keyframes pingPulse{
+    0%{ transform:scale(.2); opacity:1; }
+    70%{ opacity:.7; }
+    100%{ transform:scale(2.4); opacity:0; }
+  }
+
+  /* ===== Turno atual da iniciativa, destacado sobre o token ===== */
+  .token.active-turn{ box-shadow:0 0 0 3px var(--gold), 0 0 14px 2px rgba(201,161,92,.7); }
+  .token-row.init-active{ color:var(--gold); }
+  .init-value{ width:48px; text-align:center; padding:3px 4px; font-size:12.5px; }
+
+  /* ===== Alças de girar/redimensionar sobre o token (estilo Owlbear) =====
+     Ficam num wrapper posicionado no mesmo ponto (x,y) do token, filho do
+     board-surface — assim seguem o pan/zoom do mapa de graça, igual aos
+     tokens e à aura. */
+  .token-handles{ position:absolute; top:0; left:0; z-index:7; pointer-events:none; }
+  .token-select-ring{
+    position:absolute; top:0; left:0; border-radius:50%;
+    border:2px dashed var(--gold); pointer-events:none;
+  }
+  .token-handle{
+    position:absolute; top:0; left:0; width:24px; height:24px; margin:-12px 0 0 -12px;
+    border-radius:50%; background:var(--gold); color:#16110c; font-size:13px; font-weight:600;
+    display:flex; align-items:center; justify-content:center; cursor:grab;
+    box-shadow:0 2px 6px rgba(0,0,0,.6); pointer-events:auto; touch-action:none;
+    border:2px solid #16110c;
+  }
+  .token-handle:active{ cursor:grabbing; }
+  .token-handle.handle-resize{ cursor:nwse-resize; }
+  .token-handle.handle-resize:active{ cursor:nwse-resize; }
+
+  .ruler-line{ position:absolute; pointer-events:none; z-index:50; }
+  .ruler-line-svg .ruler-cell-a, .ruler-line-svg .ruler-cell-b{ opacity:.85; }
+  .ruler-label{
+    position:absolute; pointer-events:none; z-index:51; background:rgba(10,8,6,.85);
+    color:var(--gold); font-size:12px; padding:2px 7px; border-radius:6px; white-space:nowrap;
+    border:1px solid var(--hairline);
+  }
+  /* No toque, o rótulo não acompanha o dedo (ver drawRulerOverlay em
+     mesa.js) — vira um cartão fixo perto do topo do tabuleiro, maior e mais
+     destacado, já que precisa ser lido de relance sem tampar com a mão. */
+  .ruler-label.ruler-label-touch{
+    font-size:15px; font-weight:600; padding:7px 14px; border-radius:10px;
+    box-shadow:0 4px 14px rgba(0,0,0,.5); border-color:var(--gold-dim);
+  }
+
+  /* Controles de girar/redimensionar de um token, na lista lateral */
+  .token-row .tr-tools{ display:flex; align-items:center; gap:3px; flex-wrap:wrap; justify-content:flex-end; }
+  .token-row .tr-tools button{
+    background:none; border:1px solid var(--hairline-soft); color:var(--ink-mute); cursor:pointer;
+    font-size:11px; padding:2px 6px; border-radius:4px;
+  }
+  .token-row .tr-tools button:hover{ border-color:var(--gold-dim); color:var(--gold); }
+  .token-row .tr-tools input.aura-radius-input{
+    width:38px; background:none; border:1px solid var(--hairline-soft); color:var(--ink-mute);
+    font-size:11px; padding:2px 3px; border-radius:4px; text-align:center;
+    -moz-appearance:textfield;
+  }
+  .token-row .tr-tools input.aura-radius-input::-webkit-inner-spin-button,
+  .token-row .tr-tools input.aura-radius-input::-webkit-outer-spin-button{ opacity:0.5; }
+  .token-row .tr-tools input.aura-radius-input:focus{ border-color:var(--gold-dim); color:var(--gold); outline:none; }
+
+  .map-upload-row{ display:flex; align-items:center; gap:8px; margin:10px 0; }
+  .map-upload-row .tc-meta{ flex-shrink:0; }
+  hr.tool-hr{ border:none; border-top:1px solid var(--hairline-soft); margin:14px 0; }
+
+  /* ===== Aura (estilo Owlbear Rodeo) ===== */
+  .token-aura{
+    position:absolute; border-radius:50%; pointer-events:none; z-index:3;
+    transition:width .12s linear, height .12s linear, margin .12s linear;
+  }
+
+  /* ===== Swatch de cor (abre a roda cromática) ===== */
+  .color-swatch{
+    width:22px; height:22px; border-radius:50%; padding:0; flex-shrink:0;
+    border:2px solid var(--hairline-soft); cursor:pointer; box-sizing:border-box;
+  }
+  .color-swatch:hover{ border-color:var(--gold); }
+  .my-color-row{ display:flex; align-items:center; gap:8px; margin:8px 0; font-size:12.5px; color:var(--ink-mute); }
+
+  /* ===== Popover da roda cromática ===== */
+  .wheel-popover{
+    position:fixed; z-index:300; background:#16110c; border:1px solid var(--hairline);
+    border-radius:var(--radius); padding:14px; box-shadow:0 10px 30px rgba(0,0,0,.6);
+    display:flex; flex-direction:column; align-items:center; gap:10px;
+  }
+  .wheel-popover canvas{ cursor:crosshair; border-radius:50%; touch-action:none; }
+  .wheel-popover .wp-light{ width:160px; height:14px; border-radius:7px; cursor:pointer; }
+  .wheel-popover .wp-row{ display:flex; align-items:center; gap:8px; width:100%; }
+  .wheel-popover .wp-preview{ width:24px; height:24px; border-radius:50%; border:2px solid var(--hairline-soft); flex-shrink:0; }
+  .wheel-popover .wp-hex{ font-family:'JetBrains Mono',monospace; font-size:12px; color:var(--ink-dim); flex:1; }
+  .wheel-popover .wp-actions{ display:flex; gap:8px; width:100%; }
+  .wheel-popover .wp-actions button{
+    flex:1; background:none; border:1px solid var(--hairline-soft); color:var(--ink-dim); cursor:pointer;
+    font-size:12.5px; padding:6px 10px; border-radius:6px; font-family:'EB Garamond', serif;
+  }
+  .wheel-popover .wp-actions button.wp-ok{ border-color:var(--gold); color:var(--gold); }
+  .wheel-backdrop{ position:fixed; inset:0; z-index:299; }
+
+  /* ===== Presença (só mestre vê) ===== */
+  .presence-row{
+    display:flex; align-items:center; gap:8px; font-size:13px; color:var(--ink-dim);
+    padding:5px 0; border-bottom:1px solid var(--hairline-soft);
+  }
+  .presence-row:last-child{ border-bottom:none; }
+  .presence-dot{ width:9px; height:9px; border-radius:50%; flex-shrink:0; box-shadow:0 0 4px currentColor; }
+  .presence-role{ font-size:11px; color:var(--ink-mute); margin-left:auto; }
+
+  /* ===== Mobile ===== */
+  @media (max-width:820px){
+    /* BUG CORRIGIDO: "align-items:flex-start" (herdado da regra base, pensada
+       pro layout lado a lado do desktop) também controla o eixo horizontal
+       quando a direção vira coluna aqui no mobile. Como .board-wrap não tinha
+       nenhuma largura própria definida, ele encolhia para o tamanho do seu
+       conteúdo (~0px, já que board-surface é posicionado em absolute) — o
+       mapa ficava ali, só que comprimido numa fatia invisível. "stretch" +
+       width:100% garantem que ele sempre ocupe a largura toda da tela. */
+    .board-layout{ flex-direction:column; align-items:stretch; }
+    .board-wrap{ width:100%; }
+    .board-side{ flex:1 1 auto; width:100%; max-height:none; }    /* 58vh como base (suportado em qualquer navegador) e 58dvh por cima —
+       em navegadores mobile que suportam dvh, isso usa a altura visível
+       "de verdade" (já descontando a barra de endereço), então o mapa não
+       fica com uma folga errada quando a barra recolhe/aparece. Navegadores
+       sem suporte a dvh simplesmente ignoram essa linha e ficam com o vh.
+       (Antes era 56vh: subiu um pouco porque as barras de ferramentas abaixo
+       agora rolam na horizontal em vez de quebrar em 2-3 linhas, sobrando
+       mais altura de tela pro mapa em si.) */
+    .board-wrap{ height:58vh; min-height:320px; }
+    .board-wrap{ height:58dvh; }
+    #boardView.fullscreen-mode .board-wrap{ height:calc(100vh - 132px); }
+    #boardView.fullscreen-mode .board-wrap{ height:calc(100dvh - 132px); }
+
+    /* A página inteira (.shell) tem 24px de respiro nas laterais, pensado
+       pro texto do resto do site — na mesa isso rouba quase 50px de largura
+       do mapa, que é o elemento mais importante da tela no celular. Aqui a
+       gente aperta essa margem só quando o tabuleiro está aberto
+       (.shell-board é ligado/desligado via JS ao entrar/sair da mesa). */
+    .shell.shell-board{ padding-left:10px; padding-right:10px; }
+
+    /* Barras de ferramentas (zoom/expandir e régua/desenho/névoa/marcar):
+       em vez de quebrar em várias linhas — o que empurrava o mapa pra baixo
+       e obrigava a catar botão em 2-3 fileiras — cada barra vira uma fileira
+       só, que rola na horizontal com o dedo (padrão comum em apps mobile de
+       ferramentas). O mapa ganha altura de volta e os botões continuam com
+       alvo de toque grande. */
+    .board-toolbar, .tool-toolbar{
+      flex-wrap:nowrap; overflow-x:auto; overflow-y:hidden;
+      -webkit-overflow-scrolling:touch; scrollbar-width:none; -ms-overflow-style:none;
+      padding-bottom:2px; /* evita cortar a sombra/borda dos botões no fundo do scroll */
+      /* Sombra sutil nas bordas indicando que dá pra arrastar pros lados —
+         sem isso, uma fileira que rola fica parecendo só "cortada". */
+      -webkit-mask-image:linear-gradient(90deg, transparent, #000 14px, #000 calc(100% - 14px), transparent);
+      mask-image:linear-gradient(90deg, transparent, #000 14px, #000 calc(100% - 14px), transparent);
+    }
+    /* A barra de zoom/expandir fica fixa logo abaixo do topbar ao rolar a
+       tela pra ver os painéis (dados, fichas na mesa etc.) — sem isso, pra
+       dar zoom ou voltar ao mapa cheio era preciso rolar de volta pro topo
+       toda vez. 54px ~= altura do topbar reduzido no mobile. */
+    .board-toolbar{
+      position:sticky; top:54px; z-index:15; padding-top:6px; padding-bottom:8px;
+      background:linear-gradient(180deg, var(--bg) 78%, transparent);
+    }
+    .board-toolbar::-webkit-scrollbar, .tool-toolbar::-webkit-scrollbar{ display:none; }
+    .board-toolbar{ gap:6px; }
+    .board-toolbar > *{ flex-shrink:0; }
+    .board-toolbar button{
+      padding:10px 14px; font-size:14px; white-space:nowrap;
+      min-height:44px; display:inline-flex; align-items:center; justify-content:center;
+    }
+    .board-toolbar .zoom-group button{ padding:10px 14px; min-height:44px; }
+    .board-toolbar .spacer{ display:none; } /* sem sentido numa fileira que rola; só ocupava espaço */
+    .board-hint{ display:none; }
+    .tool-toolbar{ gap:5px; }
+    /* BUG CORRIGIDO: sem isto, os botões e o campo "m/casa" da barra podiam
+       ser espremidos pelo flex (encolhendo texto/input) em vez de simplesmente
+       rolar — mesmo problema que já existia e tinha sido corrigido só na
+       .board-toolbar acima. */
+    .tool-toolbar > *{ flex-shrink:0; }
+    .tool-toolbar button{
+      padding:9px 11px; font-size:13.5px; white-space:nowrap;
+      min-height:42px; display:inline-flex; align-items:center; justify-content:center;
+    }
+    .cell-unit-label{ padding:7px 10px 7px 12px; min-height:42px; box-sizing:border-box; }
+    .cell-unit-label input{ width:44px; padding:6px 4px; font-size:13.5px; }
+
+    /* Campo de nome de cena nova, e o campo de renomear uma cena existente
+       (clicando no nome dela na lista): abaixo de 16px, o iOS Safari dá
+       zoom automático na página inteira ao focar o campo — chato de
+       desfazer com o dedo. 16px evita esse zoom sem mudar nada no visual
+       de desktop. */
+    .scene-new-row input{ font-size:16px; padding:10px 12px; }
+    .scene-name-input{ font-size:16px; padding:6px 0; }
+
+    /* Alvos de toque maiores nos painéis laterais (dados, adicionar token,
+       lista de fichas na mesa) — no desktop esses botões/campos são
+       pensados pra mouse; no celular precisam de mais área pro dedo. */
+    .side-panel{ padding:14px; margin-bottom:10px; }
+    #dicePanel .dice-quick-row button{ padding:10px 14px; font-size:13.5px; min-height:40px; }
+    #dicePanel .dice-cmd-row input{ padding:11px 12px; font-size:16px; }
+    #dicePanel .dice-cmd-row button{ padding:11px 16px; }
+    #dicePanel .dice-hide-row input{ width:20px; height:20px; }
+    /* BUG: os selects de alvo e parte do corpo tinham padding/fonte menores
+       que os outros campos do mesmo painel (7px/12.5px, herdados do
+       desktop) — no celular ficavam com ~30px de altura e texto pequeno
+       o bastante pra disparar o zoom automático do iOS Safari ao focar. */
+    #dicePanel .dice-target-row select, #dicePanel .dice-part-row select{
+      padding:10px 8px; font-size:16px; min-height:42px;
+    }
+    .token-row{ padding:8px 0; font-size:14.5px; }
+    /* BUG: os botões ⟲ ⟳ e "❤ HP" da lista "Fichas na mesa" mediam ~19px
+       de altura no celular — ícone pequeno sem nenhuma folga de toque ao
+       redor, fácil de errar e acabar girando/redimensionando o token errado. */
+    .token-row button{ font-size:14px; padding:8px 8px; min-height:38px; min-width:38px; }
+    .token-row .tr-tools{ gap:6px; }
+    .token-row .tr-tools input.aura-radius-input{ padding:8px 4px; min-height:38px; font-size:13px; }
+    #myTokenPanel select, #myTokenPanel input[type=file]{ padding:11px 12px; }
+    #dicePanel .dice-log{ max-height:240px; }
+    /* BUG: "Entrar na mesa com esta ficha" (~31px) e "📜 Ver ficha" (~34px)
+       usam a classe global .btn.small, pensada pro mouse (padding menor) —
+       no celular ficam abaixo do alvo de toque confortável. O swatch de
+       cor é ainda menor (22px), difícil de acertar pra abrir a roda de cor. */
+    #myTokenPanel .btn.small{ padding:12px 16px; font-size:14px; min-height:44px; }
+    .color-swatch{ width:30px; height:30px; }
+    /* "← Voltar às mesas" também fica pequeno (~32px) nesta régua. */
+    #backToLobbyBtn{ padding:10px 16px; min-height:40px; }
+
+    /* Alças de girar/redimensionar do token: no mouse 24px é tranquilo de
+       clicar, mas com o dedo é fácil errar e mexer no mapa por baixo. */
+    .token-handle{ width:32px; height:32px; margin:-16px 0 0 -16px; font-size:14px; }
+
+    /* Título de cada painel lateral (sanfona) — a área clicável era só a
+       altura do texto; aqui ganha uma faixa maior pra abrir/fechar sem
+       precisar mirar com precisão. */
+    .side-panel > h4:first-child{ padding:5px 0; margin-bottom:10px; }
+
+    /* Botões da lista de cenas (usar/renomear/excluir) e o "x" de fechar a
+       ficha em modal — maiores pro toque, mesmo tamanho de fonte. */
+    .scene-actions button{ padding:6px 10px; font-size:12.5px; }
+    .sheet-modal-close{ width:38px; height:38px; font-size:18px; }
+
+    /* Roda de cor (token/desenho): em vez de um popover pequeno ancorado
+       perto do botão que a abriu — fácil de estourar a tela e difícil de
+       acertar com o dedo —, no celular ela abre centralizada, maior, como
+       uma folha flutuante. O JS calcula a posição pra desktop; aqui a gente
+       sobrepõe com !important só na faixa mobile. */
+    .wheel-popover{
+      left:50% !important; top:50% !important; right:auto; bottom:auto;
+      transform:translate(-50%,-50%); width:min(88vw, 300px);
+    }
+    .wheel-popover canvas{ width:100%; height:auto; aspect-ratio:1/1; }
+  }
+
+  /* BUG CORRIGIDO: o "top:54px" do .board-toolbar acima supõe que o .topbar
+     do site continua fixo no alto da tela (como no desktop), sobrando esses
+     54px por cima dele. Só que abaixo de 780px (ver @media em
+     css/style.css) o .topbar vira position:relative e passa a rolar junto
+     com a página — então, nessa faixa mais estreita, colar o board-toolbar
+     a 54px do topo deixava uma faixa vazia (o próprio gradiente de fundo)
+     por cima dele ao rolar. Aqui, quando o topbar já não é mais fixo, a
+     barra gruda direto no topo da tela (0px). */
+  @media (max-width:780px){
+    .board-toolbar{ top:0; }
+  }
+
+  /* Telas bem estreitas (a maioria dos celulares em retrato): aperta mais
+     um pouco os botões das barras de ferramentas, sem tirar nada de função,
+     só pra caber mais coisa visível de cada vez antes de precisar rolar. */
+  @media (max-width:400px){
+    .shell.shell-board{ padding-left:8px; padding-right:8px; }
+    .board-toolbar button{ padding:9px 11px; font-size:13px; }
+    .board-toolbar .zoom-group button{ padding:9px 11px; }
+    .zoom-label{ min-width:34px; font-size:11.5px; }
+    .tool-toolbar button{ padding:8px 9px; font-size:13px; }
+  }
+
+  /* Celular deitado: a régua de "é mobile" lá em cima é só por LARGURA
+     (max-width:820px), então um telefone deitado (~700-900px de largura)
+     ainda cai no layout empilhado do celular — só que, deitado, é a ALTURA
+     que fica curta, não a largura; empilhar mapa + painéis desperdiça o
+     espaço horizontal de sobra e deixa o mapa baixinho. Aqui, quando a
+     largura é média E a altura é curta (sinal de celular deitado), volta
+     pro layout lado a lado (como no desktop), só com o painel mais estreito. */
+  @media (max-width:920px) and (max-height:500px) and (orientation:landscape){
+    .shell.shell-board{ padding-left:10px; padding-right:10px; }
+    .board-layout{ flex-direction:row; align-items:flex-start; }
+    .board-wrap{ width:auto; flex:1 1 auto; height:calc(100vh - 96px); height:calc(100dvh - 96px); min-height:220px; }
+    .board-side{ flex:0 0 240px; width:240px; max-height:calc(100vh - 96px); max-height:calc(100dvh - 96px); overflow-y:auto; }
+    #boardView.fullscreen-mode .board-wrap{ height:calc(100vh - 12px); height:calc(100dvh - 12px); }
+    .board-toolbar{ position:static; } /* aqui não precisa fixar: já cabe tudo com o painel do lado */
+  }
+
+  /* ===== Chat da mesa ===== */
+  .chat-fab{
+    position:fixed; right:20px; bottom:20px; z-index:180;
+    width:54px; height:54px; border-radius:50%;
+    background:var(--panel); border:1px solid var(--gold-dim); color:var(--gold);
+    font-size:22px; cursor:pointer; box-shadow:0 4px 16px rgba(0,0,0,.5);
+    display:flex; align-items:center; justify-content:center;
+  }
+  .chat-fab:hover{ border-color:var(--gold); }
+  .chat-fab-badge{
+    position:absolute; top:-4px; right:-4px; min-width:19px; height:19px; padding:0 4px;
+    border-radius:10px; background:var(--seal-bright); color:#fff; font-size:11px;
+    font-family:'JetBrains Mono', monospace; display:flex; align-items:center; justify-content:center;
+  }
+
+  .chat-popup{
+    position:fixed; right:20px; bottom:86px; z-index:181;
+    width:340px; height:460px; max-height:70vh;
+    background:var(--panel); border:1px solid var(--hairline); border-radius:var(--radius);
+    box-shadow:0 10px 40px rgba(0,0,0,.6);
+    display:flex; flex-direction:column; overflow:hidden;
+  }
+  .chat-popup.hidden{ display:none; }
+  .chat-popup.minimized .chat-target-row,
+  .chat-popup.minimized .chat-messages,
+  .chat-popup.minimized .chat-input-row,
+  .chat-popup.minimized .chat-err{ display:none; }
+  .chat-popup.minimized{ height:auto; }
+
+  .chat-popup-head{
+    display:flex; align-items:center; justify-content:space-between; gap:6px;
+    padding:8px 8px 8px 12px; border-bottom:1px solid var(--hairline-soft); flex-shrink:0;
+  }
+  .chat-tabs{ display:flex; gap:4px; flex-wrap:wrap; }
+  .chat-tab{
+    position:relative;
+    background:none; border:1px solid var(--hairline-soft); color:var(--ink-mute);
+    padding:5px 9px; border-radius:6px; cursor:pointer; font-size:12px; font-family:'EB Garamond', serif;
+  }
+  .chat-tab:hover{ border-color:var(--gold-dim); color:var(--gold); }
+  .chat-tab.active{ border-color:var(--gold); color:var(--gold); background:var(--panel-2); }
+  .chat-tab.disabled{ opacity:.45; cursor:not-allowed; }
+  .chat-tab-dot{
+    position:absolute; top:-3px; right:-3px; width:9px; height:9px; border-radius:50%;
+    background:var(--seal-bright); border:1.5px solid var(--panel);
+  }
+  .chat-tab-dot.hidden{ display:none; }
+  .chat-head-actions{ display:flex; gap:2px; flex-shrink:0; }
+  .chat-min-btn, .chat-close-btn{
+    background:none; border:none; color:var(--ink-mute); cursor:pointer; font-size:15px;
+    width:26px; height:26px; border-radius:5px;
+  }
+  .chat-min-btn:hover, .chat-close-btn:hover{ color:var(--gold); background:var(--panel-2); }
+
+  .chat-target-row{ padding:8px 12px; border-bottom:1px solid var(--hairline-soft); flex-shrink:0; }
+  .chat-target-row select{ width:100%; font-size:13px; padding:7px 8px; }
+
+  .chat-messages{
+    flex:1 1 auto; overflow-y:auto; padding:10px 12px; display:flex; flex-direction:column; gap:8px;
+  }
+  .chat-empty{ color:var(--ink-mute); font-size:12.5px; text-align:center; margin-top:16px; }
+  .chat-msg{
+    background:var(--panel-2); border:1px solid var(--hairline-soft); border-radius:8px;
+    padding:6px 9px; font-size:13px; max-width:88%; align-self:flex-start;
+  }
+  .chat-msg.mine{ align-self:flex-end; border-color:var(--gold-dim); }
+  .chat-msg.whisper{ border-style:dashed; background:var(--panel); }
+  .chat-msg.whisper .chat-msg-body{ font-style:italic; }
+  .chat-msg-head{ display:flex; justify-content:space-between; gap:8px; margin-bottom:2px; }
+  .chat-msg-who{ color:var(--gold); font-size:11.5px; }
+  .chat-msg-who.clickable{ cursor:pointer; text-decoration:underline dotted; }
+  .chat-msg-who.clickable:hover{ color:var(--seal-bright); }
+  .chat-msg-master-tag{
+    color:var(--seal-bright); font-size:10px; border:1px solid var(--seal-bright);
+    border-radius:4px; padding:0 4px; margin-left:5px; vertical-align:1px;
+  }
+  .chat-msg-time{ color:var(--ink-mute); font-size:10.5px; font-family:'JetBrains Mono', monospace; }
+  .chat-msg-body{ color:var(--ink-dim); white-space:pre-wrap; word-break:break-word; }
+
+  .chat-hint{ padding:6px 12px 0; color:var(--ink-mute); font-size:11px; flex-shrink:0; }
+  .chat-hint.hidden{ display:none; }
+
+  .chat-input-row{ display:flex; gap:6px; padding:9px 10px; border-top:1px solid var(--hairline-soft); flex-shrink:0; }
+  .chat-input-row input{ flex:1; font-size:13.5px; padding:8px 10px; }
+  .chat-input-row input:disabled{ opacity:.5; cursor:not-allowed; }
+  .chat-input-row button{ width:auto; padding:8px 14px; flex-shrink:0; }
+  .chat-err{ padding:0 12px 8px; color:#e0a5a5; font-size:11.5px; flex-shrink:0; }
+
+  /* Mobile: quase tela cheia, alvo de toque maior */
+  @media (max-width:820px){
+    /* env(safe-area-inset-bottom) só existe (>0) em telas com barra de
+       gestos/notch (iPhone) e exige viewport-fit=cover no <meta viewport>
+       (já ligado no <head>); em outros aparelhos vale 0px e não muda nada.
+       Sem isso o botão de chat e o rodapé do popup ficam meio colados na
+       barra de gestos. */
+    .chat-fab{
+      right:14px; bottom:calc(14px + env(safe-area-inset-bottom)); width:56px; height:56px;
+    }
+    .chat-popup{
+      right:8px; left:8px; bottom:0; width:auto;
+      height:82vh; height:82dvh; max-height:none; border-radius:var(--radius) var(--radius) 0 0;
+      padding-bottom:env(safe-area-inset-bottom);
+    }
+    .chat-tab{ padding:8px 10px; font-size:13px; }
+    .chat-input-row input{ padding:11px 12px; font-size:16px; }
+    .chat-input-row button{ padding:11px 16px; }
+    .chat-target-row select{ padding:10px 8px; font-size:16px; }
+    /* BUG: minimizar/fechar e as abas do chat mediam ~26-34px de altura —
+       abaixo do mínimo confortável de toque (~40-44px), fácil de errar com
+       o dedo justamente nos botões que fecham/minimizam a conversa. */
+    .chat-tab{ padding:11px 13px; font-size:13.5px; min-height:42px; }
+    .chat-min-btn, .chat-close-btn{ width:38px; height:38px; font-size:17px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="brand">
+    <svg class="seal-icon" viewBox="0 0 120 120" fill="none">
+      <circle cx="60" cy="60" r="54" stroke="#C9A15C" stroke-width="2" opacity="0.5"/>
+      <circle cx="60" cy="60" r="4" fill="#C9A15C"/>
+      <path d="M60 24 L84 60 L60 96 L36 60 Z" stroke="#9C2B2B" stroke-width="2" opacity="0.55" fill="none"/>
+    </svg>
+    <div>
+      <div class="brand-title">HEARTSOUL</div>
+      <div class="brand-sub">Mesa</div>
+    </div>
+  </div>
+  <div class="topbar-right" id="topbarRight"></div>
+</div>
+
+<div class="shell">
+
+  <!-- ===================== LOBBY ===================== -->
+  <div id="lobbyView">
+    <div class="page-head">
+      <div class="eyebrow">Tabletop</div>
+      <h1 class="h-font">Mesas de Jogo</h1>
+      <p class="lede">Entre em uma mesa para mover sua ficha sobre o tabuleiro, ou, se for mestre, crie uma nova mesa e gere um mapa.</p>
+    </div>
+
+    <div id="createTableBox"></div>
+
+    <div id="tablesList" class="center-loading">Carregando mesas…</div>
+  </div>
+
+  <!-- ===================== BOARD ===================== -->
+  <div id="boardView">
+    <div class="page-head" style="margin-bottom:14px;" id="boardTitleRow">
+      <button class="btn-link" id="backToLobbyBtn" style="margin-bottom:10px;">← Voltar às mesas</button>
+      <h1 class="h-font" id="boardTitle" style="font-size:24px;">Mesa</h1>
+      <div class="tc-meta" id="boardSceneLabel"></div>
+    </div>
+
+    <div class="board-toolbar">
+      <div class="zoom-group">
+        <button type="button" id="zoomOutBtn" title="Diminuir zoom">−</button>
+        <span class="zoom-label" id="zoomLabel">100%</span>
+        <button type="button" id="zoomInBtn" title="Aumentar zoom">+</button>
+      </div>
+      <button type="button" id="zoomFitBtn">Ajustar à tela</button>
+      <button type="button" id="zoomResetBtn">100%</button>
+      <div class="spacer"></div>
+      <span class="tc-meta board-hint">Arraste para mover · roda do mouse / pinça para zoom</span>
+      <button type="button" id="fullscreenBtn">⛶ Expandir mesa</button>
+    </div>
+
+    <div class="tool-toolbar" id="toolToolbar"></div>
+
+    <div class="board-layout">
+      <div class="board-wrap" id="boardWrap">
+        <div class="board-surface" id="boardSurface"></div>
+      </div>
+
+      <div class="board-side">
+        <div class="side-panel" id="myTokenPanel"></div>
+        <div class="side-panel hidden" id="scenePanel"></div>
+        <div class="side-panel" id="masterMapPanel"></div>
+        <div class="side-panel" id="dicePanel">
+          <h4>🎲 Dados</h4>
+          <div class="dice-quick-row" id="diceQuickRow"></div>
+          <div class="dice-cmd-row">
+            <input type="text" id="diceCmdInput" placeholder="ex.: d20, 2d6+3, 2#d20">
+            <button class="btn small" id="diceRollBtn">Rolar</button>
+          </div>
+          <div class="dice-target-row">
+            <select id="diceTargetSelect" title="Alvo do ataque/cura">
+              <option value="">— sem alvo (rolagem livre) —</option>
+            </select>
+          </div>
+          <div class="dice-part-row hidden" id="dicePartRow">
+            <div class="dice-part-checks" id="diceBodyPartChecks" title="Partes do corpo">
+              <label class="dice-part-check-item"><input type="checkbox" value="cabeca" checked> Cabeça</label>
+              <label class="dice-part-check-item"><input type="checkbox" value="tronco"> Tronco</label>
+              <label class="dice-part-check-item"><input type="checkbox" value="braco_esq"> Braço Esquerdo</label>
+              <label class="dice-part-check-item"><input type="checkbox" value="braco_dir"> Braço Direito</label>
+              <label class="dice-part-check-item"><input type="checkbox" value="perna_esq"> Perna Esquerda</label>
+              <label class="dice-part-check-item"><input type="checkbox" value="perna_dir"> Perna Direita</label>
+            </div>
+            <select id="diceActionSelect" title="O que fazer com o resultado">
+              <option value="damage">⚔️ Causar dano</option>
+              <option value="heal">❤️ Curar</option>
+            </select>
+          </div>
+          <div class="dice-target-hp hidden" id="diceTargetHpLine"></div>
+          <label class="dice-hide-row" for="diceHideChk">
+            <input type="checkbox" id="diceHideChk">
+            Ocultar esta rolagem dos outros jogadores (só você e o Mestre veem)
+          </label>
+          <div class="dice-err" id="diceErr"></div>
+          <div class="dice-log" id="diceLog"><div class="dice-empty">Nenhuma rolagem ainda.</div></div>
+        </div>
+        <div class="side-panel" id="tokenListPanel">
+          <h4>Fichas na mesa</h4>
+          <div id="tokenListBody"><span class="tc-meta">Nenhum token ainda.</span></div>
+        </div>
+        <div class="side-panel" id="initiativePanel"></div>
+        <div class="side-panel hidden" id="presencePanel">
+          <h4>👁 Quem está na mesa</h4>
+          <div id="presenceBody"><span class="tc-meta">Ninguém além de você, por enquanto.</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ===================== MODAL: VER FICHA ===================== -->
+<div class="sheet-modal-overlay" id="sheetModalOverlay">
+  <div class="sheet-modal-box">
+    <button type="button" class="sheet-modal-close" id="sheetModalClose">✕</button>
+    <iframe id="sheetModalFrame" src="about:blank"></iframe>
+  </div>
+</div>
+
+<!-- ===================== CHAT DA MESA ===================== -->
+<!-- Só aparece com uma mesa aberta (ver showChatFab/hideChatUi em mesa.js). -->
+<button type="button" class="chat-fab hidden" id="chatFabBtn" title="Chat da mesa" aria-label="Abrir chat da mesa">
+  💬<span class="chat-fab-badge hidden" id="chatFabBadge">0</span>
+</button>
+
+<div class="chat-popup hidden" id="chatPopup" role="dialog" aria-label="Chat da mesa">
+  <div class="chat-popup-head">
+    <div class="chat-tabs" id="chatTabs">
+      <button type="button" class="chat-tab active" data-chat-type="general">📣 Geral<span class="chat-tab-dot hidden" id="chatDotGeneral"></span></button>
+      <button type="button" class="chat-tab" data-chat-type="whisper">🤫 Sussurro<span class="chat-tab-dot hidden" id="chatDotWhisper"></span></button>
+    </div>
+    <div class="chat-head-actions">
+      <button type="button" class="chat-min-btn" id="chatMinBtn" title="Minimizar">–</button>
+      <button type="button" class="chat-close-btn" id="chatCloseBtn" title="Fechar">✕</button>
+    </div>
+  </div>
+  <div class="chat-target-row hidden" id="chatTargetRow">
+    <select id="chatTargetSelect"><option value="">Selecione…</option></select>
+  </div>
+  <div class="chat-messages" id="chatMessages"><div class="chat-empty">Nenhuma mensagem ainda.</div></div>
+  <div class="chat-hint hidden" id="chatHint"></div>
+  <div class="chat-input-row">
+    <input type="text" id="chatInput" maxlength="1000" placeholder="Escreva uma mensagem…">
+    <button type="button" class="btn small" id="chatSendBtn">Enviar</button>
+  </div>
+  <div class="chat-err hidden" id="chatErr"></div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+<script src="js/firebase-config.js"></script>
+<script src="js/firebase-init.js"></script>
+<script src="js/mapgen.js"></script>
+<!-- mesa.js foi dividido em 6 arquivos para facilitar manutenção.
+     A ordem abaixo importa: mesa-board.js declara o estado/funções
+     compartilhadas que os outros usam, então tem que vir primeiro. -->
+<script src="js/mesa-board.js"></script>
+<script src="js/mesa-tools.js"></script>
+<script src="js/mesa-tokens.js"></script>
+<script src="js/mesa-dice.js"></script>
+<script src="js/mesa-chat.js"></script>
+<script src="js/mesa-init.js"></script>
+</body>
+</html>

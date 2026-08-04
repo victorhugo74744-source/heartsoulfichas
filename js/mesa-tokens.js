@@ -1,0 +1,1006 @@
+// ============================================================
+// Tokens: 'virar ficha'/token do jogador, lista e render dos tokens, HP por parte do corpo, aura, girar/redimensionar, iniciativa, alças de seleção (estilo Owlbear), mapa do Mestre.
+// Parte de mesa.js (dividido para facilitar manutenção).
+// Depende de variáveis/funções globais definidas em mesa-board.js
+// — carregar SEMPRE depois dele, na ordem dos <script> do mesa.html.
+// ============================================================
+
+// ------------------------------------------------------------- MEU TOKEN --
+// HTML da seção "entrar com ficha" — usada tanto por jogadores quanto pelo
+// Mestre (que também pode ter fichas próprias, criadas como jogador).
+function sheetSectionHtml() {
+  if (mySheets.length === 0) {
+    return `<h4>Sua ficha</h4><p class="tc-meta">Você ainda não tem nenhuma ficha criada. <a href="ficha-editor.html" target="_blank" rel="noopener">Criar ficha</a></p>`;
+  }
+  return `
+    <h4>Se transformar em ficha</h4>
+    <div class="field">
+      <select id="sheetSelect">
+        ${mySheets.map(s => `<option value="${s.id}">${escapeHtml(s.characterName || 'Sem nome')}</option>`).join('')}
+      </select>
+    </div>
+    <div class="my-color-row">
+      <button type="button" class="color-swatch" id="myColorSwatch" style="background:${myColor};" title="Sua cor na mesa"></button>
+      <span>Sua cor na mesa (aura e contorno da ficha)</span>
+    </div>
+    <button class="btn small" id="enterBoardBtn" style="width:auto;">Entrar na mesa com esta ficha</button>
+    <button class="btn secondary small" id="viewSheetBtn" style="width:auto; margin-top:8px;">📜 Ver ficha</button>
+    <button class="btn secondary small hidden" id="leaveBoardBtn" style="width:auto; margin-top:8px;">Sair da mesa</button>
+    <div class="error-msg hidden" id="enterErr"></div>`;
+}
+function wireSheetSection() {
+  if (mySheets.length === 0) return;
+  document.getElementById('enterBoardBtn').addEventListener('click', () => enterBoardAsSheet(document.getElementById('sheetSelect').value));
+  document.getElementById('leaveBoardBtn').addEventListener('click', leaveBoard);
+  document.getElementById('viewSheetBtn').addEventListener('click', () => openSheetModal(document.getElementById('sheetSelect').value));
+  document.getElementById('myColorSwatch').addEventListener('click', (e) => {
+    openColorWheel(e.currentTarget, myColor, async (hex) => {
+      myColor = hex;
+      setStoredColor(curUser.uid, hex);
+      e.currentTarget.style.background = hex;
+      // Se já tem token na mesa, atualiza a cor ao vivo pra todo mundo ver.
+      if (liveTokens[curUser.uid]) {
+        try { await db.collection('tables').doc(curTable.id).collection('tokens').doc(curUser.uid).update({ color: hex }); }
+        catch (err) { console.error('Erro ao atualizar cor:', err); }
+      }
+    });
+  });
+  // Se já existe um token meu nesta mesa, reflete isso na UI assim que os tokens carregarem
+  // (feito em renderAllTokens, que chama updateMyTokenUiState).
+}
+
+function renderMyTokenPanel() {
+  const panel = document.getElementById('myTokenPanel');
+  if (isTableOwner()) {
+    // O Mestre (dono desta mesa) vê as duas coisas: o form de NPC avulso e, logo abaixo, a
+    // mesma seção "entrar com ficha" que os jogadores têm — assim ele
+    // também pode colocar seu próprio personagem (ficha de jogador) na mesa.
+    panel.innerHTML = `
+      <h4>Adicionar token</h4>
+      <div class="field">
+        <input type="text" id="npcName" placeholder="Nome (ex.: Lobo Sombrio)">
+      </div>
+      <div class="field">
+        <input type="file" id="npcImage" accept="image/*">
+      </div>
+      <div class="my-color-row">
+        <button type="button" class="color-swatch" id="npcColorSwatch" style="background:${npcColor};" title="Cor deste token"></button>
+        <span>Cor do token (aura e contorno)</span>
+      </div>
+      <button class="btn small" id="addNpcBtn" style="width:auto;">Adicionar à mesa</button>
+      <div class="error-msg hidden" id="npcErr"></div>
+      <hr style="border-color:var(--hairline); margin:16px 0;">
+      ${sheetSectionHtml()}`;
+    document.getElementById('addNpcBtn').addEventListener('click', addNpcToken);
+    document.getElementById('npcColorSwatch').addEventListener('click', (e) => {
+      openColorWheel(e.currentTarget, npcColor, (hex) => {
+        npcColor = hex;
+        e.currentTarget.style.background = hex;
+      });
+    });
+    wireSheetSection();
+    return;
+  }
+
+  panel.innerHTML = sheetSectionHtml();
+  wireSheetSection();
+}
+
+function updateMyTokenUiState(hasToken) {
+  const enterBtn = document.getElementById('enterBoardBtn');
+  const leaveBtn = document.getElementById('leaveBoardBtn');
+  if (!enterBtn || !leaveBtn) return;
+  enterBtn.textContent = hasToken ? 'Atualizar aparência na mesa' : 'Entrar na mesa com esta ficha';
+  leaveBtn.classList.toggle('hidden', !hasToken);
+}
+
+async function enterBoardAsSheet(sheetId) {
+  const sheet = mySheets.find(s => s.id === sheetId);
+  const errEl = document.getElementById('enterErr');
+  if (!sheet) return;
+  try {
+    const ref = db.collection('tables').doc(curTable.id).collection('tokens').doc(curUser.uid);
+    const existing = await ref.get();
+    const tokenData = {
+      ownerId: curUser.uid,
+      sheetId: sheet.id,
+      name: sheet.characterName || curProfile.name || 'Personagem',
+      image: sheet.appearanceImage || curProfile.avatarImage || '',
+      color: myColor,
+      x: existing.exists ? existing.data().x : snapAxisToGrid(0.5, baseMapW, boardCellPx),
+      y: existing.exists ? existing.data().y : snapAxisToGrid(0.5, baseMapH, boardCellPx),
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    };
+    // Só define o HP inicial na primeira vez que este token é criado — se
+    // já existir (ex.: "Atualizar aparência"), o HP atual (já com dano ou
+    // cura acumulados na sessão) é preservado.
+    if (!existing.exists) tokenData.hp = hpFromSheetResources(sheet.resources);
+    await ref.set(tokenData, { merge: true });
+    // Registra esta mesa como "ativa" no perfil do jogador — é assim que
+    // js/editor.js sabe, na próxima vez que a ficha for salva, para quais
+    // mesas empurrar a aparência/nome atualizados automaticamente.
+    db.collection('users').doc(curUser.uid).update({
+      activeTables: firebase.firestore.FieldValue.arrayUnion(curTable.id)
+    }).catch(err => console.warn('Não foi possível registrar a mesa como ativa:', err));
+    errEl.classList.add('hidden');
+  } catch (err) {
+    errEl.textContent = 'Erro ao entrar na mesa: ' + err.message;
+    errEl.classList.remove('hidden');
+  }
+}
+
+async function leaveBoard() {
+  try {
+    await db.collection('tables').doc(curTable.id).collection('tokens').doc(curUser.uid).delete();
+    db.collection('users').doc(curUser.uid).update({
+      activeTables: firebase.firestore.FieldValue.arrayRemove(curTable.id)
+    }).catch(() => {});
+  } catch (err) {
+    alert('Erro ao sair da mesa: ' + err.message);
+  }
+}
+
+async function addNpcToken() {
+  const nameEl = document.getElementById('npcName');
+  const fileEl = document.getElementById('npcImage');
+  const errEl = document.getElementById('npcErr');
+  const name = nameEl.value.trim() || 'NPC';
+  try {
+    let image = '';
+    if (fileEl.files && fileEl.files[0]) image = await fileToResizedDataUrl(fileEl.files[0], 240);
+    await db.collection('tables').doc(curTable.id).collection('tokens').add({
+      ownerId: curUser.uid, name, image, npc: true, color: npcColor, sceneId: curTable.activeSceneId,
+      x: snapAxisToGrid(0.5, baseMapW, boardCellPx), y: snapAxisToGrid(0.5, baseMapH, boardCellPx),
+      hp: defaultTokenHp(),
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    npcColor = pickDefaultColor(name + Date.now()); // próximo NPC nasce com outra cor, pra distinguir na mesa
+    const swatch = document.getElementById('npcColorSwatch');
+    if (swatch) swatch.style.background = npcColor;
+    nameEl.value = ''; fileEl.value = '';
+    errEl.classList.add('hidden');
+  } catch (err) {
+    errEl.textContent = 'Erro ao adicionar: ' + err.message;
+    errEl.classList.remove('hidden');
+  }
+}
+
+// -------------------------------------------------------------- TOKENS --
+let liveTokens = {}; // id -> data (cache local do último snapshot)
+let hpEditExpanded = new Set(); // ids de token com o mini-editor de HP aberto na lista
+
+// Fichas de jogador acompanham o grupo em qualquer cena; já NPCs/monstros
+// avulsos (token.npc === true) só aparecem na cena em que foram criados —
+// assim, monstros de uma masmorra não "vazam" pra cena da taverna, por
+// exemplo. NPCs antigos (de antes deste recurso, sem sceneId salvo)
+// continuam aparecendo em qualquer cena, pra não sumir nada de mesas já em uso.
+function isTokenInActiveScene(tok) {
+  if (!tok.npc || !tok.sceneId) return true;
+  return tok.sceneId === (curTable && curTable.activeSceneId);
+}
+
+function listenTokens() {
+  tokenUnsub = db.collection('tables').doc(curTable.id).collection('tokens')
+    .onSnapshot(snap => {
+      liveTokens = {};
+      snap.forEach(d => { liveTokens[d.id] = { id: d.id, ...d.data() }; });
+      renderAllTokens();
+    }, err => console.error('Erro ao sincronizar tokens:', err));
+}
+
+function renderAllTokens() {
+  const surface = document.getElementById('boardSurface');
+  if (!surface) return;
+
+  // Remove tokens que não existem mais (ou que pertencem a outra cena).
+  surface.querySelectorAll('.token').forEach(el => {
+    const t = liveTokens[el.dataset.id];
+    if (!t || !isTokenInActiveScene(t)) el.remove();
+  });
+  surface.querySelectorAll('.token-aura').forEach(el => {
+    const t = liveTokens[el.dataset.auraId];
+    if (!t || !isTokenInActiveScene(t)) el.remove();
+  });
+
+  // O board-surface agora sempre fica no tamanho "natural" (sem zoom) — quem
+  // escala tudo (mapa, grade e tokens) é o transform aplicado nele. Por isso
+  // aqui usamos as medidas cruas do mapa e da célula, sem multiplicar pelo
+  // zoom: o token acompanha o zoom de graça, por ser filho do surface.
+  const w = baseMapW;
+  const h = baseMapH;
+
+  Object.values(liveTokens).forEach(tok => {
+    if (tok.id === draggingTokenId) return; // não sobrescreve enquanto o próprio usuário arrasta
+    if (tok.id === handleDraggingTokenId) return; // idem, enquanto arrasta a alça de girar/redimensionar
+    if (!isTokenInActiveScene(tok)) return; // NPC pertence a outra cena: não aparece no mapa agora
+    // Tamanho por token: célula da grade × o multiplicador próprio do token
+    // (ferramenta de redimensionar, na lista lateral) — assim uma criatura
+    // "grande" pode ocupar mais de uma célula sem mudar o zoom de ninguém.
+    const tokenPx = Math.max(8, Math.round(boardCellPx * (tok.scale || 1)));
+    let el = surface.querySelector(`.token[data-id="${tok.id}"]`);
+    if (!el) {
+      el = document.createElement('div');
+      el.className = 'token';
+      el.dataset.id = tok.id;
+      surface.appendChild(el);
+      attachTokenDragHandlers(el, tok.id);
+    }
+    el.classList.toggle('mine', tok.ownerId === curUser.uid);
+    el.classList.toggle('active-turn', !!activeInitiativeId && tok.id === activeInitiativeId);
+    el.style.width = tokenPx + 'px';
+    el.style.height = tokenPx + 'px';
+    el.style.marginLeft = (-tokenPx / 2) + 'px';
+    el.style.marginTop = (-tokenPx / 2) + 'px';
+    el.style.left = (tok.x * w) + 'px';
+    el.style.top = (tok.y * h) + 'px';
+    // Camada (trazer para frente / enviar para trás, na lista lateral):
+    // cada token guarda um "z" próprio; a base 1000 garante que qualquer
+    // token sempre fique acima do mapa/desenhos/névoa, só concorrendo em
+    // ordem entre si.
+    el.style.zIndex = String(1000 + (tok.z || 0));
+    // A cor escolhida na roda cromática (se houver) vence o contorno padrão
+    // dourado/verde — é ela que faz o token "ser" da cor do usuário.
+    el.style.borderColor = tok.color || '';
+
+    // Aura: círculo colorido por trás do token, com raio em nº de casas da
+    // grade (tok.auraRadius) — igual à ferramenta de luz/visão do Owlbear.
+    let auraEl = surface.querySelector(`.token-aura[data-aura-id="${tok.id}"]`);
+    if (tok.auraOn && tok.auraRadius) {
+      const auraPx = tokenPx + Math.round(tok.auraRadius * 2 * boardCellPx);
+      if (!auraEl) {
+        auraEl = document.createElement('div');
+        auraEl.className = 'token-aura';
+        auraEl.dataset.auraId = tok.id;
+        surface.appendChild(auraEl);
+      }
+      const auraColor = tok.color || '#c9a15c';
+      auraEl.style.width = auraPx + 'px';
+      auraEl.style.height = auraPx + 'px';
+      auraEl.style.marginLeft = (-auraPx / 2) + 'px';
+      auraEl.style.marginTop = (-auraPx / 2) + 'px';
+      auraEl.style.left = (tok.x * w) + 'px';
+      auraEl.style.top = (tok.y * h) + 'px';
+      auraEl.style.background = `radial-gradient(circle, ${hexToRgba(auraColor, 0.20)} 55%, ${hexToRgba(auraColor, 0.32)} 88%, ${hexToRgba(auraColor, 0)} 100%)`;
+      auraEl.style.border = `1px solid ${hexToRgba(auraColor, 0.55)}`;
+    } else if (auraEl) {
+      auraEl.remove();
+    }
+
+    const rot = tok.rot || 0;
+    el.innerHTML = tok.image
+      ? `<img src="${escapeHtml(tok.image)}" alt="" style="transform:rotate(${rot}deg);">`
+      : `<div class="token-ph" style="transform:rotate(${rot}deg);">👤</div>`;
+    el.innerHTML += `<span class="token-label">${escapeHtml(tok.name || '')}</span>`;
+    el.innerHTML += tokenHpBarHtml(tok);
+  });
+
+  renderTokenListPanel();
+  renderDiceTargetOptions();
+  updateSelectionHandles();
+
+  if (!isTableOwner()) {
+    updateMyTokenUiState(!!liveTokens[curUser.uid]);
+  }
+}
+
+function renderTokenListPanel() {
+  const body = document.getElementById('tokenListBody');
+  const tokens = Object.values(liveTokens);
+  if (tokens.length === 0) { body.innerHTML = `<span class="tc-meta">Nenhum token ainda.</span>`; return; }
+  const canManage = isTableOwner();
+  body.innerHTML = tokens.map(t => {
+    // Cada jogador gira/redimensiona o próprio token; o Mestre pode mexer em qualquer um.
+    const canEdit = canManage || t.ownerId === curUser.uid;
+    const elsewhere = t.npc && t.sceneId && t.sceneId !== curTable.activeSceneId;
+    const hp = t.hp || {};
+    const sumCur = BODY_PARTS_TABLE.reduce((a, [k]) => a + ((hp[k] && hp[k].cur) || 0), 0);
+    const sumMax = BODY_PARTS_TABLE.reduce((a, [k]) => a + ((hp[k] && hp[k].max) || 0), 0);
+    const expanded = hpEditExpanded.has(t.id);
+    return `
+    <div class="token-row ${elsewhere ? 'token-row-elsewhere' : ''}">
+      <span class="${t.sheetId ? 'tr-name' : ''}" ${t.sheetId ? `data-view-sheet="${t.sheetId}"` : ''}>${escapeHtml(t.name || 'Token')}${elsewhere ? ' <span class="tc-meta">(outra cena)</span>' : ''}</span>
+      <div class="tr-tools">
+        ${sumMax ? `<span class="tr-hp-summary" title="HP total (soma das partes)">❤ ${sumCur}/${sumMax}</span>` : ''}
+        ${canEdit && !elsewhere ? `<button data-hp-toggle="${t.id}" title="Ver/editar HP por parte">${expanded ? '❤︎ fechar' : '❤ HP'}</button>` : ''}
+        ${elsewhere && canManage ? `<button data-bring-scene="${t.id}" title="Trazer este NPC para a cena atual">📥 trazer</button>` : ''}
+        ${canEdit && !elsewhere ? `
+          <button data-tcolor="${t.id}" style="background:${t.color || '#c9a15c'}; width:14px; height:14px; border-radius:50%; padding:0; border:1px solid var(--hairline-soft);" title="Cor do token"></button>
+          <button data-aura-toggle="${t.id}" title="${t.auraOn ? 'Desligar aura' : 'Ligar aura'}">${t.auraOn ? '💡' : '🕯'}</button>
+          ${t.auraOn ? `
+            <button data-aura-delta="${t.id}" data-delta="-0.5" title="Diminuir aura">−</button>
+            <input type="number" class="aura-radius-input" data-aura-input="${t.id}" value="${t.auraRadius || 2}" min="0.5" step="0.5" title="Raio da aura (em quadrados)">
+            <button data-aura-delta="${t.id}" data-delta="0.5" title="Aumentar aura">+</button>
+          ` : ''}
+          <button data-rotate="${t.id}" data-delta="-15" title="Girar à esquerda">⟲</button>
+          <button data-rotate="${t.id}" data-delta="15" title="Girar à direita">⟳</button>
+          <button data-scale="${t.id}" data-delta="-0.25" title="Diminuir">−</button>
+          <button data-scale="${t.id}" data-delta="0.25" title="Aumentar">+</button>
+          <button data-tofront="${t.id}" title="Trazer para frente (fica por cima dos outros tokens)">⬆︎</button>
+          <button data-toback="${t.id}" title="Enviar para trás (fica por baixo dos outros tokens)">⬇︎</button>
+        ` : ''}
+        ${canManage ? `<button data-remove="${t.id}">remover</button>` : ''}
+      </div>
+    </div>
+    ${expanded && canEdit && !elsewhere ? `
+    <div class="token-hp-edit">
+      ${BODY_PARTS_TABLE.map(([k, label]) => {
+        const part = hp[k] || { max: 0, cur: 0 };
+        return `<span class="hp-part">${label}:
+          <input type="number" data-hp-cur="${t.id}" data-part="${k}" value="${part.cur}" title="HP atual — ${label}">
+          / <input type="number" data-hp-max="${t.id}" data-part="${k}" value="${part.max}" title="HP máximo — ${label}">
+        </span>`;
+      }).join('')}
+    </div>` : ''}`;
+  }).join('');
+  body.querySelectorAll('[data-bring-scene]').forEach(b => b.addEventListener('click', () =>
+    db.collection('tables').doc(curTable.id).collection('tokens').doc(b.dataset.bringScene)
+      .update({ sceneId: curTable.activeSceneId }).catch(err => console.error('Erro ao trazer NPC:', err))
+  ));
+  body.querySelectorAll('[data-view-sheet]').forEach(el =>
+    el.addEventListener('click', () => openSheetModal(el.dataset.viewSheet))
+  );
+  body.querySelectorAll('[data-tcolor]').forEach(b => b.addEventListener('click', () => {
+    const t = liveTokens[b.dataset.tcolor];
+    openColorWheel(b, (t && t.color) || '#c9a15c', async (hex) => {
+      try {
+        await db.collection('tables').doc(curTable.id).collection('tokens').doc(b.dataset.tcolor).update({ color: hex });
+        if (b.dataset.tcolor === curUser.uid) {
+          myColor = hex; setStoredColor(curUser.uid, hex);
+          const sw = document.getElementById('myColorSwatch');
+          if (sw) sw.style.background = hex;
+        }
+      } catch (err) { console.error('Erro ao mudar cor do token:', err); }
+    });
+  }));
+  body.querySelectorAll('[data-aura-toggle]').forEach(b =>
+    b.addEventListener('click', () => toggleTokenAura(b.dataset.auraToggle))
+  );
+  body.querySelectorAll('[data-aura-delta]').forEach(b =>
+    b.addEventListener('click', () => adjustTokenAuraRadius(b.dataset.auraDelta, parseFloat(b.dataset.delta)))
+  );
+  body.querySelectorAll('[data-aura-input]').forEach(inp => {
+    // Confirma com Enter ou ao sair do campo; clique no campo não deve fechar o painel.
+    inp.addEventListener('click', (e) => e.stopPropagation());
+    inp.addEventListener('keydown', (e) => { if (e.key === 'Enter') inp.blur(); });
+    inp.addEventListener('change', () => setTokenAuraRadius(inp.dataset.auraInput, parseFloat(inp.value)));
+  });
+  body.querySelectorAll('[data-rotate]').forEach(b =>
+    b.addEventListener('click', () => rotateToken(b.dataset.rotate, parseFloat(b.dataset.delta)))
+  );
+  body.querySelectorAll('[data-scale]').forEach(b =>
+    b.addEventListener('click', () => scaleToken(b.dataset.scale, parseFloat(b.dataset.delta)))
+  );
+  body.querySelectorAll('[data-tofront]').forEach(b =>
+    b.addEventListener('click', () => bringTokenToFront(b.dataset.tofront))
+  );
+  body.querySelectorAll('[data-toback]').forEach(b =>
+    b.addEventListener('click', () => sendTokenToBack(b.dataset.toback))
+  );
+  if (canManage) {
+    body.querySelectorAll('[data-remove]').forEach(b => b.addEventListener('click', () =>
+      db.collection('tables').doc(curTable.id).collection('tokens').doc(b.dataset.remove).delete()
+    ));
+  }
+  body.querySelectorAll('[data-hp-toggle]').forEach(b => b.addEventListener('click', () => {
+    const id = b.dataset.hpToggle;
+    if (hpEditExpanded.has(id)) hpEditExpanded.delete(id); else hpEditExpanded.add(id);
+    renderTokenListPanel();
+  }));
+  body.querySelectorAll('[data-hp-cur]').forEach(inp => {
+    inp.addEventListener('click', (e) => e.stopPropagation());
+    inp.addEventListener('keydown', (e) => { if (e.key === 'Enter') inp.blur(); });
+    inp.addEventListener('change', () => setTokenHpPart(inp.dataset.hpCur, inp.dataset.part, 'cur', inp.value));
+  });
+  body.querySelectorAll('[data-hp-max]').forEach(inp => {
+    inp.addEventListener('click', (e) => e.stopPropagation());
+    inp.addEventListener('keydown', (e) => { if (e.key === 'Enter') inp.blur(); });
+    inp.addEventListener('change', () => setTokenHpPart(inp.dataset.hpMax, inp.dataset.part, 'max', inp.value));
+  });
+}
+
+// Edição manual de uma única parte do HP de um token, direto na lista
+// lateral — útil para corrigir um valor ou configurar o HP inicial de um
+// NPC avulso (que não tem ficha própria pra puxar os valores automaticamente).
+async function setTokenHpPart(tokenId, partKey, field, rawValue) {
+  const tok = liveTokens[tokenId]; if (!tok) return;
+  const value = parseInt(rawValue, 10);
+  if (isNaN(value) || value < 0) { renderTokenListPanel(); return; }
+  const hp = Object.assign({}, defaultTokenHp(), tok.hp || {});
+  const part = Object.assign({ max: 0, cur: 0 }, hp[partKey] || {});
+  part[field] = value;
+  if (field === 'max' && part.cur > value) part.cur = value; // não deixa o atual passar do novo máximo
+  hp[partKey] = part;
+  try {
+    await db.collection('tables').doc(curTable.id).collection('tokens').doc(tokenId)
+      .update({ hp, updatedAt: firebase.firestore.FieldValue.serverTimestamp() });
+    if (tok.sheetId) await syncTokenHpToSheet(tok.sheetId, hp);
+  } catch (err) {
+    console.error('Erro ao editar HP do token:', err);
+    renderTokenListPanel();
+  }
+}
+
+async function toggleTokenAura(tokenId) {
+  const tok = liveTokens[tokenId]; if (!tok) return;
+  try {
+    await db.collection('tables').doc(curTable.id).collection('tokens').doc(tokenId)
+      .update({ auraOn: !tok.auraOn, auraRadius: tok.auraRadius || 2 });
+  } catch (err) { console.error('Erro ao alternar aura:', err); }
+}
+
+async function adjustTokenAuraRadius(tokenId, delta) {
+  const tok = liveTokens[tokenId]; if (!tok) return;
+  const r = Math.max(0.5, Math.round(((tok.auraRadius || 2) + delta) * 10) / 10);
+  try {
+    await db.collection('tables').doc(curTable.id).collection('tokens').doc(tokenId).update({ auraRadius: r });
+  } catch (err) { console.error('Erro ao ajustar raio da aura:', err); }
+}
+
+async function setTokenAuraRadius(tokenId, value) {
+  const tok = liveTokens[tokenId]; if (!tok) return;
+  if (isNaN(value)) { renderTokenListPanel(); return; } // valor inválido: repinta com o valor salvo
+  const r = Math.max(0.5, Math.round(value * 10) / 10);
+  try {
+    await db.collection('tables').doc(curTable.id).collection('tokens').doc(tokenId).update({ auraRadius: r });
+  } catch (err) { console.error('Erro ao definir raio da aura:', err); }
+}
+
+async function rotateToken(tokenId, delta) {
+  const tok = liveTokens[tokenId]; if (!tok) return;
+  const rot = ((tok.rot || 0) + delta + 360) % 360;
+  try {
+    await db.collection('tables').doc(curTable.id).collection('tokens').doc(tokenId).update({ rot });
+  } catch (err) { console.error('Erro ao girar token:', err); }
+}
+
+async function scaleToken(tokenId, delta) {
+  const tok = liveTokens[tokenId]; if (!tok) return;
+  const scale = Math.max(0.5, Math.round(((tok.scale || 1) + delta) * 100) / 100);
+  try {
+    await db.collection('tables').doc(curTable.id).collection('tokens').doc(tokenId).update({ scale });
+  } catch (err) { console.error('Erro ao redimensionar token:', err); }
+}
+
+// Camada dos tokens (estilo Owlbear): cada token guarda um "z" próprio,
+// só relevante quando dois tokens se sobrepõem no mapa (ex.: uma criatura
+// grande cobrindo outra menor) — "trazer para frente" fica acima de todo
+// mundo, "enviar para trás" fica abaixo de todo mundo.
+async function bringTokenToFront(tokenId) {
+  const tok = liveTokens[tokenId]; if (!tok) return;
+  const maxZ = Object.values(liveTokens).reduce((m, t) => Math.max(m, t.z || 0), 0);
+  try {
+    await db.collection('tables').doc(curTable.id).collection('tokens').doc(tokenId).update({ z: maxZ + 1 });
+  } catch (err) { console.error('Erro ao trazer token para frente:', err); }
+}
+
+async function sendTokenToBack(tokenId) {
+  const tok = liveTokens[tokenId]; if (!tok) return;
+  const minZ = Object.values(liveTokens).reduce((m, t) => Math.min(m, t.z || 0), 0);
+  try {
+    await db.collection('tables').doc(curTable.id).collection('tokens').doc(tokenId).update({ z: minZ - 1 });
+  } catch (err) { console.error('Erro ao enviar token para trás:', err); }
+}
+
+// ------------------------------------------------------------ INICIATIVA --
+// Rastreador de turnos: o Mestre adiciona os tokens presentes à lista,
+// define o valor de iniciativa de cada um (a lista sempre aparece ordenada
+// do maior pro menor) e avança quem está na vez. Todos na mesa veem a
+// ordem; o token do turno atual ganha um contorno destacado no mapa.
+function sortedInitiativeList() {
+  return Object.values(liveInitiative).sort((a, b) => (b.value || 0) - (a.value || 0));
+}
+
+function listenInitiative() {
+  initiativeUnsub = db.collection('tables').doc(curTable.id).collection('initiative')
+    .onSnapshot(snap => {
+      liveInitiative = {};
+      activeInitiativeId = null;
+      snap.forEach(d => {
+        if (d.id === '_active') { activeInitiativeId = d.data().activeId || null; return; }
+        liveInitiative[d.id] = { id: d.id, ...d.data() };
+      });
+      renderInitiativePanel();
+      renderAllTokens(); // atualiza o contorno de "turno atual" sobre os tokens
+    }, err => console.error('Erro ao sincronizar iniciativa:', err));
+}
+
+async function addAllTokensToInitiative() {
+  const batch = db.batch();
+  let any = false;
+  Object.values(liveTokens).forEach(t => {
+    if (liveInitiative[t.id]) return;
+    if (!isTokenInActiveScene(t)) return; // NPC de outra cena: não faz parte deste combate
+    any = true;
+    batch.set(db.collection('tables').doc(curTable.id).collection('initiative').doc(t.id), {
+      name: t.name || 'Token', value: 0
+    });
+  });
+  if (!any) return;
+  try { await batch.commit(); } catch (err) { alert('Erro ao adicionar à iniciativa: ' + err.message); }
+}
+
+async function setInitiativeValue(id, value) {
+  const v = Math.max(-99, Math.min(99, Math.round(Number(value) || 0)));
+  try {
+    await db.collection('tables').doc(curTable.id).collection('initiative').doc(id)
+      .set({ name: (liveInitiative[id] && liveInitiative[id].name) || 'Token', value: v }, { merge: true });
+  } catch (err) { console.error('Erro ao ajustar iniciativa:', err); }
+}
+
+async function removeInitiativeEntry(id) {
+  try {
+    await db.collection('tables').doc(curTable.id).collection('initiative').doc(id).delete();
+    if (activeInitiativeId === id) {
+      await db.collection('tables').doc(curTable.id).collection('initiative').doc('_active').set({ activeId: null });
+    }
+  } catch (err) { console.error('Erro ao remover da iniciativa:', err); }
+}
+
+async function clearInitiative() {
+  if (!confirm('Limpar toda a lista de iniciativa?')) return;
+  try {
+    const snap = await db.collection('tables').doc(curTable.id).collection('initiative').get();
+    const batch = db.batch();
+    snap.forEach(d => batch.delete(d.ref));
+    await batch.commit();
+  } catch (err) { alert('Erro ao limpar iniciativa: ' + err.message); }
+}
+
+async function nextInitiativeTurn() {
+  const list = sortedInitiativeList();
+  if (!list.length) return;
+  const idx = list.findIndex(e => e.id === activeInitiativeId);
+  const next = list[(idx + 1) % list.length];
+  try {
+    await db.collection('tables').doc(curTable.id).collection('initiative').doc('_active').set({ activeId: next.id });
+  } catch (err) { console.error('Erro ao avançar turno:', err); }
+}
+
+function renderInitiativePanel() {
+  const panel = document.getElementById('initiativePanel');
+  if (!panel) return;
+  const isMaster = isTableOwner();
+  const list = sortedInitiativeList();
+
+  const rowsHtml = list.length
+    ? list.map(e => `
+      <div class="token-row${e.id === activeInitiativeId ? ' init-active' : ''}">
+        <span>${e.id === activeInitiativeId ? '▶ ' : ''}${escapeHtml(e.name || 'Token')}</span>
+        <div class="tr-tools">
+          ${isMaster ? `<input type="number" class="init-value" data-init-value="${e.id}" value="${e.value || 0}">` : `<span class="tc-meta">${e.value || 0}</span>`}
+          ${isMaster ? `<button data-init-remove="${e.id}" title="Remover da iniciativa">remover</button>` : ''}
+        </div>
+      </div>`).join('')
+    : `<span class="tc-meta">Ninguém na iniciativa ainda.</span>`;
+
+  panel.innerHTML = `
+    <h4>⚔️ Iniciativa</h4>
+    ${isMaster ? `
+      <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:10px;">
+        <button class="btn secondary small" id="initAddAllBtn" style="width:auto;">+ Adicionar tokens presentes</button>
+        <button class="btn small" id="initNextBtn" style="width:auto;">Próximo turno ▶</button>
+        <button class="btn-link" id="initClearBtn">Limpar</button>
+      </div>` : ''}
+    <div id="initiativeBody">${rowsHtml}</div>`;
+
+  if (isMaster) {
+    document.getElementById('initAddAllBtn').addEventListener('click', addAllTokensToInitiative);
+    document.getElementById('initNextBtn').addEventListener('click', nextInitiativeTurn);
+    document.getElementById('initClearBtn').addEventListener('click', clearInitiative);
+    panel.querySelectorAll('[data-init-value]').forEach(inp => {
+      inp.addEventListener('change', () => setInitiativeValue(inp.dataset.initValue, inp.value));
+    });
+    panel.querySelectorAll('[data-init-remove]').forEach(b => {
+      b.addEventListener('click', () => removeInitiativeEntry(b.dataset.initRemove));
+    });
+  }
+}
+
+// -------------------------------------------------------- VER FICHA (modal) --
+function openSheetModal(sheetId) {
+  if (!sheetId) return;
+  document.getElementById('sheetModalFrame').src = `ficha-view.html?id=${encodeURIComponent(sheetId)}`;
+  document.getElementById('sheetModalOverlay').classList.add('open');
+}
+
+function closeSheetModal() {
+  document.getElementById('sheetModalOverlay').classList.remove('open');
+  document.getElementById('sheetModalFrame').src = 'about:blank';
+}
+
+// Encaixa uma coordenada normalizada (0..1) no centro da célula de grade
+// mais próxima, no eixo indicado. cellScreen é o tamanho da célula na tela
+// (já com zoom aplicado); axisPx é a largura ou altura da mesa na tela.
+function snapAxisToGrid(value, axisPx, cellScreen) {
+  if (!cellScreen) return value;
+  const px = value * axisPx;
+  const snappedPx = Math.floor(px / cellScreen) * cellScreen + cellScreen / 2;
+  return Math.min(1, Math.max(0, snappedPx / axisPx));
+}
+
+function attachTokenDragHandlers(el, tokenId) {
+  el.addEventListener('pointerdown', (e) => {
+    const tok = liveTokens[tokenId];
+    const canDrag = isTableOwner() || (tok && tok.ownerId === curUser.uid);
+    if (!canDrag) return;
+    e.preventDefault();
+    e.stopPropagation(); // não deixa o pointerdown "vazar" pro pan do mapa (board-wrap)
+    draggingTokenId = tokenId;
+    el.classList.add('dragging');
+    el.setPointerCapture(e.pointerId);
+    const startClientX = e.clientX, startClientY = e.clientY;
+
+    const surface = document.getElementById('boardSurface');
+    // localW/localH: tamanho natural do surface (sem zoom) — é nesse espaço
+    // que left/top do token são interpretados, já que o zoom é só visual
+    // (aplicado via transform no elemento pai). rect (em getBoundingClientRect,
+    // recalculado a cada movimento) já reflete o zoom/pan atuais na tela, e
+    // serve só pra converter a posição do ponteiro em fração 0..1 do mapa.
+    const localW = surface.offsetWidth || baseMapW;
+    const localH = surface.offsetHeight || baseMapH;
+
+    // Aura do próprio token (se tiver): precisa se mover junto durante o
+    // arrasto, senão fica "grudada" na posição antiga até soltar.
+    const auraEl = surface.querySelector(`.token-aura[data-aura-id="${tokenId}"]`);
+
+    const move = (ev) => {
+      const rect = surface.getBoundingClientRect();
+      let x = (ev.clientX - rect.left) / rect.width;
+      let y = (ev.clientY - rect.top) / rect.height;
+      x = Math.min(1, Math.max(0, x));
+      y = Math.min(1, Math.max(0, y));
+      el.style.left = (x * localW) + 'px';
+      el.style.top = (y * localH) + 'px';
+      if (auraEl) {
+        auraEl.style.left = (x * localW) + 'px';
+        auraEl.style.top = (y * localH) + 'px';
+      }
+      el._lastX = x; el._lastY = y;
+      el._freePlace = ev.altKey; // segurar Alt/Option solta sem encaixar na grade
+    };
+
+    const up = async (ev) => {
+      el.removeEventListener('pointermove', move);
+      el.removeEventListener('pointerup', up);
+      el.removeEventListener('pointercancel', up);
+      el.classList.remove('dragging');
+      draggingTokenId = null;
+
+      // Um clique simples (quase sem arrastar) seleciona/deseleciona o
+      // token em vez de mover — é o que abre as alças de girar/redimensionar
+      // direto sobre ele, no estilo Owlbear Rodeo. No toque o limiar é maior
+      // que no mouse (dedo treme mais que um cursor), senão um simples
+      // "tap" pra selecionar acaba sendo lido como um micro-arrasto e
+      // desloca o token por engano.
+      const moved = Math.hypot(ev.clientX - startClientX, ev.clientY - startClientY);
+      const tapThreshold = ev.pointerType === 'touch' ? 14 : 6;
+      if (moved < tapThreshold) {
+        selectedTokenId = (selectedTokenId === tokenId) ? null : tokenId;
+        renderTokenListPanel();
+        updateSelectionHandles();
+        return;
+      }
+      if (el._lastX === undefined) return;
+
+      let finalX = el._lastX, finalY = el._lastY;
+      const shouldSnap = snapToGrid && !el._freePlace;
+      if (shouldSnap) {
+        finalX = snapAxisToGrid(finalX, localW, boardCellPx);
+        finalY = snapAxisToGrid(finalY, localH, boardCellPx);
+        el.style.left = (finalX * localW) + 'px';
+        el.style.top = (finalY * localH) + 'px';
+      }
+
+      try {
+        await db.collection('tables').doc(curTable.id).collection('tokens').doc(tokenId)
+          .update({ x: finalX, y: finalY, updatedAt: firebase.firestore.FieldValue.serverTimestamp() });
+        if (selectedTokenId === tokenId) updateSelectionHandles();
+      } catch (err) {
+        console.error('Erro ao salvar posição do token:', err);
+      }
+    };
+
+    el.addEventListener('pointermove', move);
+    el.addEventListener('pointerup', up);
+    el.addEventListener('pointercancel', up);
+  });
+}
+
+// -------------------------------------------------- ALÇAS DO TOKEN (owlbear) --
+// Ao selecionar um token (clique simples nele), aparecem duas alças por
+// cima dele: uma para girar (arrasta em volta) e outra para redimensionar
+// (arrasta pra fora/dentro) — exatamente como no Owlbear Rodeo, em vez de
+// só botões +/− numa lista ao lado. Cada jogador só vê/mexe nas alças do
+// próprio token; o Mestre pode usar as de qualquer um.
+function getSelectionHandleGeometry(tok, overrides) {
+  const scale = (overrides && overrides.scale != null) ? overrides.scale : (tok.scale || 1);
+  const rot = (overrides && overrides.rot != null) ? overrides.rot : (tok.rot || 0);
+  const tokenPx = Math.max(8, Math.round(boardCellPx * scale));
+  return { tokenPx, rot, scale };
+}
+
+function updateSelectionHandles(overrides) {
+  const surface = document.getElementById('boardSurface');
+  if (!surface) return;
+  const tok = selectedTokenId ? liveTokens[selectedTokenId] : null;
+  const canEdit = tok && curProfile && (isTableOwner() || tok.ownerId === curUser.uid);
+  let wrap = document.getElementById('tokenHandles');
+  if (!tok || !canEdit) {
+    if (wrap) wrap.remove();
+    return;
+  }
+  if (!wrap) {
+    wrap = document.createElement('div');
+    wrap.id = 'tokenHandles';
+    wrap.className = 'token-handles';
+    wrap.innerHTML = `
+      <div class="token-select-ring"></div>
+      <div class="token-handle handle-rotate" title="Arrastar para girar (segure Shift para girar em passos de 15°)">⟳</div>
+      <div class="token-handle handle-resize" title="Arrastar para redimensionar">⤡</div>`;
+    surface.appendChild(wrap);
+    attachHandleDragHandlers(wrap);
+  }
+  const { tokenPx, rot } = getSelectionHandleGeometry(tok, overrides);
+  wrap.style.left = (tok.x * baseMapW) + 'px';
+  wrap.style.top = (tok.y * baseMapH) + 'px';
+
+  const ring = wrap.querySelector('.token-select-ring');
+  const ringPx = tokenPx + 10;
+  ring.style.width = ringPx + 'px';
+  ring.style.height = ringPx + 'px';
+  ring.style.marginLeft = (-ringPx / 2) + 'px';
+  ring.style.marginTop = (-ringPx / 2) + 'px';
+
+  const rotR = tokenPx / 2 + 26;
+  const rad = rot * Math.PI / 180;
+  const rotateHandle = wrap.querySelector('.handle-rotate');
+  rotateHandle.style.left = (Math.sin(rad) * rotR) + 'px';
+  rotateHandle.style.top = (-Math.cos(rad) * rotR) + 'px';
+
+  const resizeR = (tokenPx / 2) * Math.SQRT1_2;
+  const resizeHandle = wrap.querySelector('.handle-resize');
+  resizeHandle.style.left = resizeR + 'px';
+  resizeHandle.style.top = resizeR + 'px';
+}
+
+// Aplica visualmente (sem esperar o Firestore) o novo tamanho/rotação
+// enquanto a alça está sendo arrastada — igual ao arrasto de posição.
+function applyLiveTokenVisual(tokenId, overrides) {
+  const surface = document.getElementById('boardSurface');
+  if (!surface) return;
+  const el = surface.querySelector(`.token[data-id="${tokenId}"]`);
+  const tok = liveTokens[tokenId];
+  if (!el || !tok) return;
+  if (overrides.scale != null) {
+    const tokenPx = Math.max(8, Math.round(boardCellPx * overrides.scale));
+    el.style.width = tokenPx + 'px';
+    el.style.height = tokenPx + 'px';
+    el.style.marginLeft = (-tokenPx / 2) + 'px';
+    el.style.marginTop = (-tokenPx / 2) + 'px';
+    const auraEl = surface.querySelector(`.token-aura[data-aura-id="${tokenId}"]`);
+    if (auraEl && tok.auraOn) {
+      const auraPx = tokenPx + Math.round((tok.auraRadius || 2) * 2 * boardCellPx);
+      auraEl.style.width = auraPx + 'px';
+      auraEl.style.height = auraPx + 'px';
+      auraEl.style.marginLeft = (-auraPx / 2) + 'px';
+      auraEl.style.marginTop = (-auraPx / 2) + 'px';
+    }
+  }
+  if (overrides.rot != null) {
+    el.querySelectorAll('img, .token-ph').forEach(n => { n.style.transform = `rotate(${overrides.rot}deg)`; });
+  }
+}
+
+function attachHandleDragHandlers(wrap) {
+  const rotateHandle = wrap.querySelector('.handle-rotate');
+  const resizeHandle = wrap.querySelector('.handle-resize');
+
+  rotateHandle.addEventListener('pointerdown', (e) => {
+    e.preventDefault(); e.stopPropagation();
+    const tokenId = selectedTokenId;
+    const tok = liveTokens[tokenId];
+    if (!tok) return;
+    handleDraggingTokenId = tokenId;
+    rotateHandle.setPointerCapture(e.pointerId);
+    const surface = document.getElementById('boardSurface');
+    let liveRot = tok.rot || 0;
+
+    const move = (ev) => {
+      const rect = surface.getBoundingClientRect();
+      const cx = rect.left + tok.x * rect.width;
+      const cy = rect.top + tok.y * rect.height;
+      let angle = Math.atan2(ev.clientX - cx, -(ev.clientY - cy)) * 180 / Math.PI;
+      if (angle < 0) angle += 360;
+      if (ev.shiftKey) angle = Math.round(angle / 15) * 15 % 360; // Shift: girar em passos de 15°
+      liveRot = angle;
+      applyLiveTokenVisual(tokenId, { rot: liveRot });
+      updateSelectionHandles({ rot: liveRot });
+    };
+    const up = async () => {
+      rotateHandle.removeEventListener('pointermove', move);
+      rotateHandle.removeEventListener('pointerup', up);
+      rotateHandle.removeEventListener('pointercancel', up);
+      handleDraggingTokenId = null;
+      try {
+        await db.collection('tables').doc(curTable.id).collection('tokens').doc(tokenId).update({ rot: liveRot });
+      } catch (err) { console.error('Erro ao girar token:', err); }
+    };
+    rotateHandle.addEventListener('pointermove', move);
+    rotateHandle.addEventListener('pointerup', up);
+    rotateHandle.addEventListener('pointercancel', up);
+  });
+
+  resizeHandle.addEventListener('pointerdown', (e) => {
+    e.preventDefault(); e.stopPropagation();
+    const tokenId = selectedTokenId;
+    const tok = liveTokens[tokenId];
+    if (!tok) return;
+    handleDraggingTokenId = tokenId;
+    resizeHandle.setPointerCapture(e.pointerId);
+    const surface = document.getElementById('boardSurface');
+    const scale0 = tok.scale || 1;
+    const rect0 = surface.getBoundingClientRect();
+    const cx0 = rect0.left + tok.x * rect0.width;
+    const cy0 = rect0.top + tok.y * rect0.height;
+    const dist0 = Math.max(1, Math.hypot(e.clientX - cx0, e.clientY - cy0));
+    let liveScale = scale0;
+
+    const move = (ev) => {
+      const rect = surface.getBoundingClientRect();
+      const cx = rect.left + tok.x * rect.width;
+      const cy = rect.top + tok.y * rect.height;
+      const dist = Math.hypot(ev.clientX - cx, ev.clientY - cy);
+      let scale = scale0 * (dist / dist0);
+      scale = Math.max(0.5, Math.round(scale * 20) / 20);
+      liveScale = scale;
+      applyLiveTokenVisual(tokenId, { scale: liveScale });
+      updateSelectionHandles({ scale: liveScale });
+    };
+    const up = async () => {
+      resizeHandle.removeEventListener('pointermove', move);
+      resizeHandle.removeEventListener('pointerup', up);
+      resizeHandle.removeEventListener('pointercancel', up);
+      handleDraggingTokenId = null;
+      try {
+        await db.collection('tables').doc(curTable.id).collection('tokens').doc(tokenId).update({ scale: liveScale });
+      } catch (err) { console.error('Erro ao redimensionar token:', err); }
+    };
+    resizeHandle.addEventListener('pointermove', move);
+    resizeHandle.addEventListener('pointerup', up);
+    resizeHandle.addEventListener('pointercancel', up);
+  });
+}
+
+function attachBoardDragHandlers() {
+  // Placeholder para futura interação direta com o fundo (ex.: medir distâncias).
+  // Hoje o arrasto acontece nos próprios tokens (attachTokenDragHandlers).
+}
+
+// -------------------------------------------------------- MAPA DO MESTRE --
+function renderMasterMapPanel() {
+  const panel = document.getElementById('masterMapPanel');
+  if (!isTableOwner()) { panel.innerHTML = ''; panel.classList.add('hidden'); return; }
+  panel.classList.remove('hidden');
+  const scene = getActiveScene();
+  const biomeOptions = Object.keys(MAPGEN_BIOME_LABELS)
+    .map(id => `<option value="${id}">${escapeHtml(MAPGEN_BIOME_LABELS[id])}</option>`).join('');
+  const sizeOptions = Object.keys(MAPGEN_SIZES)
+    .map(id => `<option value="${id}"${id === 'medio' ? ' selected' : ''}>${escapeHtml(MAPGEN_SIZE_LABELS[id] || id)}</option>`).join('');
+  panel.innerHTML = `
+    <h4>Mapa da cena atual${scene ? ' — ' + escapeHtml(scene.name || '') : ''}</h4>
+    <h4 style="font-size:13px; margin-top:-6px;">Gerar mapa procedural</h4>
+    <div class="field">
+      <select id="mapBiome">${biomeOptions}</select>
+    </div>
+    <div class="field">
+      <select id="mapSize">${sizeOptions}</select>
+    </div>
+    <button class="btn small" id="genMapBtn" style="width:auto;">Gerar novo mapa</button>
+    <button class="btn secondary small hidden" id="regenSameBtn" style="width:auto; margin-top:8px;">🎲 Gerar outra variação</button>
+    <div class="tc-meta" style="margin-top:8px;">Gerar um novo mapa não move nem apaga os tokens já na mesa — e afeta só a cena atual.</div>
+    <div class="error-msg hidden" id="mapErr"></div>
+    <hr class="tool-hr">
+    <h4>Ou envie um mapa seu</h4>
+    <div class="field">
+      <input type="file" id="mapUploadFile" accept="image/*">
+    </div>
+    <div class="map-upload-row">
+      <span class="tc-meta">Nº de colunas da grade:</span>
+      <input type="number" id="mapUploadCols" value="20" min="4" max="120" style="width:70px;">
+    </div>
+    <button class="btn secondary small" id="mapUploadBtn" style="width:auto;">Enviar mapa</button>
+    <div class="tc-meta" style="margin-top:8px;">A grade é desenhada por cima da sua imagem, no número de colunas escolhido, pra encaixar os tokens certinho.</div>
+    <div class="error-msg hidden" id="mapUploadErr"></div>`;
+  document.getElementById('genMapBtn').addEventListener('click', () => generateAndSaveMap());
+  document.getElementById('regenSameBtn').addEventListener('click', () => generateAndSaveMap());
+  if (scene && scene.biome) document.getElementById('regenSameBtn').classList.remove('hidden');
+  document.getElementById('mapUploadBtn').addEventListener('click', () => uploadCustomMap());
+}
+
+async function generateAndSaveMap() {
+  const biome = document.getElementById('mapBiome').value;
+  const size = document.getElementById('mapSize').value;
+  const errEl = document.getElementById('mapErr');
+  const scene = getActiveScene();
+  if (!scene) return;
+  try {
+    const map = mapgenGenerate({ size, biome, seed: Math.floor(Math.random() * 1e9) });
+    await db.collection('tables').doc(curTable.id).collection('scenes').doc(scene.id).update({
+      mapImage: map.dataUrl, mapW: map.width, mapH: map.height, cellPx: map.cellPx, biome
+    });
+    document.getElementById('regenSameBtn').classList.remove('hidden');
+    boardZoom = 1;
+    setTimeout(fitBoardToScreen, 60);
+    errEl.classList.add('hidden');
+  } catch (err) {
+    errEl.textContent = 'Erro ao gerar/salvar mapa: ' + err.message;
+    errEl.classList.remove('hidden');
+  }
+}
+
+// Lê uma imagem escolhida pelo Mestre, desenha uma grade por cima (no
+// mesmo espírito visual dos mapas procedurais) e devolve um dataURL já
+// dentro do orçamento de tamanho do Firestore (reaproveita
+// mapgenEncodeWithBudget, de js/mapgen.js).
+function readCustomMapFile(file, cols) {
+  return new Promise((resolve, reject) => {
+    if (!file.type.startsWith('image/')) { reject(new Error('Escolha um arquivo de imagem válido.')); return; }
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        const safeCols = Math.max(4, Math.min(120, Math.round(cols) || 20));
+        const cellPx = Math.max(16, Math.round(img.width / safeCols));
+        const rows = Math.max(1, Math.round(img.height / cellPx));
+        const canvas = document.createElement('canvas');
+        canvas.width = safeCols * cellPx;
+        canvas.height = rows * cellPx;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        ctx.strokeStyle = 'rgba(20,16,12,0.4)';
+        ctx.lineWidth = 1;
+        for (let x = 0; x <= safeCols; x++) {
+          ctx.beginPath(); ctx.moveTo(x * cellPx + .5, 0); ctx.lineTo(x * cellPx + .5, canvas.height); ctx.stroke();
+        }
+        for (let y = 0; y <= rows; y++) {
+          ctx.beginPath(); ctx.moveTo(0, y * cellPx + .5); ctx.lineTo(canvas.width, y * cellPx + .5); ctx.stroke();
+        }
+        resolve({
+          dataUrl: mapgenEncodeWithBudget(canvas),
+          width: canvas.width, height: canvas.height, cellPx
+        });
+      };
+      img.onerror = () => reject(new Error('Não foi possível ler essa imagem.'));
+      img.src = e.target.result;
+    };
+    reader.onerror = () => reject(new Error('Não foi possível ler esse arquivo.'));
+    reader.readAsDataURL(file);
+  });
+}
+
+async function uploadCustomMap() {
+  const fileEl = document.getElementById('mapUploadFile');
+  const colsEl = document.getElementById('mapUploadCols');
+  const errEl = document.getElementById('mapUploadErr');
+  const scene = getActiveScene();
+  if (!scene) return;
+  if (!fileEl.files || !fileEl.files[0]) {
+    errEl.textContent = 'Escolha uma imagem primeiro.';
+    errEl.classList.remove('hidden');
+    return;
+  }
+  try {
+    const map = await readCustomMapFile(fileEl.files[0], parseInt(colsEl.value, 10));
+    await db.collection('tables').doc(curTable.id).collection('scenes').doc(scene.id).update({
+      mapImage: map.dataUrl, mapW: map.width, mapH: map.height, cellPx: map.cellPx, biome: ''
+    });
+    fileEl.value = '';
+    boardZoom = 1;
+    setTimeout(fitBoardToScreen, 60);
+    errEl.classList.add('hidden');
+  } catch (err) {
+    errEl.textContent = 'Erro ao enviar mapa: ' + err.message;
+    errEl.classList.remove('hidden');
+  }
+}
+

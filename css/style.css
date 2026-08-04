@@ -1,0 +1,1049 @@
+/* ============================================================
+   BREAKPOINTS DO SITE (referência)
+   O projeto não tem build step (sem Sass/PostCSS), então não dá pra usar
+   variável dentro de @media — os valores abaixo são só documentação, pra
+   quem for mexer no responsivo saber o que já existe antes de inventar
+   um valor novo. Lista de todo max-width/min-width usado no site hoje
+   (css/style.css + <style> de cada .html):
+
+     ~400/460/480/560/600/640/700px  → ajustes finos de componentes
+                                         específicos (grid de atributos,
+                                         cards, etc.), cada um no ponto
+                                         onde aquele componente específico
+                                         começa a apertar — não são o
+                                         breakpoint geral do site.
+     780/781px   → breakpoint principal do site: abaixo disso é "modo
+                    mobile" (menu hambúrguer, colunas empilhadas etc.).
+                    É o mais usado — ao adicionar uma regra nova de
+                    "mobile geral", prefira esse valor em vez de um novo.
+     820/900/920/1000/1001px → tablet / tablet-paisagem / mesa (VTT) em
+                    telas médias.
+     1180px (com min-width:821px) → faixa "notebook pequeno" específica
+                    da mesa (VTT).
+     1500/1680/1920px (min-width) → não são breakpoints de layout comuns;
+                    são degraus de escala do tabuleiro (mesa.html) para
+                    monitores grandes/ultrawide.
+
+   Não consolidei esses valores num set menor porque não dá pra verificar
+   visualmente cada tela daqui — juntar dois breakpoints próximos pode
+   parecer inofensivo mas mudar o ponto exato em que um componente
+   específico quebra. Se quiser, posso revisar visualmente contigo,
+   tela por tela, e aí sim reduzir com segurança.
+   ============================================================ */
+
+:root{
+  --bg: #120F0C;
+  --bg-alt: #17130F;
+  --panel: #1B1611;
+  --panel-2: #201A14;
+  --hairline: #3A2E22;
+  --hairline-soft: #2a2119;
+  --ink: #E9DFC7;
+  --ink-dim: #b4a688;
+  --ink-mute: #a08d6a;
+  --seal: #9C2B2B;
+  --seal-bright: #C4433C;
+  --gold: #C9A15C;
+  --gold-dim: #8f7a4c;
+  --benign: #6f8f6a;
+  --malign: #8a3f3f;
+  --radius: 3px;
+  --content-max: 980px;
+}
+
+*{ box-sizing:border-box; }
+html{ scroll-behavior:smooth; -webkit-text-size-adjust:100%; text-size-adjust:100%; }
+
+/* Utilitário global de ocultar elemento. Precisa existir aqui (e não só
+   escopado a "form.hidden") para que qualquer elemento (div, section, etc.)
+   que receba essa classe via JS realmente desapareça da tela. */
+.hidden{ display:none !important; }
+
+body{
+  margin:0;
+  min-height:100vh;
+  background:
+    radial-gradient(ellipse 1200px 800px at 15% -10%, rgba(156,43,43,0.08), transparent 60%),
+    radial-gradient(ellipse 900px 700px at 100% 10%, rgba(201,161,92,0.06), transparent 55%),
+    var(--bg);
+  color:var(--ink);
+  font-family:'EB Garamond', Georgia, serif;
+  font-size:17px;
+  line-height:1.6;
+  -webkit-font-smoothing:antialiased;
+}
+
+::selection{ background:var(--seal); color:#fff; }
+::-webkit-scrollbar{ width:10px; }
+::-webkit-scrollbar-track{ background:var(--bg); }
+::-webkit-scrollbar-thumb{ background:var(--hairline); border-radius:6px; }
+
+a{ color:var(--gold); text-decoration:none; }
+a:hover{ color:var(--gold-dim); }
+
+.h-font{ font-family:'Cinzel', Georgia, serif; letter-spacing:.02em; }
+
+/* ===== Top bar ===== */
+.topbar{
+  display:flex; align-items:center; justify-content:space-between;
+  padding:16px 28px; border-bottom:1px solid var(--hairline);
+  background:linear-gradient(180deg, var(--panel), var(--bg-alt));
+  position:sticky; top:0; z-index:30;
+}
+.brand{ display:flex; align-items:center; gap:10px; }
+.brand .seal-icon{ width:26px; height:26px; flex-shrink:0; }
+.brand-title{ font-family:'Cinzel', serif; font-size:17px; color:var(--gold); letter-spacing:.04em; }
+.brand-sub{ font-size:11px; letter-spacing:.16em; text-transform:uppercase; color:var(--ink-mute); }
+.topbar-right{ display:flex; align-items:center; gap:14px; font-size:14px; color:var(--ink-dim); }
+.topbar-right .who{ color:var(--gold); }
+.topbar-menu{ display:flex; align-items:center; gap:14px; flex-wrap:wrap; }
+.topbar-menu .topbar-user{ display:flex; align-items:center; }
+.btn-link{
+  background:none; border:1px solid var(--hairline); color:var(--ink-dim);
+  padding:7px 14px; border-radius:var(--radius); cursor:pointer;
+  font-family:'EB Garamond', serif; font-size:14px; transition:all .15s;
+}
+.btn-link:hover{ border-color:var(--gold-dim); color:var(--gold); }
+
+/* Botão hamburger do topbar — escondido no desktop, só aparece no mobile
+   (ver @media abaixo), onde substitui a fileira de links por um menu
+   retrátil, já que não há espaço horizontal para tudo junto. */
+.topbar-toggle{
+  display:none; width:38px; height:38px; align-items:center; justify-content:center;
+  background:var(--panel-2); border:1px solid var(--hairline); border-radius:var(--radius);
+  color:var(--gold); font-size:17px; cursor:pointer; flex-shrink:0;
+}
+
+/* ===== Shell / content ===== */
+.shell{ max-width:var(--content-max); margin:0 auto; padding:clamp(22px,7vw,44px) clamp(14px,4.5vw,24px) clamp(56px,14vw,100px); }
+.shell.narrow{ max-width:460px; padding-top:clamp(40px,11vw,80px); }
+
+.page-head{ margin-bottom:34px; }
+.eyebrow{
+  font-size:12px; letter-spacing:.28em; text-transform:uppercase;
+  color:var(--seal-bright); margin-bottom:10px;
+}
+.page-head h1{
+  font-family:'Cinzel', serif; font-size:clamp(26px,4vw,36px); color:var(--gold);
+  margin:0 0 8px; line-height:1.15;
+}
+.page-head p{ color:var(--ink-dim); font-style:italic; margin:0; max-width:620px; }
+
+/* Pequeno ornamento sob o título — mesma linguagem visual do selo da
+   landing (linhas + losango dourado), só que discreto o bastante pra
+   caber em qualquer cabeçalho de página interna. Puramente decorativo. */
+.page-head h1::after{
+  content:''; display:block; width:88px; height:9px; margin-top:12px;
+  background:
+    linear-gradient(var(--gold-dim), var(--gold-dim)) left center / 34px 1px no-repeat,
+    linear-gradient(var(--gold-dim), var(--gold-dim)) right center / 34px 1px no-repeat,
+    linear-gradient(45deg, var(--gold-dim), var(--gold-dim)) center / 7px 7px no-repeat;
+  opacity:.75;
+}
+
+/* ===== Cards / panels ===== */
+.panel{
+  background:linear-gradient(180deg, var(--panel), var(--panel-2));
+  border:1px solid var(--hairline); border-radius:var(--radius);
+  padding:28px;
+}
+.panel + .panel{ margin-top:20px; }
+.panel h2{
+  font-family:'Cinzel', serif; font-size:19px; color:var(--gold);
+  margin:0 0 18px; padding-bottom:12px; border-bottom:1px solid var(--hairline-soft);
+  display:flex; align-items:center; gap:10px;
+}
+.panel h2 .step-num{
+  font-family:'JetBrains Mono', monospace; font-size:12px; color:var(--seal-bright);
+  border:1px solid var(--seal); border-radius:50%; width:22px; height:22px;
+  display:flex; align-items:center; justify-content:center; flex-shrink:0;
+}
+.panel .hint{ color:var(--ink-mute); font-size:14px; font-style:italic; margin:-10px 0 18px; }
+
+/* ===== Forms ===== */
+label{ display:block; font-size:13px; letter-spacing:.04em; text-transform:uppercase; color:var(--ink-mute); margin-bottom:6px; }
+input[type=text], input[type=email], input[type=password], input[type=number], textarea, select{
+  width:100%; background:var(--bg-alt); border:1px solid var(--hairline); color:var(--ink);
+  padding:10px 12px; font-family:'EB Garamond', serif; font-size:16px; border-radius:var(--radius);
+  outline:none; transition:border-color .15s;
+}
+input:focus, textarea:focus, select:focus{ border-color:var(--gold-dim); }
+textarea{ resize:vertical; min-height:70px; }
+.field{ margin-bottom:16px; }
+.field-row{ display:grid; grid-template-columns:repeat(2,1fr); gap:14px; }
+@media (max-width:640px){ .field-row{ grid-template-columns:1fr; } }
+
+/* ---- Barra de ferramentas (linha flex) ----
+   Para filas com um campo flexível + um botão/seleção de largura própria
+   (criar pasta, busca + filtro) — .field-row é uma grade de colunas iguais
+   e força um botão a ocupar metade da largura da linha; isto aqui deixa
+   cada item do tamanho que faz sentido e quebra linha em telas estreitas. */
+.toolbar-row{ display:flex; gap:12px; flex-wrap:wrap; align-items:flex-end; }
+.toolbar-row > .field{ margin-bottom:0; flex:1 1 220px; }
+.toolbar-row > .btn{ flex:0 0 auto; }
+
+.btn{
+  background:linear-gradient(180deg, var(--seal-bright), var(--seal));
+  color:#fff; border:none; padding:12px 22px; border-radius:var(--radius);
+  font-family:'Cinzel', serif; font-size:14px; letter-spacing:.03em; cursor:pointer;
+  transition:filter .15s; width:100%; flex:0 0 auto;
+}
+.btn:hover{ filter:brightness(1.1); }
+@media (min-width:781px){
+  /* Acima do breakpoint mobile, botões soltos em painéis/formulários
+     (ex: "Entrar", "Salvar ficha") não devem esticar a largura toda do
+     container — voltam a ter largura de conteúdo com um mínimo confortável. */
+  .btn, .btn.secondary{ width:auto; min-width:200px; }
+}
+.btn:disabled{ opacity:.5; cursor:not-allowed; }
+.btn.secondary{
+  background:none; border:1px solid var(--gold-dim); color:var(--gold);
+}
+.btn.small{ width:auto; min-width:0; padding:8px 16px; font-size:12.5px; }
+.btn.danger{ background:linear-gradient(180deg,#6b2626,#4a1a1a); }
+
+.error-msg{
+  background:rgba(156,43,43,.12); border:1px solid var(--seal); color:#e8a6a6;
+  padding:10px 14px; border-radius:var(--radius); font-size:14px; margin-bottom:16px;
+}
+.ok-msg{
+  background:rgba(111,143,106,.12); border:1px solid var(--benign); color:#b8d2b3;
+  padding:10px 14px; border-radius:var(--radius); font-size:14px; margin-bottom:16px;
+}
+
+/* ===== Points counter ===== */
+.points-bar{
+  display:flex; align-items:center; justify-content:space-between;
+  background:var(--bg-alt); border:1px solid var(--hairline); border-radius:var(--radius);
+  padding:10px 16px; margin-bottom:18px; font-family:'Cinzel', serif; font-size:14px;
+}
+.points-bar .count{ color:var(--gold); font-size:18px; }
+.points-bar .count.over{ color:var(--seal-bright); }
+
+/* ===== Attribute grid ===== */
+.attr-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:14px; }
+@media (max-width:700px){ .attr-grid{ grid-template-columns:repeat(2,1fr); } }
+.attr-box{
+  background:var(--bg-alt); border:1px solid var(--hairline); border-radius:var(--radius);
+  padding:14px; text-align:center; min-width:0;
+}
+.attr-box .attr-name{ font-size:12px; text-transform:uppercase; letter-spacing:.08em; color:var(--ink-mute); margin-bottom:8px; }
+.attr-controls{ display:flex; align-items:center; justify-content:center; gap:10px; }
+.attr-controls button{
+  width:28px; height:28px; border-radius:50%; border:1px solid var(--hairline);
+  background:var(--panel); color:var(--gold); cursor:pointer; font-size:16px; line-height:1;
+}
+.attr-controls button:hover{ border-color:var(--gold-dim); }
+.attr-controls .val{ font-family:'Cinzel', serif; font-size:22px; color:var(--ink); width:32px; }
+.attr-mod{ font-size:12px; color:var(--gold-dim); margin-top:6px; }
+
+/* ===== Skill rows ===== */
+.skill-row{ display:grid; grid-template-columns:1fr auto; gap:10px; align-items:center; margin-bottom:10px; }
+.skill-pts{ display:flex; align-items:center; gap:8px; }
+.skill-pts button{
+  width:26px; height:26px; border-radius:50%; border:1px solid var(--hairline);
+  background:var(--panel); color:var(--gold); cursor:pointer;
+}
+.skill-pts .val{ width:20px; text-align:center; font-family:'Cinzel',serif; color:var(--gold); }
+.skill-remove{ background:none; border:none; color:var(--ink-mute); cursor:pointer; font-size:18px; padding:0 6px; }
+.skill-remove:hover{ color:var(--seal-bright); }
+
+/* ===== Race / trait selectors ===== */
+.race-grid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(190px,1fr)); gap:10px; margin-bottom:18px; }
+.race-card{
+  background:var(--bg-alt); border:1px solid var(--hairline); border-radius:var(--radius);
+  padding:12px 14px; cursor:pointer; transition:border-color .15s, background .15s;
+}
+.race-card:hover{ border-color:var(--gold-dim); }
+.race-card.selected{ border-color:var(--seal-bright); background:rgba(156,43,43,.08); }
+.race-card .rname{ font-family:'Cinzel', serif; color:var(--gold); font-size:14.5px; }
+
+.race-detail{
+  background:var(--bg-alt); border:1px solid var(--hairline-soft); border-radius:var(--radius);
+  padding:18px; margin-bottom:18px; font-size:15px; color:var(--ink-dim);
+}
+.race-detail .fixed-trait{ border-left:2px solid var(--seal); padding-left:12px; margin:12px 0; }
+.race-detail .fixed-trait b{ color:var(--gold); }
+.race-detail .race-flavor{ margin:0 0 16px; padding-bottom:14px; border-bottom:1px solid var(--hairline-soft); }
+.race-detail .race-flavor p{ margin:0 0 10px; color:var(--ink-dim); }
+.race-detail .race-flavor p:last-child{ margin-bottom:0; }
+
+.trait-option{
+  display:flex; gap:10px; align-items:flex-start; padding:10px 0; border-bottom:1px dotted var(--hairline-soft);
+  cursor:pointer;
+}
+.trait-option:last-child{ border-bottom:none; }
+.trait-option input{ margin-top:4px; width:auto; }
+.trait-option .tname{ color:var(--gold); font-weight:600; }
+
+.trait-cat{ margin-bottom:22px; }
+.trait-cat-title{
+  font-family:'Cinzel', serif; font-size:14px; color:var(--gold); text-transform:uppercase;
+  letter-spacing:.06em; margin-bottom:8px; display:flex; align-items:center; gap:8px;
+}
+.tag{ font-size:10.5px; padding:2px 8px; border-radius:20px; letter-spacing:.04em; text-transform:uppercase; }
+.tag.benign{ background:rgba(111,143,106,.18); color:#a9c6a3; border:1px solid var(--benign); }
+.tag.malign{ background:rgba(138,63,63,.2); color:#e0a5a5; border:1px solid var(--malign); }
+
+.trait-pick{
+  border:1px solid var(--hairline); border-radius:var(--radius); padding:12px 14px; margin-bottom:8px;
+  background:var(--bg-alt); cursor:pointer; transition:border-color .15s;
+}
+.trait-pick:hover{ border-color:var(--gold-dim); }
+.trait-pick.selected{ border-color:var(--seal-bright); background:rgba(156,43,43,.06); }
+.trait-pick .thead{ display:flex; justify-content:space-between; align-items:center; gap:10px; }
+.trait-pick .tname{ color:var(--gold); font-weight:600; font-size:15px; }
+.trait-pick .tcost{ font-family:'JetBrains Mono', monospace; color:var(--ink-mute); font-size:12.5px; flex-shrink:0; }
+.trait-pick .tdesc{ font-size:14px; color:var(--ink-dim); margin-top:6px; }
+.trait-search{ margin-bottom:14px; }
+
+.chosen-list{ display:flex; flex-wrap:wrap; gap:8px; margin-top:10px; }
+.chosen-chip{
+  background:var(--panel-2); border:1px solid var(--gold-dim); color:var(--gold);
+  padding:5px 12px; border-radius:20px; font-size:13px; display:flex; align-items:center; gap:8px;
+}
+.chosen-chip button{ background:none; border:none; color:var(--ink-mute); cursor:pointer; font-size:14px; }
+
+/* ===== Sheet view (read-only summary / master view) ===== */
+.sheet-card{
+  background:linear-gradient(180deg, var(--panel), var(--panel-2));
+  border:1px solid var(--hairline); border-radius:var(--radius); padding:22px 26px;
+  margin-bottom:16px;
+}
+.sheet-card .sc-head{ display:flex; flex-wrap:wrap; justify-content:space-between; align-items:flex-start; gap:14px; margin-bottom:12px; }
+.sheet-card h3{ font-family:'Cinzel', serif; color:var(--gold); font-size:19px; margin:0; }
+.sheet-card .sc-meta{ color:var(--ink-mute); font-size:13px; }
+.sheet-card .sc-owner{ color:var(--ink-dim); font-size:13px; margin-top:2px; }
+/* auto-fit + minmax em vez de um número fixo de colunas: esta grade só é
+   usada dentro de .sheet-side, uma coluna lateral de 290px — com
+   "repeat(6,1fr)" o navegador dava a cada célula uma largura mínima baseada
+   no texto ("Braço Esquerdo", "Perna Direita"), maior do que cabia nos
+   290px, e a grade transbordava por cima do conteúdo principal ao lado
+   (a coluna lateral é "sticky", então fica acima do texto na pilha visual).
+   Com minmax(84px,1fr) cada célula nunca fica menor que 84px, e o
+   navegador ajusta sozinho quantas colunas cabem — 2 na coluna lateral
+   estreita, mais quando o layout empilha em uma coluna só no celular. */
+.sheet-summary-grid{ display:grid; grid-template-columns:repeat(auto-fit, minmax(84px,1fr)); gap:10px; margin:14px 0; }
+.sum-attr{ text-align:center; background:var(--bg-alt); border:1px solid var(--hairline-soft); border-radius:var(--radius); padding:8px 4px; min-width:0; }
+.sum-attr .sa-name{ font-size:10.5px; text-transform:uppercase; color:var(--ink-mute); overflow-wrap:break-word; }
+.sum-attr .sa-val{ font-family:'Cinzel', serif; color:var(--gold); font-size:18px; }
+.sheet-section-title{ font-family:'Cinzel', serif; color:var(--gold-dim); font-size:13px; text-transform:uppercase; letter-spacing:.06em; margin:16px 0 6px; }
+/* Painel Recursos, na lateral, empilha vários blocos (HP, Sanidade,
+   Estamina, Energia, Economia) sem nenhuma separação visual entre eles —
+   uma linha sutil acima de cada título deixa claro onde um bloco termina
+   e o próximo começa. O primeiro título do painel (ex.: "HP por partes do
+   corpo") não recebe a linha, pois já é o início do painel. */
+.sheet-side .sheet-section-title{ padding-top:12px; border-top:1px solid var(--hairline-soft); }
+.sheet-side .sheet-section-title:first-of-type{ padding-top:0; border-top:none; }
+.sheet-list{ font-size:14.5px; color:var(--ink-dim); }
+.sheet-list .li{ padding:4px 0; border-bottom:1px dotted var(--hairline-soft); }
+.sheet-list .li:last-child{ border-bottom:none; }
+.sheet-list .li b{ color:var(--ink); }
+
+.empty-state{ text-align:center; padding:60px 20px; color:var(--ink-mute); }
+.empty-state .es-icon{ font-size:34px; margin-bottom:12px; opacity:.6; }
+
+.badge-master{ background:var(--seal); color:#fff; font-size:11px; padding:2px 8px; border-radius:10px; letter-spacing:.04em; text-transform:uppercase; }
+
+.center-loading{ text-align:center; padding:80px 20px; color:var(--ink-mute); font-style:italic; }
+
+.conn-error-overlay{
+  position:fixed; inset:0; z-index:999; display:flex; align-items:center; justify-content:center;
+  background:rgba(10,8,6,.88); padding:24px;
+}
+.conn-error-box{
+  max-width:360px; width:100%; text-align:center; background:var(--panel);
+  border:1px solid var(--hairline); border-radius:var(--radius); padding:32px 24px;
+  box-shadow:0 20px 50px rgba(0,0,0,.5);
+}
+.conn-error-title{ font-family:'Cinzel', serif; color:var(--seal-bright); font-size:16px; margin:0 0 8px; }
+.conn-error-box .hint{ margin:0 0 20px; }
+.conn-error-box .btn{ width:100%; min-width:0; }
+
+/* Banner leve de "sem conexão" — diferente do overlay acima (que só
+   aparece se a página nem consegue carregar): este aparece por cima do
+   topo da tela quando a internet cai NO MEIO do uso (ex.: mexendo na
+   ficha, na mesa ou no chat) e some sozinho quando a conexão volta,
+   sem travar o resto da interface. */
+.offline-banner{
+  position:fixed; top:0; left:0; right:0; z-index:998;
+  display:flex; align-items:center; justify-content:center; gap:10px;
+  padding:10px 16px; text-align:center;
+  background:var(--seal); color:#fff; font-size:13px;
+  box-shadow:0 2px 12px rgba(0,0,0,.35);
+  transform:translateY(-100%); transition:transform .25s ease;
+}
+.offline-banner.show{ transform:translateY(0); }
+.offline-banner .dot{
+  width:7px; height:7px; border-radius:50%; background:#fff; flex:none;
+  animation:offlinePulse 1.4s ease-in-out infinite;
+}
+@keyframes offlinePulse{ 0%,100%{ opacity:1; } 50%{ opacity:.35; } }
+@media (prefers-reduced-motion: reduce){
+  .offline-banner .dot{ animation:none; }
+}
+
+.tabs{ display:flex; gap:6px; margin-bottom:24px; border-bottom:1px solid var(--hairline); }
+.tab-btn{
+  background:none; border:none; color:var(--ink-mute); padding:10px 18px; cursor:pointer;
+  font-family:'Cinzel', serif; font-size:14px; border-bottom:2px solid transparent; margin-bottom:-1px;
+}
+.tab-btn.active{ color:var(--gold); border-bottom-color:var(--seal); }
+
+.footer-note{ text-align:center; color:var(--ink-mute); font-size:12.5px; margin-top:40px; letter-spacing:.02em; }
+
+/* ---- Perícias Extras (Antecedente) ---- */
+.extra-skills-row{ display:flex; flex-wrap:wrap; gap:8px; margin:0 0 18px; }
+.extra-skill-chip{
+  background:rgba(201,161,92,.12); border:1px solid var(--gold-dim); color:var(--gold);
+  padding:6px 12px; border-radius:20px; font-size:13.5px;
+}
+.bg-skill-grid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(180px,1fr)); gap:6px 14px; margin-top:8px; }
+.bg-skill-option{ display:flex; align-items:center; gap:8px; font-size:14px; color:var(--ink-dim); cursor:pointer; }
+.bg-skill-option input{ width:auto; }
+
+/* ---- Conversão de Inspiração ---- */
+.inspiration-convert-box{
+  display:flex; align-items:center; justify-content:space-between; gap:14px; flex-wrap:wrap;
+  background:var(--bg-alt); border:1px solid var(--hairline-soft); border-radius:var(--radius);
+  padding:12px 16px; margin-bottom:18px; font-size:14px; color:var(--ink-dim);
+}
+.inspiration-convert-box button:disabled{ opacity:.4; cursor:not-allowed; }
+
+/* ---- Aparência (imagem) ----
+   font-size 16px (não 15px) especificamente por causa do celular: abaixo
+   de 16px o iOS Safari dá zoom automático na página inteira ao focar o
+   campo — esse input é usado aqui, no editor de ficha e na mesa. */
+input[type=file]{
+  width:100%; background:var(--bg-alt); border:1px solid var(--hairline); color:var(--ink-dim);
+  padding:10px 12px; font-family:'EB Garamond', serif; font-size:16px; border-radius:var(--radius);
+}
+input[type=file]::file-selector-button{
+  background:none; border:1px solid var(--gold-dim); color:var(--gold);
+  padding:7px 14px; border-radius:var(--radius); cursor:pointer; margin-right:12px;
+  font-family:'Cinzel', serif; font-size:12.5px;
+}
+#appearancePreview{ margin-top:10px; }
+.appearance-img{
+  max-width:220px; max-height:280px; border-radius:var(--radius); border:1px solid var(--hairline);
+  display:block; object-fit:cover;
+}
+
+.topbar-avatar{
+  width:26px; height:26px; border-radius:50%; object-fit:cover; vertical-align:middle;
+  margin-right:7px; border:1px solid var(--gold-dim);
+}
+
+/* ---- Avatar circular (foto de aparência do personagem, painel do Mestre) ---- */
+.avatar-circle{
+  width:44px; height:44px; border-radius:50%; object-fit:cover; flex-shrink:0;
+  border:1px solid var(--gold-dim); background:var(--bg-alt);
+}
+.avatar-circle-placeholder{
+  width:44px; height:44px; border-radius:50%; flex-shrink:0;
+  border:1px solid var(--hairline); background:var(--bg-alt);
+  display:flex; align-items:center; justify-content:center;
+  font-size:18px; color:var(--ink-mute);
+}
+
+/* ---- Caixa de texto que expande para baixo (Inventário) ---- */
+textarea.auto-expand{
+  resize:none; overflow:hidden; min-height:70px;
+}
+
+/* ---- Listas de linha (Anotações) ---- */
+.line-list-item{ display:flex; gap:8px; align-items:center; margin-bottom:8px; }
+.line-list-item input{ flex:1; }
+.line-list-add{ margin-top:2px; }
+.sheet-line-list .li{ padding:5px 0; border-bottom:1px dotted var(--hairline-soft); }
+.sheet-line-list .li:last-child{ border-bottom:none; }
+
+/* ---- Painel do Mestre na ficha ---- */
+.master-notes-box textarea{ min-height:160px; }
+
+/* ---- Edição de Traços pelo Mestre ---- */
+.master-trait-editor .field-row{ gap:14px 18px; }
+.master-trait-row{
+  padding:14px 0; border-bottom:1px dashed var(--hairline-soft);
+}
+.master-trait-row:first-child{ padding-top:0; }
+.master-trait-row .field{ margin-bottom:12px; }
+#masterTraitRows{ margin-bottom:14px; }
+
+/* ---- Traços: acordeão por categoria ---- */
+.trait-cat-title{
+  width:100%; background:var(--bg-alt); border:1px solid var(--hairline); cursor:pointer;
+  border-radius:var(--radius); padding:12px 14px; text-align:left;
+  font-family:'Cinzel', serif; font-size:14px; color:var(--gold); text-transform:uppercase;
+  letter-spacing:.06em; display:flex; align-items:center; gap:10px; transition:border-color .15s;
+}
+.trait-cat-title:hover{ border-color:var(--gold-dim); }
+.trait-cat-title .tc-chevron{ color:var(--seal-bright); width:12px; flex-shrink:0; font-family:sans-serif; }
+.trait-cat-title .tc-count{
+  margin-left:auto; font-family:'EB Garamond', serif; text-transform:none; letter-spacing:0;
+  color:var(--ink-mute); font-size:12.5px; font-style:italic;
+}
+.trait-cat-body{ padding:12px 2px 2px; }
+
+/* ---- Habilidades ---- */
+.ability-row{
+  background:var(--bg-alt); border:1px solid var(--hairline); border-radius:var(--radius);
+  padding:12px 14px; margin-bottom:10px;
+}
+.ability-head{ display:flex; align-items:center; gap:10px; }
+.ability-head b{ color:var(--gold); font-size:15px; }
+.ability-head .tcost{ font-family:'JetBrains Mono', monospace; color:var(--ink-mute); font-size:12.5px; }
+.ability-head .skill-remove{ margin-left:auto; }
+.ability-desc{ font-size:14px; color:var(--ink-dim); margin-top:6px; }
+.new-ability-form{ display:flex; flex-direction:column; gap:10px; margin-top:14px; }
+.ability-cost-row{ display:flex; gap:10px; flex-wrap:wrap; }
+.ability-cost-row input, .ability-cost-row select{ flex:1; min-width:120px; }
+.ability-head .atype{ font-family:'Cinzel', serif; font-size:11px; color:var(--ink-mute); border:1px solid var(--hairline); padding:2px 7px; border-radius:2px; }
+
+/* ---- Recursos: HP por partes do corpo, Sanidade, Estamina, Vigor ---- */
+.hp-part-row{
+  display:flex; align-items:center; justify-content:space-between; gap:12px;
+  background:var(--bg-alt); border:1px solid var(--hairline-soft); border-radius:var(--radius);
+  padding:10px 14px; margin-bottom:8px; flex-wrap:wrap;
+}
+.hp-part-name{ font-family:'Cinzel', serif; color:var(--gold); font-size:14px; min-width:90px; }
+.hp-part-inputs{ display:flex; align-items:center; gap:8px; font-size:12.5px; color:var(--ink-mute); }
+.hp-part-inputs label{ margin:0; font-size:11px; }
+.hp-part-inputs input{ width:64px; padding:6px 8px; text-align:center; }
+.resource-row{
+  display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;
+  background:var(--bg-alt); border:1px solid var(--hairline-soft); border-radius:var(--radius);
+  padding:12px 16px; margin-bottom:12px;
+}
+.resource-label{ font-family:'Cinzel', serif; color:var(--gold); font-size:14px; }
+.resource-inputs{ display:flex; align-items:center; gap:8px; }
+.resource-inputs input{ width:72px; padding:7px 8px; text-align:center; }
+
+/* ---- Bônus de atributo vindo de traços ---- */
+.attr-bonus{ font-size:11px; color:var(--gold-dim); margin-top:4px; }
+.attr-manual{ margin-top:8px; }
+.attr-manual label{ font-size:9.5px; margin-bottom:3px; }
+.attr-manual input{ padding:5px 6px; font-size:12px; text-align:center; }
+
+/* ---- Painel do Mestre: agrupamento por jogador ---- */
+.player-group{ margin-bottom:30px; }
+.player-group-head{
+  display:flex; align-items:center; justify-content:space-between; gap:10px;
+  margin-bottom:14px; padding-bottom:10px; border-bottom:1px solid var(--hairline); flex-wrap:wrap;
+}
+.player-group-head .count{ font-size:12.5px; color:var(--ink-mute); }
+.folder-badge{
+  display:inline-block; margin-top:4px; font-size:11.5px; color:var(--gold-dim);
+  border:1px solid var(--hairline); border-radius:20px; padding:2px 9px;
+}
+
+/* ===== Responsivo (mobile) =====
+   O topbar é a peça mais crítica: sozinho ele tem saudação, avatar, 4 links
+   e 2 botões — não cabe numa tela de celular. Abaixo de 780px ele vira um
+   botão de menu (☰) que abre um dropdown com tudo empilhado. O restante das
+   regras aqui reduz espaçamentos e evita que grupos de botões estourem a
+   largura da tela. */
+@media (max-width:780px){
+  .topbar{ padding:12px 16px; position:relative; }
+  .brand-sub{ font-size:10px; }
+  .topbar-toggle{ display:flex; }
+  .topbar-menu{
+    display:none; position:absolute; top:100%; left:0; right:0;
+    flex-direction:column; align-items:stretch; gap:2px;
+    background:linear-gradient(180deg, var(--panel), var(--bg-alt));
+    border-bottom:1px solid var(--hairline);
+    padding:10px 16px 18px; box-shadow:0 14px 26px rgba(0,0,0,.4); z-index:50;
+  }
+  .topbar-menu.open{ display:flex; }
+  .topbar-menu .topbar-user{
+    padding:8px 0 12px; border-bottom:1px solid var(--hairline-soft); margin-bottom:6px; flex-wrap:wrap;
+  }
+  .topbar-menu .btn-link{ width:100%; text-align:left; }
+
+  .page-head h1{ font-size:26px; }
+
+  .panel{ padding:18px 16px; }
+  .panel h2{ font-size:17px; gap:8px; }
+
+  .sheet-card{ padding:18px 16px; }
+  .sheet-card .sc-head{ flex-wrap:wrap; }
+  .player-group-head{ gap:8px; }
+
+  /* Botões finais do editor de ficha (Salvar/Cancelar) — empilham em telas
+     estreitas para não estourar a largura nem ficar apertados ao toque. */
+  .wizard-actions{ flex-wrap:wrap; }
+  .wizard-actions .btn, .wizard-actions .btn.secondary{ width:100% !important; justify-content:center; }
+
+  /* Grupos de botões lado a lado (editar/excluir, adicionar/cancelar etc.)
+     precisam poder quebrar linha em telas estreitas. */
+  .profile-actions, .new-ability-form > div[style*="display:flex"]{ flex-wrap:wrap; }
+}
+
+@media (max-width:460px){
+  .attr-grid{ grid-template-columns:repeat(2,1fr); }
+  .race-grid{ grid-template-columns:1fr 1fr; }
+  .bg-skill-grid{ grid-template-columns:1fr; }
+  .btn.small{ width:auto; }
+  .race-detail{ padding:14px; font-size:14px; }
+  .race-detail .race-flavor p{ margin-bottom:8px; }
+}
+
+/* ---- Formulários no mobile: alvos de toque maiores e menos aperto ----
+   No celular, os botõezinhos redondos de +/- (atributos, perícias) e o "x"
+   de remover ficavam pequenos demais pra acertar com o dedo, e algumas
+   fileiras (perícia, campos de habilidade) esmagavam vários controles lado
+   a lado. Aqui a gente aumenta os alvos de toque e deixa essas fileiras
+   quebrarem/empilharem com mais folga, sem mudar nada no desktop. */
+@media (max-width:780px){
+  input[type=text], input[type=email], input[type=password], input[type=number], textarea, select{
+    padding:12px 14px;
+  }
+  .field-row{ gap:12px; }
+
+  .attr-controls{ gap:14px; }
+  .attr-controls button{ width:38px; height:38px; font-size:19px; }
+  .attr-controls .val{ font-size:24px; width:36px; }
+
+  .skill-row{ grid-template-columns:1fr auto; gap:8px 12px; }
+  .skill-pts{ gap:10px; }
+  .skill-pts button{ width:34px; height:34px; font-size:15px; }
+  .skill-remove{ font-size:22px; padding:2px 8px; }
+
+  .trait-option input, .bg-skill-option input{ width:20px; height:20px; }
+  .chosen-chip{ padding:7px 14px; font-size:13.5px; }
+  .chosen-chip button{ font-size:17px; padding:2px 4px; }
+
+  .hp-part-inputs input, .resource-inputs input{ width:56px; padding:8px; }
+
+  input[type=file]{ padding:12px; }
+  input[type=file]::file-selector-button{ padding:9px 14px; font-size:13px; margin-right:10px; }
+
+  /* Fileiras de custo/tipo de ação das habilidades — empilham em vez de
+     espremer dois campos com min-width lado a lado. */
+  .ability-cost-row{ flex-direction:column; }
+  .ability-cost-row input, .ability-cost-row select{ min-width:0; width:100%; }
+}
+
+/* ---- Zona de perigo (excluir conta) ---- */
+.danger-zone{
+  border:1px solid var(--seal); background:rgba(156,43,43,.06); border-radius:var(--radius);
+  padding:18px 20px; margin-top:30px;
+}
+.danger-zone h2{ color:var(--seal-bright); }
+
+/* =====================================================================
+   REFORMA DE LAYOUT — visão geral
+   As páginas de listagem (Minhas Fichas, Painel do Mestre) e as páginas
+   longas (Ficha-Editor, Ficha-View) ficavam presas a uma única coluna de
+   980px, mesmo em monitores largos, virando uma rolagem infinita sem
+   nenhuma orientação de onde a pessoa está. Os blocos abaixo dão a essas
+   páginas mais estrutura (colunas, navegação fixa) sem mudar paleta,
+   tipografia ou o conteúdo em si.
+   ===================================================================== */
+
+/* Largura alternativa do shell para páginas com conteúdo em colunas —
+   980px vira estreito demais quando há navegação lateral ou 2 colunas. */
+.shell.wide{ max-width:1180px; }
+
+/* ---- Grade de cards de ficha (Minhas Fichas / Painel do Mestre) ----
+   Antes, cada .sheet-card ocupava a largura toda do shell e empilhava
+   verticalmente — em telas largas isso deixava metade da tela vazia.
+   Em telas estreitas continua 1 coluna. */
+.cards-grid{
+  display:grid; grid-template-columns:repeat(auto-fill, minmax(340px,1fr));
+  gap:16px; align-items:start; margin-bottom:4px;
+}
+.cards-grid .sheet-card{ margin:0; }
+
+/* ---- Ficha (visualização): retrato + recursos fixos ao lado ----
+   A ficha inteira era uma coluna só de painéis empilhados (Recursos,
+   Atributos, Perícias, Habilidades, Raça, Traços, Antecedente, Detalhes),
+   obrigando a rolar a página toda pra comparar HP com Atributos. Agora
+   Recursos e Atributos (o que se consulta o tempo todo numa mesa) ficam
+   fixos numa coluna lateral; o resto flui na coluna principal. */
+.sheet-layout{
+  display:grid; grid-template-columns:290px 1fr; gap:22px; align-items:start;
+}
+.sheet-side{ position:sticky; top:86px; display:flex; flex-direction:column; gap:16px; }
+.sheet-side .panel{ margin-top:0; }
+.sheet-main{ min-width:0; }
+.sheet-main .panel:first-child{ margin-top:0; }
+.sheet-portrait{
+  border-radius:var(--radius); border:1px solid var(--hairline); overflow:hidden;
+  background:var(--bg-alt); flex-shrink:0;
+}
+.sheet-portrait img{ width:100%; aspect-ratio:3/4; object-fit:cover; display:block; }
+.sheet-portrait .no-img{
+  aspect-ratio:3/4; display:flex; align-items:center; justify-content:center;
+  font-size:40px; color:var(--ink-mute);
+}
+
+@media (max-width:900px){
+  .sheet-layout{ grid-template-columns:1fr; }
+  .sheet-side{ position:static; }
+  .sheet-portrait{ max-width:220px; margin:0 auto; }
+}
+
+/* ---- Ficha (criação/edição): navegação fixa por etapa ----
+   O editor tinha 9 painéis grandes (Identificação → Detalhes Finais)
+   empilhados um após o outro, sem nenhum jeito de ver quantas etapas
+   faltam ou pular direto pra uma — só rolar a página inteira às cegas.
+   Isso vira uma navegação lateral fixa (some numa faixa horizontal no
+   mobile) que destaca a etapa visível conforme a rolagem. */
+.wizard-layout{ display:grid; grid-template-columns:216px 1fr; gap:28px; align-items:start; }
+.wizard-nav{
+  position:sticky; top:86px; display:flex; flex-direction:column; gap:2px;
+  max-height:calc(100vh - 106px); overflow-y:auto; padding-right:4px;
+}
+.wizard-nav a{
+  display:flex; align-items:center; gap:10px; padding:9px 10px; border-radius:var(--radius);
+  color:var(--ink-mute); font-size:13.5px; border-left:2px solid transparent; transition:all .15s;
+  text-decoration:none;
+}
+.wizard-nav a:hover{ color:var(--gold); }
+.wizard-nav a.active{ color:var(--gold); border-left-color:var(--seal-bright); background:rgba(156,43,43,.06); }
+.wizard-nav .wn-num{
+  font-family:'JetBrains Mono', monospace; font-size:11px; color:var(--ink-mute);
+  border:1px solid var(--hairline); border-radius:50%; width:20px; height:20px; flex-shrink:0;
+  display:flex; align-items:center; justify-content:center; transition:all .15s;
+}
+.wizard-nav a.active .wn-num{ border-color:var(--seal-bright); color:var(--seal-bright); }
+.wizard-main{ min-width:0; }
+.wizard-main .panel[id^="step-"]{ scroll-margin-top:96px; }
+
+@media (max-width:780px){
+  /* Antes esse ponto de corte era 900px, diferente dos 780px em que o
+     .topbar deixa de ser sticky (vira position:relative + menu ☰, ver acima).
+     Entre 780 e 900px os dois ficavam sticky/top:0 ao mesmo tempo e a barra
+     de etapas era empurrada para debaixo do topbar, parecendo travada.
+     Usando o mesmo corte do topbar, a troca só acontece quando o topbar já
+     não disputa mais o topo — sem sobreposição em nenhuma largura. */
+  .wizard-layout{ grid-template-columns:1fr; gap:0; }
+  .wizard-nav{
+    position:sticky; top:0; z-index:20; flex-direction:row; overflow-x:auto; overflow-y:hidden;
+    max-height:none; background:var(--bg-alt); padding:10px 16px; margin:0 -16px 14px;
+    border-bottom:1px solid var(--hairline); gap:4px;
+  }
+  .wizard-nav a{ flex-shrink:0; border-left:none; border-bottom:2px solid transparent; white-space:nowrap; padding:8px 8px; }
+  .wizard-nav a.active{ border-bottom-color:var(--seal-bright); background:none; }
+}
+
+/* =====================================================================
+   POLIMENTO GERAL — depois da reforma de layout
+   A reforma acima deu largura extra às páginas (coluna lateral, navegação
+   fixa), mas várias peças menores foram desenhadas para uma coluna
+   estreita (a antiga .shell de 980px, ou a .shell.narrow de 460px) e
+   ficaram esparramadas nessa largura nova: linhas de recurso com o rótulo
+   de um lado e o campo bem longe do outro, texto corrido em linhas de
+   100+ caracteres, foco de teclado quase invisível. Os blocos abaixo
+   corrigem isso sem tocar em HTML/JS — só reorganizam o espaço que já
+   existe.
+   ===================================================================== */
+
+/* ---- Leitura: texto corrido não deveria esticar a página toda ----
+   Parágrafos de apoio (dicas, descrições de traço/habilidade, texto do
+   antecedente) ficavam com uma linha só de ~100+ caracteres nas colunas
+   largas — cansativo de ler. Limitar a largura de leitura (~70 caracteres)
+   não afeta em nada os campos de formulário, grades ou botões ao lado. */
+.hint,
+.race-detail,
+.ability-desc,
+.trait-pick .tdesc,
+.sheet-list{
+  max-width:70ch;
+}
+.race-detail{ max-width:640px; }
+
+/* ---- Linhas de recurso compactas em 2 colunas ----
+   HP por parte do corpo, moedas (Economia) e perícias eram uma lista de
+   linhas cheias (rótulo + 1 campo) esticadas pela largura toda da coluna
+   principal — muito espaço vazio entre o nome e o número. Como cada
+   container já só recebe esse tipo de linha (nada de estrutura para
+   preservar), reagrupar em 2 colunas devolve a cada linha a largura para
+   a qual ela foi desenhada originalmente. */
+#hpPartsBox, #economyBox, #skillsList{
+  display:grid; grid-template-columns:repeat(2,1fr); gap:8px 14px; align-items:start;
+}
+#hpPartsBox .hp-part-row,
+#economyBox .resource-row,
+#skillsList .skill-row{ margin-bottom:0; }
+#economyBox #economyTotalHint{ grid-column:1 / -1; }
+#skillsList > p.hint{ grid-column:1 / -1; }
+
+/* ---- Cartões de conteúdo variável em grade flexível ----
+   Habilidades, técnicas e traços (cada um com nome + custo + descrição de
+   tamanho variável) usam auto-fill: cada cartão fica com sua largura
+   natural (mín. 300px) e a grade decide sozinha quantas colunas cabem —
+   2 na coluna principal do editor, 1 quando a tela é estreita. */
+#abilitiesList, #techniquesList, .trait-cat-body{
+  display:grid; grid-template-columns:repeat(auto-fill, minmax(300px,1fr));
+  gap:10px 14px; align-items:start;
+}
+#abilitiesList > p.hint, #techniquesList > p.hint{ grid-column:1 / -1; }
+#abilitiesList .ability-row, #techniquesList .ability-row{ margin-bottom:0; }
+.trait-cat-body .trait-pick{ margin-bottom:0; }
+
+@media (max-width:640px){
+  #hpPartsBox, #economyBox, #skillsList,
+  #abilitiesList, #techniquesList, .trait-cat-body{
+    grid-template-columns:1fr;
+  }
+}
+
+/* ---- Foco de teclado visível ----
+   Botões, links e cartões clicáveis (raça, traço) só mudavam a cor da
+   borda de 1px no :hover — para quem navega pelo teclado (Tab), o foco
+   ficava quase impossível de enxergar. Um contorno dourado consistente
+   resolve isso em qualquer elemento focável, sem mudar a aparência normal
+   (sem foco) de nada. */
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+.race-card:focus-visible,
+.trait-pick:focus-visible{
+  outline:2px solid var(--gold);
+  outline-offset:2px;
+}
+
+/* ---- Correção geral de overflow horizontal no mobile ----
+   Causa raiz de vários layouts "cortados" no celular (cards de atributo,
+   linhas de recurso, etc.): dentro de um grid/flex, todo item tem por
+   padrão min-width:auto, que trava no tamanho intrínseco do próprio
+   conteúdo — e um <input>, especialmente type=number (por causa das
+   setinhas nativas), tem um tamanho intrínseco bem maior que sua coluna
+   em telas estreitas. Isso ignora completamente o width:100% do CSS e
+   empurra a grade (e a página inteira) pra fora da tela, sem quebrar
+   linha nem encolher. min-width:0 deixa o navegador encolher esses
+   elementos até caberem de verdade. */
+input, select, textarea{ min-width:0; }
+
+/* Rede de segurança: nenhuma parte do site precisa rolar na horizontal
+   (a única exceção, as abas do wizard, já tem seu próprio overflow-x
+   interno), então isso evita que qualquer overflow não previsto — aqui
+   ou em algo que passe batido no futuro — quebre visualmente a página.
+
+   IMPORTANTE: overflow-x precisa ficar só no <html>, nunca também no
+   <body>. Declarar overflow (mesmo só no eixo X) nos dois ao mesmo tempo
+   faz o navegador tratar os dois como contêineres de rolagem — o
+   overflow-y de ambos passa a valer "auto" implicitamente, mesmo sem
+   pedir. O body então vira um segundo contêiner de rolagem "morto"
+   (ele nunca rola de verdade, porque sua altura sempre acompanha o
+   conteúdo). Qualquer elemento position:sticky dentro do body (a nav de
+   etapas do ficha-editor, o topbar) passa a ser calculado em relação a
+   esse contêiner que nunca se move, em vez do scroll real da página —
+   é isso que faz a nav travar/sumir mesmo com os breakpoints já
+   alinhados com o topbar. Com overflow-x só no html, sobra um único
+   contêiner de rolagem real e o sticky volta a funcionar. */
+html{ overflow-x:hidden; max-width:100%; }
+body{ max-width:100%; }
+
+/* ---- Profundidade sutil nos painéis ----
+   Os painéis usavam só um degradê de fundo + borda de 1px para se
+   separarem do fundo — funcional, mas achatado. Uma sombra bem discreta
+   dá uma leve sensação de camada sem mudar a paleta nem chamar atenção
+   para si mesma. */
+.panel{ box-shadow:0 8px 20px -14px rgba(0,0,0,.55); }
+
+/* =====================================================================
+   ACABAMENTO — profundidade, movimento e resposta ao toque
+   Esta seção não muda paleta, tipografia ou estrutura: adiciona feedback
+   visual (hover/active/foco), pequenas transições e detalhes ornamentais
+   que fazem o site parecer mais "vivo" sem arriscar quebrar nenhum
+   seletor usado pelo JS (nenhuma classe é renomeada ou removida).
+   ===================================================================== */
+
+@media (prefers-reduced-motion: reduce){
+  *{ animation-duration:.01ms !important; animation-iteration-count:1 !important; transition-duration:.01ms !important; }
+}
+
+/* Firefox: acompanha a cor da scrollbar já usada no webkit acima */
+html{ scrollbar-width:thin; scrollbar-color:var(--hairline) var(--bg); }
+
+/* ---- Fio dourado no topo dos painéis ----
+   Um traço fino que esmaece nas pontas, lembrando a lombada de um livro
+   antigo — reforça a identidade "grimório" sem exigir imagem nenhuma. */
+.panel{ position:relative; overflow:hidden; }
+.panel::before{
+  content:''; position:absolute; top:0; left:0; right:0; height:1px;
+  background:linear-gradient(90deg, transparent, var(--gold-dim), transparent);
+  opacity:.55;
+}
+
+/* ---- Botões: profundidade e resposta ao clique ----
+   Hover já existia (brightness); acrescenta leve elevação e um estado de
+   :active que "afunda" o botão — feedback tátil que faltava. */
+.btn{
+  box-shadow:0 6px 16px -8px rgba(156,43,43,.45);
+  transition:filter .15s, transform .12s, box-shadow .15s;
+}
+.btn:hover:not(:disabled){ transform:translateY(-1px); box-shadow:0 10px 20px -8px rgba(156,43,43,.55); }
+.btn:active:not(:disabled){ transform:translateY(0); filter:brightness(.97); box-shadow:0 3px 10px -6px rgba(156,43,43,.5); }
+.btn.secondary{ box-shadow:none; transition:all .15s; }
+.btn.secondary:hover{ background:rgba(201,161,92,.08); transform:translateY(-1px); }
+.btn.secondary:active{ transform:translateY(0); background:rgba(201,161,92,.14); }
+.btn.danger{ box-shadow:0 6px 16px -8px rgba(107,38,38,.5); }
+.btn-link{ transition:all .15s, transform .12s; }
+.btn-link:hover{ transform:translateY(-1px); }
+
+/* ---- Cartões clicáveis: elevação leve no hover ----
+   Raça, traço e ficha (lista) ganham um deslocamento sutil + sombra para
+   deixar claro que são interativos, sem depender só da mudança de borda. */
+.race-card, .trait-pick, .sheet-card, .trait-cat-title{
+  transition:border-color .15s, background .15s, transform .15s, box-shadow .15s;
+}
+.race-card:hover{ transform:translateY(-2px); box-shadow:0 10px 18px -12px rgba(0,0,0,.6); }
+.trait-pick:hover{ transform:translateY(-1px); box-shadow:0 8px 16px -12px rgba(0,0,0,.55); }
+.sheet-card{ transition:border-color .15s, transform .15s, box-shadow .2s; }
+.sheet-card:hover{ border-color:var(--gold-dim); transform:translateY(-2px); box-shadow:0 14px 24px -16px rgba(0,0,0,.65); }
+
+/* ---- Controles redondos (+/-): leve escala ao interagir ---- */
+.attr-controls button, .skill-pts button{ transition:border-color .15s, transform .12s, color .15s; }
+.attr-controls button:hover, .skill-pts button:hover{ transform:scale(1.08); }
+.attr-controls button:active, .skill-pts button:active{ transform:scale(.95); }
+
+/* ---- Estado de carregamento: giro sutil em vez de texto parado ---- */
+.center-loading{
+  display:flex; flex-direction:column; align-items:center; justify-content:center; gap:14px;
+}
+.center-loading::before{
+  content:''; width:26px; height:26px; border-radius:50%;
+  border:2px solid var(--hairline); border-top-color:var(--gold-dim);
+  animation:hs-spin .8s linear infinite;
+}
+
+/* ---- Estado vazio: ícone com leve flutuação ---- */
+.empty-state .es-icon{ animation:hs-float 3.2s ease-in-out infinite; display:inline-block; }
+
+@keyframes hs-spin{ to{ transform:rotate(360deg); } }
+@keyframes hs-float{
+  0%, 100%{ transform:translateY(0); }
+  50%{ transform:translateY(-6px); }
+}
+@keyframes hs-fade-up{
+  from{ opacity:0; transform:translateY(8px); }
+  to{ opacity:1; transform:translateY(0); }
+}
+
+/* ---- Entrada suave de cada página ---- */
+.shell{ animation:hs-fade-up .35s ease-out; }
+
+/* ---- Título de página: leve brilho para reforçar hierarquia ---- */
+.page-head h1{ text-shadow:0 0 24px rgba(201,161,92,.18); }
+
+/* ---- Chips selecionados/tags: pequena transição em vez de corte seco ---- */
+.chosen-chip, .tag, .extra-skill-chip{ transition:transform .12s, background .15s; }
+.chosen-chip:hover{ transform:translateY(-1px); }
+
+/* =====================================================================
+   ACABAMENTO II — textura, seleção e leitura
+   Segunda passada de polimento: continua sem tocar em HTML/JS (fora um
+   ajuste pontual no index.html feito à parte). Foco agora em três coisas
+   que ainda pareciam "genéricas": o fundo liso, os <select> nativos (que
+   destoam do resto, estilizado) e a falta de um sinal visual claro de "isto
+   está selecionado" nos cartões de raça/traço além da cor da borda.
+   ===================================================================== */
+
+/* ---- Textura sutil de pergaminho ----
+   Um grão bem discreto (SVG de ruído embutido, sem requisição de rede)
+   por cima do degradê radial já existente — dá peso de "página antiga"
+   sem escurecer nem competir com o conteúdo. */
+body{
+  background-image:
+    radial-gradient(ellipse 1200px 800px at 15% -10%, rgba(156,43,43,0.08), transparent 60%),
+    radial-gradient(ellipse 900px 700px at 100% 10%, rgba(201,161,92,0.06), transparent 55%),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.035'/%3E%3C/svg%3E");
+  background-color:var(--bg);
+}
+
+/* ---- <select> com identidade própria ----
+   Antes herdava só a borda/fundo dos inputs de texto; a setinha nativa do
+   navegador (cinza, quadrada) quebrava o clima. Aqui a seta vira um "V"
+   dourado desenhado em SVG, sem precisar de nenhum wrapper extra no HTML. */
+select{
+  appearance:none; -webkit-appearance:none; -moz-appearance:none;
+  padding-right:34px; cursor:pointer;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1L6 6L11 1' stroke='%23C9A15C' stroke-width='1.6' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat:no-repeat; background-position:right 12px center;
+}
+select:hover{ border-color:var(--gold-dim); }
+select option{ background:var(--bg-alt); color:var(--ink); }
+
+/* ---- Checkboxes de parte do corpo (painel de Dados da mesa) ----
+   Substitui o antigo <select> de parte única: agora dá pra marcar várias
+   partes de uma vez e a rolagem é aplicada em cada uma marcada. */
+.dice-part-checks{
+  display:grid; grid-template-columns:1fr 1fr; gap:4px 10px;
+  margin-bottom:8px; padding:8px 10px;
+  border:1px solid var(--hairline); border-radius:6px;
+}
+.dice-part-check-item{
+  display:flex; align-items:center; gap:6px;
+  font-size:13px; text-transform:none; letter-spacing:normal;
+  color:var(--ink); margin-bottom:0; cursor:pointer;
+}
+.dice-part-check-item input[type=checkbox]{ margin:0; cursor:pointer; }
+
+/* ---- Selo de seleção em cartões ----
+   .race-card.selected e .trait-pick.selected já mudavam borda/fundo, mas
+   num relance rápido (ex.: rolando uma lista longa de traços) isso é fácil
+   de não notar. Uma marca "✓" fixa no canto deixa a escolha inconfundível. */
+.race-card, .trait-pick{ position:relative; }
+.race-card.selected::after, .trait-pick.selected::after{
+  content:'✓'; position:absolute; top:-7px; right:-7px; width:20px; height:20px;
+  background:var(--seal-bright); color:#fff; border-radius:50%; font-size:11px;
+  display:flex; align-items:center; justify-content:center; box-shadow:0 3px 8px rgba(0,0,0,.4);
+  animation:hs-pop .18s ease-out;
+}
+@keyframes hs-pop{ from{ transform:scale(.5); opacity:0; } to{ transform:scale(1); opacity:1; } }
+
+/* ---- Ornamento entre título de seção e conteúdo ----
+   Um pequeno losango dourado antes do título do painel, no lugar (ou ao
+   lado) do número de etapa — reforça o clima "capítulo de livro" nos
+   títulos que não têm .step-num (a maioria dos h2 fora do editor). */
+.panel h2:not(:has(.step-num))::before{
+  content:''; width:6px; height:6px; background:var(--seal-bright); transform:rotate(45deg);
+  flex-shrink:0; opacity:.85;
+}
+
+/* ---- Mensagens de erro/sucesso com ícone ----
+   Texto simples sobre fundo colorido já era claro, mas um ícone acelera o
+   reconhecimento (erro vs. sucesso) antes mesmo de ler a frase. */
+.error-msg, .ok-msg{ display:flex; align-items:flex-start; gap:10px; }
+.error-msg::before{ content:'⚠'; flex-shrink:0; }
+.ok-msg::before{ content:'✓'; flex-shrink:0; }
+
+/* ---- Zona de perigo: ícone reforçando o tom ---- */
+.danger-zone h2::before{ content:'⚠ '; }
+
+/* ---- Estado vazio: moldura discreta ----
+   Antes era só texto solto no meio do espaço em branco; uma borda
+   pontilhada finge um "espaço reservado" no grimório, convidando a
+   preencher (ex.: "nenhuma ficha ainda — crie a primeira"). */
+.empty-state{
+  border:1px dashed var(--hairline); border-radius:var(--radius);
+}
+
+/* ---- Leitura mais confortável em blocos de texto corrido ---- */
+.sheet-list .li, .race-detail, .ability-desc, .trait-pick .tdesc{ line-height:1.55; }
+
+/* ---- Botão primário: brilho passando no hover ----
+   Um reflexo diagonal que atravessa o botão suavemente — reforça que é a
+   ação principal da tela sem depender só da cor vermelha/dourada. */
+.btn:not(.secondary):not(.danger){ position:relative; overflow:hidden; }
+.btn:not(.secondary):not(.danger)::after{
+  content:''; position:absolute; top:0; left:-60%; width:40%; height:100%;
+  background:linear-gradient(120deg, transparent, rgba(255,255,255,.16), transparent);
+  transform:skewX(-20deg); transition:left .5s ease;
+}
+.btn:not(.secondary):not(.danger):hover::after{ left:130%; }
+
+/* ---- Menu mobile: entrada deslizando em vez de aparecer seco ---- */
+@media (max-width:780px){
+  .topbar-menu.open{ animation:hs-slide-down .18s ease-out; }
+  @keyframes hs-slide-down{
+    from{ opacity:0; transform:translateY(-6px); }
+    to{ opacity:1; transform:translateY(0); }
+  }
+}

@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Heartsoul — Fichas</title>
+<link rel="icon" href="assets/favicon-32.png" type="image/png">
+<link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#120F0C">
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').catch(() => {});
+  });
+}
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,600;1,400&family=Cinzel:wght@500;600&family=JetBrains+Mono&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+<style>
+  body{ display:flex; align-items:center; justify-content:center; min-height:100vh; }
+  .auth-wrap{ max-width:440px; width:100%; margin:0 auto; padding:56px 20px; }
+  .auth-card{
+    position:relative; background:linear-gradient(180deg, var(--panel), var(--panel-2));
+    border:1px solid var(--hairline); border-radius:6px; padding:40px 34px 34px;
+    box-shadow:0 24px 60px -24px rgba(0,0,0,.7), 0 8px 20px -14px rgba(0,0,0,.6);
+    animation:hs-fade-up .45s ease-out;
+  }
+  /* Cantos ornamentais — um traço em "L" em cada canto do cartão, como a
+     moldura de um pergaminho lacrado. Puramente decorativo (CSS puro). */
+  .auth-card::before, .auth-card::after,
+  .auth-corner-br, .auth-corner-bl{
+    content:''; position:absolute; width:22px; height:22px; pointer-events:none;
+  }
+  .auth-card::before{ top:10px; left:10px; border-top:1px solid var(--gold-dim); border-left:1px solid var(--gold-dim); }
+  .auth-card::after{ top:10px; right:10px; border-top:1px solid var(--gold-dim); border-right:1px solid var(--gold-dim); }
+  .auth-corner-bl{ bottom:10px; left:10px; border-bottom:1px solid var(--gold-dim); border-left:1px solid var(--gold-dim); }
+  .auth-corner-br{ bottom:10px; right:10px; border-bottom:1px solid var(--gold-dim); border-right:1px solid var(--gold-dim); }
+  .seal-big{ display:block; margin:0 auto 18px; animation:hs-seal-spin 40s linear infinite; }
+  @media (prefers-reduced-motion: reduce){ .seal-big{ animation:none; } }
+  @keyframes hs-seal-spin{ to{ transform:rotate(360deg); } }
+  .auth-title{
+    text-align:center; font-family:'Cinzel',serif; font-size:30px; color:var(--gold); margin:0 0 6px;
+    letter-spacing:.08em; text-shadow:0 0 26px rgba(201,161,92,.22);
+  }
+  .auth-sub{ text-align:center; color:var(--ink-dim); font-style:italic; margin:0 0 30px; font-size:15px; }
+  .mode-toggle{ display:flex; gap:8px; margin-bottom:24px; background:var(--bg-alt); border:1px solid var(--hairline); border-radius:var(--radius); padding:4px; }
+  .mode-toggle button{
+    flex:1; background:none; border:none; color:var(--ink-mute); padding:9px; cursor:pointer;
+    font-family:'Cinzel',serif; font-size:13px; border-radius:2px; letter-spacing:.03em; transition:all .15s;
+  }
+  .mode-toggle button.active{ background:var(--panel-2); color:var(--gold); }
+  .mode-toggle button:not(.active):hover{ color:var(--ink-dim); }
+  .form-toggle{ text-align:center; margin-top:16px; font-size:14px; color:var(--ink-mute); }
+  .form-toggle a{ cursor:pointer; }
+  .who-tabs{ display:flex; gap:8px; margin-bottom:28px; }
+  .who-tabs button{
+    flex:1; background:var(--panel); border:1px solid var(--hairline); color:var(--ink-dim);
+    padding:14px; border-radius:var(--radius); cursor:pointer; font-family:'Cinzel',serif; font-size:14px;
+    transition:all .15s;
+  }
+  .who-tabs button:hover{ border-color:var(--gold-dim); }
+  .who-tabs button.active{ border-color:var(--seal-bright); color:var(--gold); background:rgba(156,43,43,.08); }
+</style>
+</head>
+<body>
+
+<div class="auth-wrap">
+  <div class="auth-card">
+  <div class="auth-corner-bl"></div><div class="auth-corner-br"></div>
+  <svg class="seal-big" width="64" height="64" viewBox="0 0 120 120" fill="none">
+    <circle cx="60" cy="60" r="54" stroke="#C9A15C" stroke-width="1" opacity="0.5"/>
+    <circle cx="60" cy="60" r="44" stroke="#9C2B2B" stroke-width="1" opacity="0.6"/>
+    <circle cx="60" cy="60" r="4" fill="#C9A15C"/>
+    <path d="M60 24 L84 60 L60 96 L36 60 Z" stroke="#9C2B2B" stroke-width="1" opacity="0.55" fill="none"/>
+  </svg>
+  <h1 class="auth-title">HEARTSOUL</h1>
+  <p class="auth-sub">Suas fichas, guardadas entre uma sessão e outra</p>
+
+  <div class="who-tabs">
+    <button id="tabPlayer" class="active">⚔️ Sou Jogador</button>
+    <button id="tabMaster">📖 Sou Mestre</button>
+  </div>
+
+  <div id="errorBox"></div>
+
+  <!-- ===== JOGADOR ===== -->
+  <div id="playerPane">
+    <div class="mode-toggle">
+      <button id="pModeLogin" class="active">Entrar</button>
+      <button id="pModeSignup">Criar conta</button>
+    </div>
+
+    <form id="playerLoginForm">
+      <div class="field">
+        <label>E-mail</label>
+        <input type="email" id="plEmail" required>
+      </div>
+      <div class="field">
+        <label>Senha</label>
+        <input type="password" id="plPassword" required>
+      </div>
+      <button class="btn" type="submit">Entrar</button>
+      <p class="form-toggle" style="text-align:right; margin-top:10px;"><a id="pForgotLink">Esqueci minha senha</a></p>
+    </form>
+
+    <form id="playerForgotForm" class="hidden">
+      <p class="hint" style="margin-top:0;">Informe o e-mail da sua conta e enviaremos um link para redefinir a senha.</p>
+      <div class="field">
+        <label>E-mail</label>
+        <input type="email" id="pfEmail" required>
+      </div>
+      <button class="btn" type="submit">Enviar link de redefinição</button>
+      <p class="form-toggle"><a id="pForgotBack">Voltar para o login</a></p>
+    </form>
+
+    <form id="playerSignupForm" class="hidden">
+      <div class="field">
+        <label>Seu nome (como o mestre vai te ver)</label>
+        <input type="text" id="psName" required>
+      </div>
+      <div class="field">
+        <label>E-mail</label>
+        <input type="email" id="psEmail" required>
+      </div>
+      <div class="field">
+        <label>Senha (mínimo 6 caracteres)</label>
+        <input type="password" id="psPassword" required minlength="6">
+      </div>
+      <button class="btn" type="submit">Criar conta e entrar</button>
+    </form>
+  </div>
+
+  <!-- ===== MESTRE ===== -->
+  <div id="masterPane" class="hidden">
+    <div class="mode-toggle">
+      <button id="mModeLogin" class="active">Entrar</button>
+      <button id="mModeSignup">Virar Mestre</button>
+    </div>
+
+    <form id="masterLoginForm">
+      <div class="field">
+        <label>E-mail do mestre</label>
+        <input type="email" id="mlEmail" required>
+      </div>
+      <div class="field">
+        <label>Senha</label>
+        <input type="password" id="mlPassword" required>
+      </div>
+      <button class="btn" type="submit">Entrar como Mestre</button>
+      <p class="form-toggle" style="text-align:right; margin-top:10px;"><a id="mForgotLink">Esqueci minha senha</a></p>
+    </form>
+
+    <form id="masterForgotForm" class="hidden">
+      <p class="hint" style="margin-top:0;">Informe o e-mail da sua conta de mestre e enviaremos um link para redefinir a senha.</p>
+      <div class="field">
+        <label>E-mail</label>
+        <input type="email" id="mfEmail" required>
+      </div>
+      <button class="btn" type="submit">Enviar link de redefinição</button>
+      <p class="form-toggle"><a id="mForgotBack">Voltar para o login</a></p>
+    </form>
+
+    <div id="masterInfoPanel" class="hidden">
+      <p class="hint" style="margin-top:0">
+        Contas de Mestre não são criadas sozinhas por aqui — é assim de
+        propósito, pra ninguém conseguir virar Mestre sem autorização.
+        Crie uma conta normal em <strong>"Sou Jogador"</strong> e peça
+        para quem administra o site te promover (é uma edição rápida,
+        de fora do site, direto no banco de dados do projeto).
+      </p>
+    </div>
+  </div>
+
+  </div>
+
+  <p class="footer-note">Heartsoul RPG — sistema de fichas do grupo</p>
+  <p class="footer-note"><a href="livro-de-regras.html" target="_blank" rel="noopener" style="color:var(--gold-dim);">📖 Consultar o Livro de Regras</a></p>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+<script src="js/firebase-config.js"></script>
+<script src="js/firebase-init.js"></script>
+<script>
+function showError(msg){
+  document.getElementById('errorBox').innerHTML = `<div class="error-msg">${escapeHtml(msg)}</div>`;
+}
+function clearError(){ document.getElementById('errorBox').innerHTML = ''; }
+
+function translateAuthError(err){
+  const map = {
+    'auth/email-already-in-use': 'Esse e-mail já tem uma conta. Tente entrar em vez de criar.',
+    'auth/invalid-email': 'E-mail inválido.',
+    'auth/weak-password': 'A senha precisa ter pelo menos 6 caracteres.',
+    'auth/user-not-found': 'Não achei essa conta. Confira o e-mail ou crie uma conta nova.',
+    'auth/wrong-password': 'Senha incorreta.',
+    'auth/invalid-credential': 'E-mail ou senha incorretos.',
+    'auth/too-many-requests': 'Muitas tentativas. Espere um pouco e tente de novo.'
+  };
+  return map[err.code] || ('Erro: ' + err.message);
+}
+
+// já logado? redireciona
+auth.onAuthStateChanged(async (user) => {
+  if (user) {
+    const profile = await getUserProfile(user.uid);
+    if (profile) {
+      location.href = profile.role === 'master' ? 'master.html' : 'minhas-fichas.html';
+    }
+  }
+});
+
+// ---- tabs jogador/mestre ----
+const tabPlayer = document.getElementById('tabPlayer');
+const tabMaster = document.getElementById('tabMaster');
+const playerPane = document.getElementById('playerPane');
+const masterPane = document.getElementById('masterPane');
+tabPlayer.addEventListener('click', () => {
+  tabPlayer.classList.add('active'); tabMaster.classList.remove('active');
+  playerPane.classList.remove('hidden'); masterPane.classList.add('hidden');
+  document.getElementById('playerForgotForm').classList.add('hidden');
+  playerLoginForm.classList.remove('hidden');
+  clearError();
+});
+tabMaster.addEventListener('click', () => {
+  tabMaster.classList.add('active'); tabPlayer.classList.remove('active');
+  masterPane.classList.remove('hidden'); playerPane.classList.add('hidden');
+  document.getElementById('masterForgotForm').classList.add('hidden');
+  masterLoginForm.classList.remove('hidden');
+  clearError();
+});
+
+// ---- toggle login/signup jogador ----
+const pModeLogin = document.getElementById('pModeLogin');
+const pModeSignup = document.getElementById('pModeSignup');
+const playerLoginForm = document.getElementById('playerLoginForm');
+const playerSignupForm = document.getElementById('playerSignupForm');
+pModeLogin.addEventListener('click', () => {
+  pModeLogin.classList.add('active'); pModeSignup.classList.remove('active');
+  playerLoginForm.classList.remove('hidden'); playerSignupForm.classList.add('hidden');
+  document.getElementById('playerForgotForm').classList.add('hidden');
+});
+pModeSignup.addEventListener('click', () => {
+  pModeSignup.classList.add('active'); pModeLogin.classList.remove('active');
+  playerSignupForm.classList.remove('hidden'); playerLoginForm.classList.add('hidden');
+  document.getElementById('playerForgotForm').classList.add('hidden');
+});
+
+const mModeLogin = document.getElementById('mModeLogin');
+const mModeSignup = document.getElementById('mModeSignup');
+const masterLoginForm = document.getElementById('masterLoginForm');
+const masterInfoPanel = document.getElementById('masterInfoPanel');
+mModeLogin.addEventListener('click', () => {
+  mModeLogin.classList.add('active'); mModeSignup.classList.remove('active');
+  masterLoginForm.classList.remove('hidden'); masterInfoPanel.classList.add('hidden');
+  document.getElementById('masterForgotForm').classList.add('hidden');
+});
+mModeSignup.addEventListener('click', () => {
+  mModeSignup.classList.add('active'); mModeLogin.classList.remove('active');
+  masterInfoPanel.classList.remove('hidden'); masterLoginForm.classList.add('hidden');
+  document.getElementById('masterForgotForm').classList.add('hidden');
+});
+
+// ---- player login ----
+playerLoginForm.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  clearError();
+  const email = document.getElementById('plEmail').value.trim();
+  const password = document.getElementById('plPassword').value;
+  try {
+    await auth.signInWithEmailAndPassword(email, password);
+  } catch (err) { showError(translateAuthError(err)); }
+});
+
+// ---- player signup ----
+playerSignupForm.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  clearError();
+  const name = document.getElementById('psName').value.trim();
+  const email = document.getElementById('psEmail').value.trim();
+  const password = document.getElementById('psPassword').value;
+  try {
+    const cred = await auth.createUserWithEmailAndPassword(email, password);
+    await createUserProfile(cred.user.uid, { name, email, role: 'player' });
+  } catch (err) { showError(translateAuthError(err)); }
+});
+
+// ---- master login ----
+masterLoginForm.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  clearError();
+  const email = document.getElementById('mlEmail').value.trim();
+  const password = document.getElementById('mlPassword').value;
+  try {
+    const cred = await auth.signInWithEmailAndPassword(email, password);
+    const profile = await getUserProfile(cred.user.uid);
+    if (!profile || profile.role !== 'master') {
+      await auth.signOut();
+      showError('Essa conta não é de mestre.');
+    }
+  } catch (err) { showError(translateAuthError(err)); }
+});
+
+// ---- esqueci minha senha (jogador) ----
+const playerForgotForm = document.getElementById('playerForgotForm');
+document.getElementById('pForgotLink').addEventListener('click', (e) => {
+  e.preventDefault();
+  clearError();
+  playerLoginForm.classList.add('hidden');
+  playerSignupForm.classList.add('hidden');
+  playerForgotForm.classList.remove('hidden');
+});
+document.getElementById('pForgotBack').addEventListener('click', (e) => {
+  e.preventDefault();
+  clearError();
+  playerForgotForm.classList.add('hidden');
+  playerLoginForm.classList.remove('hidden');
+});
+playerForgotForm.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  clearError();
+  const email = document.getElementById('pfEmail').value.trim();
+  try {
+    await auth.sendPasswordResetEmail(email);
+    document.getElementById('errorBox').innerHTML = `<div class="ok-msg">Enviamos um e-mail com instruções para redefinir sua senha.</div>`;
+  } catch (err) { showError(translateAuthError(err)); }
+});
+
+// ---- esqueci minha senha (mestre) ----
+const masterForgotForm = document.getElementById('masterForgotForm');
+document.getElementById('mForgotLink').addEventListener('click', (e) => {
+  e.preventDefault();
+  clearError();
+  masterLoginForm.classList.add('hidden');
+  masterInfoPanel.classList.add('hidden');
+  masterForgotForm.classList.remove('hidden');
+});
+document.getElementById('mForgotBack').addEventListener('click', (e) => {
+  e.preventDefault();
+  clearError();
+  masterForgotForm.classList.add('hidden');
+  masterLoginForm.classList.remove('hidden');
+});
+masterForgotForm.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  clearError();
+  const email = document.getElementById('mfEmail').value.trim();
+  try {
+    await auth.sendPasswordResetEmail(email);
+    document.getElementById('errorBox').innerHTML = `<div class="ok-msg">Enviamos um e-mail com instruções para redefinir sua senha.</div>`;
+  } catch (err) { showError(translateAuthError(err)); }
+});
+
+// Não existe mais cadastro de Mestre pelo site (nem por senha secreta):
+// contas de Mestre só são promovidas manualmente no Firestore, fora do
+// site (ver README). Isso fecha a brecha em que qualquer pessoa podia
+// virar Mestre sozinha — ver firestore.rules, regra de /users/{userId}.
+</script>
+</body>
+</html>

@@ -1,0 +1,83 @@
+// Service worker mínimo do Heartsoul — existe principalmente para o site
+// ser reconhecido como um PWA instalável (é um dos requisitos, junto do
+// manifest.json, para o Chrome/Android oferecer "Instalar app" e para
+// ferramentas como o PWABuilder conseguirem empacotar isto como .apk).
+//
+// Estratégia "cache-first" só para o casco estático do site (HTML, CSS,
+// JS, ícones). NÃO cacheia nada do Firebase/Firestore — os dados da mesa,
+// fichas e chat continuam sempre ao vivo, exigindo internet, exatamente
+// como hoje. Isto só evita reload de arquivo estático quando a conexão
+// cai por um instante, e permite abrir o app (a tela de login, por
+// exemplo) mesmo sem internet.
+
+const CACHE_NAME = 'heartsoul-shell-v6'; // v6: livro-de-regras.html não carrega mais o conteúdo embutido — o
+// texto das regras foi extraído para regras.json (carregado à parte via fetch), então precisa entrar no
+// app shell também; e offline.html foi adicionado como página de fallback quando uma rota não cacheada
+// falha sem internet (ver tratamento de 'navigate' no listener de fetch abaixo).
+const APP_SHELL = [
+  './',
+  './index.html',
+  './minhas-fichas.html',
+  './ficha-editor.html',
+  './ficha-view.html',
+  './master.html',
+  './mesa.html',
+  './dados.html',
+  './livro-de-regras.html',
+  './regras.json',
+  './perfil.html',
+  './offline.html',
+  './css/style.css',
+  './manifest.json',
+  './assets/icon-192.png',
+  './assets/icon-512.png'
+];
+
+self.addEventListener('install', (event) => {
+  event.waitUntil(
+    caches.open(CACHE_NAME)
+      .then((cache) => cache.addAll(APP_SHELL))
+      .then(() => self.skipWaiting())
+  );
+});
+
+self.addEventListener('activate', (event) => {
+  event.waitUntil(
+    caches.keys().then((names) =>
+      Promise.all(names.filter((n) => n !== CACHE_NAME).map((n) => caches.delete(n)))
+    ).then(() => self.clients.claim())
+  );
+});
+
+self.addEventListener('fetch', (event) => {
+  const url = new URL(event.request.url);
+
+  // Nunca intercepta chamadas para fora do próprio site (Firebase,
+  // Firestore, Google Fonts etc.) — tudo isso continua indo direto pra
+  // rede, sem cache, pra não servir dado desatualizado de ficha/mesa/chat.
+  if (url.origin !== self.location.origin) return;
+  if (event.request.method !== 'GET') return;
+
+  event.respondWith(
+    caches.match(event.request).then((cached) => {
+      const network = fetch(event.request)
+        .then((resp) => {
+          if (resp && resp.ok) {
+            const clone = resp.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
+          }
+          return resp;
+        })
+        .catch(() => {
+          // Sem rede e sem cópia em cache desta rota específica. Para uma
+          // navegação de página (o usuário abrindo uma tela, não uma
+          // chamada de API/asset), mostra a tela "sem conexão" em vez de
+          // deixar o navegador exibir o erro genérico dele.
+          if (cached) return cached;
+          if (event.request.mode === 'navigate') return caches.match('./offline.html');
+          return undefined;
+        });
+      return cached || network;
+    })
+  );
+});
