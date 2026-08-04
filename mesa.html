@@ -173,10 +173,32 @@ if ('serviceWorker' in navigator) {
     overflow:hidden; pointer-events:none; z-index:2;
   }
   .token .token-hp-bar-fill{ height:100%; transition:width .25s ease; }
-  .board-side{ flex:0 0 clamp(300px, 24vw, 340px); max-height:calc(78vh + 10px); overflow-y:auto; }
+  .board-side{ flex:0 0 clamp(300px, 24vw, 340px); max-height:calc(78vh + 10px); overflow-y:auto; position:relative; transition:flex-basis .18s ease, width .18s ease; }
   /* Rolagem mais discreta no painel lateral, pra não brigar visualmente com
      o mapa ao lado (usa a mesma cor do site, só mais fina que o padrão). */
   .board-side::-webkit-scrollbar{ width:7px; }
+
+  /* ===== Painel lateral direito retrátil (recolhe a coluna inteira, não só
+     cada sanfona individual — botão fica fixo no topo, mesmo com a coluna
+     rolada, pra sempre dar pra reabrir sem precisar rolar de volta). ===== */
+  .board-side-toggle{
+    position:sticky; top:0; z-index:3; width:100%;
+    display:flex; align-items:center; justify-content:center; gap:7px;
+    background:var(--panel); border:1px solid var(--hairline); border-radius:var(--radius);
+    color:var(--ink-dim); cursor:pointer; padding:9px 10px; margin-bottom:12px;
+    font-family:'EB Garamond', serif; font-size:13px;
+  }
+  .board-side-toggle:hover{ border-color:var(--gold-dim); color:var(--gold); }
+  .bs-toggle-icon{ transition:transform .18s ease; font-size:12px; }
+  .board-side.retracted{
+    flex:0 0 42px; height:calc(78vh + 10px); max-height:calc(78vh + 10px); overflow:hidden; padding:0;
+  }
+  .board-side.retracted > *:not(.board-side-toggle){ display:none !important; }
+  .board-side.retracted .board-side-toggle{
+    margin-bottom:0; height:100%; min-height:200px; flex-direction:column;
+    writing-mode:vertical-rl; text-orientation:mixed; padding:14px 0;
+  }
+  .board-side.retracted .bs-toggle-icon{ transform:rotate(180deg); writing-mode:horizontal-tb; }
   .side-panel{
     background:var(--panel); border:1px solid var(--hairline); border-radius:var(--radius);
     padding:18px; margin-bottom:14px;
@@ -290,10 +312,22 @@ if ('serviceWorker' in navigator) {
   .tool-toolbar button{
     background:none; border:1px solid var(--hairline-soft); color:var(--ink-dim); cursor:pointer;
     font-size:13px; padding:7px 12px; border-radius:6px; font-family:'EB Garamond', serif;
+    display:inline-flex; align-items:center; gap:8px;
   }
   .tool-toolbar button:hover{ border-color:var(--gold-dim); color:var(--gold); }
   .tool-toolbar button.tool-active{ border-color:var(--gold); color:var(--gold); background:rgba(201,161,92,.12); }
   .tool-toolbar .tt-sep{ width:1px; align-self:stretch; background:var(--hairline); margin:0 4px; }
+  .tool-toolbar .tool-label{ white-space:nowrap; }
+  /* Selo com o atalho de teclado de cada ferramenta — discreto, fica mais
+     nítido (dourado) quando o botão está em foco/hover/ativo, pra ficar
+     fácil de aprender os atalhos sem precisar decorar o title/tooltip. */
+  .tool-key{
+    font-family:'JetBrains Mono', monospace; font-size:10px; letter-spacing:.02em;
+    color:var(--ink-mute); border:1px solid var(--hairline-soft); border-radius:4px;
+    padding:1px 5px; line-height:1.5; flex-shrink:0; white-space:nowrap;
+  }
+  .tool-toolbar button:hover .tool-key,
+  .tool-toolbar button.tool-active .tool-key{ border-color:var(--gold-dim); color:var(--gold); }
   /* "m/casa" — quantos metros vale uma casa da grade, usado para converter
      os números da régua e das áreas de ataque (círculo/cone/linha) de
      casas para metros. Fica no mesmo visual dos botões da barra. */
@@ -309,6 +343,49 @@ if ('serviceWorker' in navigator) {
   .cell-unit-label input::-webkit-inner-spin-button,
   .cell-unit-label input::-webkit-outer-spin-button{ opacity:.5; }
   .cell-unit-label input:focus{ border-color:var(--gold-dim); color:var(--gold); outline:none; }
+
+  /* ===== Painel de ferramentas retrátil (barra de mover/régua/marcar/
+     desenho/névoa) — vira uma coluna fixa à esquerda do mapa no desktop,
+     igual ao painel lateral direito, com o mesmo botão de recolher/expandir
+     no topo. No celular (ver @media max-width:820px mais abaixo) continua
+     como fileira horizontal, só ganhando o mesmo botão pra escondê-la. ===== */
+  .tools-panel{
+    flex:0 0 190px; display:flex; flex-direction:column; gap:10px;
+    transition:flex-basis .18s ease, width .18s ease;
+  }
+  .tools-panel-toggle{
+    display:flex; align-items:center; justify-content:center; gap:7px;
+    background:var(--panel); border:1px solid var(--hairline); border-radius:var(--radius);
+    color:var(--ink-dim); cursor:pointer; padding:9px 10px;
+    font-family:'EB Garamond', serif; font-size:13px;
+  }
+  .tools-panel-toggle:hover{ border-color:var(--gold-dim); color:var(--gold); }
+  .tp-toggle-icon{ transition:transform .18s ease; font-size:12px; }
+  .tools-panel.retracted .tool-toolbar{ display:none; }
+  /* A coluna vertical (botões empilhados, largura fixa) só faz sentido no
+     layout lado a lado do desktop — abaixo de 821px o .board-layout vira
+     coluna (ver @media max-width:820px) e o painel de ferramentas volta a
+     ser uma fileira horizontal, igual à barra original. Por isso estas
+     regras ficam presas a min-width:821px em vez de valer sempre: sem essa
+     media query, a especificidade maior de ".tools-panel .tool-toolbar"
+     (2 classes) venceria a regra ".tool-toolbar" do modo celular (1 classe)
+     mesmo lá embaixo, quebrando a rolagem horizontal por toque. */
+  @media (min-width:821px){
+    .tools-panel .tool-toolbar{
+      display:flex; flex-direction:column; align-items:stretch; flex-wrap:nowrap;
+      gap:6px; margin-bottom:0; background:var(--panel); border:1px solid var(--hairline);
+      border-radius:var(--radius); padding:10px; max-height:calc(78vh + 10px); overflow-y:auto;
+    }
+    .tools-panel .tool-toolbar button{ text-align:left; width:100%; box-sizing:border-box; justify-content:space-between; }
+    .tools-panel .tool-toolbar .tt-sep{ width:100%; height:1px; align-self:auto; margin:2px 0; }
+    .tools-panel .tool-toolbar .cell-unit-label{ width:100%; box-sizing:border-box; justify-content:space-between; }
+    .tools-panel.retracted{ flex:0 0 42px; height:calc(78vh + 10px); max-height:calc(78vh + 10px); }
+    .tools-panel.retracted .tools-panel-toggle{
+      height:100%; min-height:200px; flex-direction:column;
+      writing-mode:vertical-rl; text-orientation:mixed; padding:14px 0;
+    }
+    .tools-panel.retracted .tp-toggle-icon{ transform:rotate(180deg); writing-mode:horizontal-tb; }
+  }
 
   .board-wrap.tool-draw, .board-wrap.tool-fog, .board-wrap.tool-template{ cursor:crosshair; }
   .board-wrap.tool-ruler{ cursor:cell; }
@@ -493,7 +570,23 @@ if ('serviceWorker' in navigator) {
        width:100% garantem que ele sempre ocupe a largura toda da tela. */
     .board-layout{ flex-direction:column; align-items:stretch; }
     .board-wrap{ width:100%; }
-    .board-side{ flex:1 1 auto; width:100%; max-height:none; }    /* 58vh como base (suportado em qualquer navegador) e 58dvh por cima —
+    /* No celular os dois painéis retráteis (ferramentas e lateral) viram
+       fileiras horizontais de novo, como o resto da barra de ferramentas —
+       uma coluna estreita não cabe bem numa tela de celular. Recolher aqui
+       esconde a fileira inteira (economiza altura pro mapa) em vez de
+       encolher a largura. */
+    .tools-panel{ width:100%; flex:0 0 auto; }
+    .tools-panel-toggle{ writing-mode:horizontal-tb !important; height:auto !important; min-height:0 !important; padding:9px 10px !important; flex-direction:row !important; margin-bottom:8px; }
+    .tp-toggle-icon{ transform:rotate(-90deg) !important; }
+    .tools-panel.retracted .tp-toggle-icon{ transform:rotate(90deg) !important; }
+    .tools-panel.retracted .tools-panel-toggle{ margin-bottom:0; }
+    .tools-panel .tool-toolbar{ max-height:none; }
+    .board-side{ flex:1 1 auto; width:100%; max-height:none; }
+    .board-side-toggle{ writing-mode:horizontal-tb !important; height:auto !important; min-height:0 !important; padding:9px 10px !important; flex-direction:row !important; }
+    .bs-toggle-icon{ transform:rotate(-90deg) !important; }
+    .board-side.retracted{ flex:0 0 auto !important; width:100%; max-height:52px !important; }
+    .board-side.retracted .bs-toggle-icon{ transform:rotate(90deg) !important; }
+    /* 58vh como base (suportado em qualquer navegador) e 58dvh por cima —
        em navegadores mobile que suportam dvh, isso usa a altura visível
        "de verdade" (já descontando a barra de endereço), então o mapa não
        fica com uma folga errada quando a barra recolhe/aparece. Navegadores
@@ -838,14 +931,24 @@ if ('serviceWorker' in navigator) {
       <button type="button" id="fullscreenBtn">⛶ Expandir mesa</button>
     </div>
 
-    <div class="tool-toolbar" id="toolToolbar"></div>
-
     <div class="board-layout">
+      <div class="tools-panel" id="toolsPanel">
+        <button type="button" class="tools-panel-toggle" id="toolsPanelToggle" title="Recolher/expandir ferramentas" aria-label="Recolher/expandir ferramentas">
+          <span class="tp-toggle-icon">◂</span>
+          <span class="tp-toggle-label">Ferramentas</span>
+        </button>
+        <div class="tool-toolbar" id="toolToolbar"></div>
+      </div>
+
       <div class="board-wrap" id="boardWrap">
         <div class="board-surface" id="boardSurface"></div>
       </div>
 
       <div class="board-side">
+        <button type="button" class="board-side-toggle" id="boardSideToggle" title="Recolher/expandir painel" aria-label="Recolher/expandir painel">
+          <span class="bs-toggle-icon">▸</span>
+          <span class="bs-toggle-label">Painel</span>
+        </button>
         <div class="side-panel" id="myTokenPanel"></div>
         <div class="side-panel hidden" id="scenePanel"></div>
         <div class="side-panel" id="masterMapPanel"></div>

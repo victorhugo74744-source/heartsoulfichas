@@ -27,28 +27,28 @@ function renderToolToolbar() {
   if (!bar) return;
   const isMaster = isTableOwner();
   bar.innerHTML = `
-    <button type="button" data-tool="pan" title="Mover o mapa (padrão) — atalho: V">✋ Mover</button>
-    <button type="button" data-tool="ruler" title="Medir distância em casas da grade (segure Alt/Option para medir livre, sem encaixar) — atalho: R">📏 Régua</button>
-    <button type="button" data-tool="ping" title="Marcar um ponto para todos verem, na sua cor — atalho: P">📍 Marcar</button>
+    <button type="button" data-tool="pan" title="Mover o mapa (padrão) — atalho: V"><span class="tool-label">✋ Mover</span><kbd class="tool-key">V</kbd></button>
+    <button type="button" data-tool="ruler" title="Medir distância em casas da grade (segure Alt/Option para medir livre, sem encaixar) — atalho: R"><span class="tool-label">📏 Régua</span><kbd class="tool-key">R</kbd></button>
+    <button type="button" data-tool="ping" title="Marcar um ponto para todos verem, na sua cor — atalho: P"><span class="tool-label">📍 Marcar</span><kbd class="tool-key">P</kbd></button>
     <div class="tt-sep"></div>
-    <button type="button" data-tool="template" data-shape="circle" title="Área circular (ex.: bola de fogo) — arraste do centro até a borda, na sua cor — atalho: 1">⭕ Círculo</button>
-    <button type="button" data-tool="template" data-shape="cone" title="Área em cone (ex.: sopro de dragão) — arraste da origem até a ponta — atalho: 2">🔺 Cone</button>
-    <button type="button" data-tool="template" data-shape="line" title="Área em linha (ex.: raio) — arraste do início até o fim — atalho: 3">▭ Linha</button>
-    <button type="button" id="clearTemplatesBtn" title="Apagar suas áreas nesta cena (o Mestre apaga todas) — dica: com a ferramenta de área ativa, clique numa área pra apagar só ela">🧹 Limpar áreas</button>
-    <button type="button" id="snapToggleBtn" title="Ao soltar um token, encaixar automaticamente na célula mais próxima da grade (segure Alt/Option para soltar livre mesmo com isto ligado)">🧲 Encaixar na grade</button>
+    <button type="button" data-tool="template" data-shape="circle" title="Área circular (ex.: bola de fogo) — arraste do centro até a borda, na sua cor — atalho: 1"><span class="tool-label">⭕ Círculo</span><kbd class="tool-key">1</kbd></button>
+    <button type="button" data-tool="template" data-shape="cone" title="Área em cone (ex.: sopro de dragão) — arraste da origem até a ponta — atalho: 2"><span class="tool-label">🔺 Cone</span><kbd class="tool-key">2</kbd></button>
+    <button type="button" data-tool="template" data-shape="line" title="Área em linha (ex.: raio) — arraste do início até o fim — atalho: 3"><span class="tool-label">▭ Linha</span><kbd class="tool-key">3</kbd></button>
+    <button type="button" id="clearTemplatesBtn" title="Apagar suas áreas nesta cena (o Mestre apaga todas) — dica: com a ferramenta de área ativa, clique numa área pra apagar só ela — atalho: C"><span class="tool-label">🧹 Limpar áreas</span><kbd class="tool-key">C</kbd></button>
+    <button type="button" id="snapToggleBtn" title="Ao soltar um token, encaixar automaticamente na célula mais próxima da grade (segure Alt/Option para soltar livre mesmo com isto ligado) — atalho: G"><span class="tool-label">🧲 Encaixar na grade</span><kbd class="tool-key">G</kbd></button>
     <label class="cell-unit-label" title="Quantos metros equivalem a uma casa da grade — usado nos números da régua e das áreas de ataque">
       <span>m/casa</span>
       <input type="number" id="metersPerCellInput" min="0.5" step="0.5" value="${metersPerCell}">
     </label>
     ${isMaster ? `
       <div class="tt-sep"></div>
-      <button type="button" data-tool="draw" title="Desenhar sobre o mapa — atalho: D">✏️ Desenhar</button>
+      <button type="button" data-tool="draw" title="Desenhar sobre o mapa — atalho: D"><span class="tool-label">✏️ Desenhar</span><kbd class="tool-key">D</kbd></button>
       <button type="button" class="color-swatch" id="drawWheelBtn" style="background:${drawColor};" title="Cor do desenho (roda cromática)"></button>
-      <button type="button" id="undoDrawBtn" title="Desfazer o último traço — atalho: Ctrl/Cmd+Z">↩️ Desfazer</button>
-      <button type="button" id="clearDrawBtn" title="Apagar todos os desenhos desta cena — dica: com a ferramenta de desenho ativa, clique num traço pra apagar só ele">🧹 Limpar desenhos</button>
+      <button type="button" id="undoDrawBtn" title="Desfazer o último traço — atalho: Ctrl/Cmd+Z"><span class="tool-label">↩️ Desfazer</span><kbd class="tool-key">Ctrl+Z</kbd></button>
+      <button type="button" id="clearDrawBtn" title="Apagar todos os desenhos desta cena — dica: com a ferramenta de desenho ativa, clique num traço pra apagar só ele — atalho: X"><span class="tool-label">🧹 Limpar desenhos</span><kbd class="tool-key">X</kbd></button>
       <div class="tt-sep"></div>
-      <button type="button" data-tool="fog" title="Cobrir/revelar áreas do mapa (clique numa área coberta para revelar) — atalho: F">🌫 Névoa</button>
-      <button type="button" id="clearFogBtn" title="Revelar o mapa inteiro">☀️ Revelar tudo</button>
+      <button type="button" data-tool="fog" title="Cobrir/revelar áreas do mapa (clique numa área coberta para revelar) — atalho: F"><span class="tool-label">🌫 Névoa</span><kbd class="tool-key">F</kbd></button>
+      <button type="button" id="clearFogBtn" title="Revelar o mapa inteiro — atalho: Shift+F"><span class="tool-label">☀️ Revelar tudo</span><kbd class="tool-key">⇧F</kbd></button>
     ` : ''}`;
 
   bar.querySelectorAll('[data-tool]').forEach(b => b.addEventListener('click', () => {
@@ -72,11 +72,7 @@ function renderToolToolbar() {
   const clearTemplatesBtn = document.getElementById('clearTemplatesBtn');
   if (clearTemplatesBtn) clearTemplatesBtn.addEventListener('click', clearMyOrAllTemplates);
   const snapBtn = document.getElementById('snapToggleBtn');
-  if (snapBtn) snapBtn.addEventListener('click', () => {
-    snapToGrid = !snapToGrid;
-    try { localStorage.setItem('mesaSnapGrid', snapToGrid ? '1' : '0'); } catch (e) {}
-    updateToolToolbarActive();
-  });
+  if (snapBtn) snapBtn.addEventListener('click', toggleSnapToGrid);
   const metersInput = document.getElementById('metersPerCellInput');
   if (metersInput) metersInput.addEventListener('change', () => {
     const v = parseFloat(metersInput.value);
@@ -86,6 +82,15 @@ function renderToolToolbar() {
     renderTemplates(); // reaplica os rótulos (já salvos) com a nova escala
   });
 
+  updateToolToolbarActive();
+}
+
+// Liga/desliga o encaixe na grade — função própria (em vez de só um
+// listener inline) porque também é chamada pelo atalho de teclado "G",
+// não só pelo clique no botão.
+function toggleSnapToGrid() {
+  snapToGrid = !snapToGrid;
+  try { localStorage.setItem('mesaSnapGrid', snapToGrid ? '1' : '0'); } catch (e) {}
   updateToolToolbarActive();
 }
 
@@ -113,10 +118,11 @@ function setBoardTool(tool) {
 }
 
 // ------------------------------------------------------- ATALHOS DE TECLADO --
-// V/R/P trocam de ferramenta, 1/2/3 escolhem o formato de área, D/F são só
-// do Mestre (desenhar/névoa), Ctrl+Z desfaz o último traço, Esc volta pra
-// "Mover". Ganha muito em mesas de combate corrido, onde alternar
-// régua/marcar/área toda hora só de mouse atrapalha o ritmo.
+// V/R/P trocam de ferramenta, 1/2/3 escolhem o formato de área, C limpa as
+// áreas, G liga/desliga o encaixe na grade, D/F/X/Shift+F são só do Mestre
+// (desenhar/névoa/limpar desenhos/revelar tudo), Ctrl+Z desfaz o último
+// traço, Esc volta pra "Mover". Ganha muito em mesas de combate corrido,
+// onde alternar régua/marcar/área toda hora só de mouse atrapalha o ritmo.
 // Ignorado por completo enquanto o foco está num campo de texto (chat,
 // input de dados, nome de cena etc.) — senão digitar "d" numa mensagem de
 // chat trocaria a ferramenta do mapa sem querer.
@@ -131,7 +137,8 @@ function handleBoardKeydown(e) {
   }
   if (e.altKey) return; // Alt é usado por outras ferramentas (medir/soltar livre)
   const isMaster = isTableOwner();
-  switch (e.key.toLowerCase()) {
+  const key = e.key.toLowerCase();
+  switch (key) {
     case 'escape': setBoardTool('pan'); break;
     case 'v': setBoardTool('pan'); break;
     case 'r': setBoardTool('ruler'); break;
@@ -139,8 +146,11 @@ function handleBoardKeydown(e) {
     case '1': templateShape = 'circle'; setBoardTool('template'); break;
     case '2': templateShape = 'cone'; setBoardTool('template'); break;
     case '3': templateShape = 'line'; setBoardTool('template'); break;
+    case 'c': clearMyOrAllTemplates(); break;
+    case 'g': toggleSnapToGrid(); break;
     case 'd': if (isMaster) setBoardTool('draw'); break;
-    case 'f': if (isMaster) setBoardTool('fog'); break;
+    case 'f': if (isMaster) { if (e.shiftKey) clearAllFog(); else setBoardTool('fog'); } break;
+    case 'x': if (isMaster) clearAllDrawings(); break;
     default: return;
   }
   e.preventDefault();
@@ -181,7 +191,7 @@ function rulerMapFractionToWrapPoint(fx, fy) {
 
 function attachRulerHandlers(wrap) {
   wrap.addEventListener('pointerdown', (e) => {
-    if (boardTool !== 'ruler' || e.target.closest('.token')) return;
+    if (boardTool !== 'ruler') return;
     rulerPointerId = e.pointerId;
     rulerStartScreen = { x: e.clientX, y: e.clientY };
     wrap.setPointerCapture(e.pointerId);
@@ -311,7 +321,7 @@ let lastOwnDrawingId = null;
 
 function attachDrawHandlers(wrap) {
   wrap.addEventListener('pointerdown', (e) => {
-    if (boardTool !== 'draw' || !isTableOwner() || e.target.closest('.token')) return;
+    if (boardTool !== 'draw' || !isTableOwner()) return;
     drawPointerId = e.pointerId;
     drawCurrentPoints = [boardPointFromEvent(e)];
     wrap.setPointerCapture(e.pointerId);
@@ -458,7 +468,6 @@ function attachFogHandlers(wrap) {
   wrap.addEventListener('pointerdown', (e) => {
     if (boardTool !== 'fog' || !isTableOwner()) return;
     if (e.target.closest('.fog-rect')) return; // clique num retângulo existente: ver handler próprio dele
-    if (e.target.closest('.token')) return;
     fogPointerId = e.pointerId;
     fogStartPoint = boardPointFromEvent(e);
     wrap.setPointerCapture(e.pointerId);
@@ -567,7 +576,7 @@ async function clearAllFog() {
 // a ficar online e/ou o próximo ping dele passar por aqui de novo.
 function attachPingHandlers(wrap) {
   wrap.addEventListener('pointerdown', async (e) => {
-    if (boardTool !== 'ping' || e.target.closest('.token')) return;
+    if (boardTool !== 'ping') return;
     e.preventDefault();
     const p = boardPointFromEvent(e);
     try {
@@ -629,7 +638,7 @@ function snapTemplatePoint(p) {
 
 function attachTemplateHandlers(wrap) {
   wrap.addEventListener('pointerdown', (e) => {
-    if (boardTool !== 'template' || e.target.closest('.token')) return;
+    if (boardTool !== 'template') return;
     templatePointerId = e.pointerId;
     let p = boardPointFromEvent(e);
     if (snapToGrid && !e.altKey) p = snapTemplatePoint(p);
@@ -1030,5 +1039,49 @@ function initSidePanelAccordion() {
     try { localStorage.setItem(SIDE_PANEL_COLLAPSE_KEY, JSON.stringify(saved)); } catch (err) { /* ignora se o navegador bloquear */ }
   });
   applySidePanelCollapseState();
+}
+
+// ===== Painéis retráteis (ferramentas à esquerda / painel lateral à
+// direita) — recolhe a coluna inteira de um lado, não só uma sanfona.
+// Guarda o estado de cada um separadamente no navegador (chaves próprias),
+// pra lembrar aberto/fechado entre visitas, igual às sanfonas acima.
+const RETRACT_KEY = 'heartsoul_retractPanels';
+function loadRetractState() {
+  try { return JSON.parse(localStorage.getItem(RETRACT_KEY) || '{}'); }
+  catch (err) { return {}; }
+}
+function saveRetractState(state) {
+  try { localStorage.setItem(RETRACT_KEY, JSON.stringify(state)); } catch (err) { /* ignora se o navegador bloquear */ }
+}
+function initSidebarToggles() {
+  const toolsPanel = document.getElementById('toolsPanel');
+  const toolsToggle = document.getElementById('toolsPanelToggle');
+  const boardSide = document.querySelector('.board-side');
+  const boardSideToggle = document.getElementById('boardSideToggle');
+  const state = loadRetractState();
+
+  if (toolsPanel) toolsPanel.classList.toggle('retracted', !!state.tools);
+  if (boardSide) boardSide.classList.toggle('retracted', !!state.side);
+
+  if (toolsToggle && !toolsToggle.dataset.bound) {
+    toolsToggle.dataset.bound = '1';
+    toolsToggle.addEventListener('click', () => {
+      if (!toolsPanel) return;
+      const retracted = toolsPanel.classList.toggle('retracted');
+      const s = loadRetractState();
+      s.tools = retracted;
+      saveRetractState(s);
+    });
+  }
+  if (boardSideToggle && !boardSideToggle.dataset.bound) {
+    boardSideToggle.dataset.bound = '1';
+    boardSideToggle.addEventListener('click', () => {
+      if (!boardSide) return;
+      const retracted = boardSide.classList.toggle('retracted');
+      const s = loadRetractState();
+      s.side = retracted;
+      saveRetractState(s);
+    });
+  }
 }
 

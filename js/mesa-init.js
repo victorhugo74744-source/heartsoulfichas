@@ -38,6 +38,7 @@ guardPage(null, (user, profile) => {
   renderTableDiceQuickRow();
   renderTableDiceLog();
   initSidePanelAccordion();
+  initSidebarToggles();
   document.getElementById('diceRollBtn').addEventListener('click', doTableRoll);
   document.getElementById('diceCmdInput').addEventListener('keydown', (e) => {
     if (e.key === 'Enter') { e.preventDefault(); doTableRoll(); }

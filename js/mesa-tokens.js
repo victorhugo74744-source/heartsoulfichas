@@ -828,6 +828,13 @@ function cancelLiveTokenPosition(tokenId) {
 
 function attachTokenDragHandlers(el, tokenId) {
   el.addEventListener('pointerdown', (e) => {
+    // Só arrasta o token quando a ferramenta ativa é "Mover" (padrão) —
+    // com régua/marcar/áreas/desenho/névoa ativas, o clique deve passar
+    // direto pro mapa por baixo (ver os "return" cedo nesses handlers em
+    // attachRulerHandlers/attachTemplateHandlers/etc.), senão não dava pra
+    // desenhar uma área ou medir distância bem em cima de um token sem
+    // primeiro arrastá-lo pro lado e devolver depois.
+    if (boardTool !== 'pan') return;
     const tok = liveTokens[tokenId];
     const canDrag = isTableOwner() || (tok && tok.ownerId === curUser.uid);
     if (!canDrag) return;
