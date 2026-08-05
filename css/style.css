@@ -284,6 +284,17 @@ textarea{ resize:vertical; min-height:70px; }
 .tag{ font-size:10.5px; padding:2px 8px; border-radius:20px; letter-spacing:.04em; text-transform:uppercase; }
 .tag.benign{ background:rgba(111,143,106,.18); color:#a9c6a3; border:1px solid var(--benign); }
 .tag.malign{ background:rgba(138,63,63,.2); color:#e0a5a5; border:1px solid var(--malign); }
+.tag.info{ background:rgba(201,161,92,.14); color:var(--gold); border:1px solid var(--gold-dim); }
+
+/* Bolinha de "novidade não vista" — usada no link "Novidades" do topbar
+   (ver renderTopbar em firebase-init.js) e repetida junto de cada patch
+   note ainda não lido em patch-notes.html. Fica escondida via a classe
+   utilitária .hidden até o JS decidir que há algo novo pra mostrar. */
+.new-dot{
+  display:inline-block; width:7px; height:7px; border-radius:50%;
+  background:var(--seal-bright); margin-left:6px; vertical-align:middle;
+  box-shadow:0 0 6px rgba(196,67,60,.7);
+}
 
 .trait-pick{
   border:1px solid var(--hairline); border-radius:var(--radius); padding:12px 14px; margin-bottom:8px;

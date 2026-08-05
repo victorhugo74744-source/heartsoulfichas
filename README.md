@@ -14,6 +14,11 @@ do sistema Heartsoul, com um painel separado para o mestre ver todas as fichas.
 - **Painel do Mestre**: cria pastas de campanha e vê as fichas que estão
   dentro delas, agrupadas por jogador (ver seção "Mais de um Mestre no
   mesmo site" abaixo)
+- **Novidades (Patch Notes)**: histórico de mudanças do sistema (`patch-notes.html`
+  + `patch-notes.json`), com um indicador no menu quando há novidade não vista.
+  Pra registrar uma atualização nova, basta adicionar um objeto no topo do array
+  de `patch-notes.json` (mesmo esquema de `id`, `date`, `title`, `tags`, `changes`
+  dos itens que já existem lá)
 - Tudo salvo na nuvem via **Firebase** (gratuito), então funciona em qualquer
   dispositivo, sem perder nada ao fechar o navegador
 

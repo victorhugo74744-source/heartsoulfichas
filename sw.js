@@ -10,10 +10,9 @@
 // cai por um instante, e permite abrir o app (a tela de login, por
 // exemplo) mesmo sem internet.
 
-const CACHE_NAME = 'heartsoul-shell-v6'; // v6: livro-de-regras.html não carrega mais o conteúdo embutido — o
-// texto das regras foi extraído para regras.json (carregado à parte via fetch), então precisa entrar no
-// app shell também; e offline.html foi adicionado como página de fallback quando uma rota não cacheada
-// falha sem internet (ver tratamento de 'navigate' no listener de fetch abaixo).
+const CACHE_NAME = 'heartsoul-shell-v7'; // v7: nova página patch-notes.html (Novidades) e seu arquivo de
+// dados patch-notes.json entraram no app shell, mesmo esquema do livro de regras (HTML fixo + JSON
+// carregado à parte via fetch).
 const APP_SHELL = [
   './',
   './index.html',
@@ -25,6 +24,8 @@ const APP_SHELL = [
   './dados.html',
   './livro-de-regras.html',
   './regras.json',
+  './patch-notes.html',
+  './patch-notes.json',
   './perfil.html',
   './offline.html',
   './css/style.css',

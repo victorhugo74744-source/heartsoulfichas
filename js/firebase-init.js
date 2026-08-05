@@ -153,6 +153,7 @@ function renderTopbar(profile) {
       <span class="topbar-user">${avatarImg}Olá, <span class="who">${escapeHtml(profile.name)}</span> ${roleLabel}</span>
       <a href="perfil.html" class="btn-link">👤 Meu Perfil</a>
       <a href="livro-de-regras.html" class="btn-link" target="_blank" rel="noopener">📖 Livro de Regras</a>
+      <a href="patch-notes.html" class="btn-link">🆕 Novidades<span id="patchNotesBadge" class="new-dot hidden"></span></a>
       <a href="dados.html" class="btn-link">🎲 Rolagem de Dados</a>
       <a href="mesa.html" class="btn-link">🗺️ Mesa</a>
       ${profile.role === 'master'
@@ -178,6 +179,20 @@ function renderTopbar(profile) {
     if (menu.contains(e.target) || toggleBtn.contains(e.target)) return;
     closeMenu();
   });
+
+  // Bolinha de "novidade" no link Novidades — compara o id do patch note
+  // mais recente (topo de patch-notes.json) com o último que este
+  // navegador já viu (guardado em localStorage por patch-notes.html ao
+  // ser aberta). Roda em toda página, já que o topbar aparece em todas.
+  // Falha em silêncio sem internet/arquivo — não é uma função crítica.
+  const badge = document.getElementById('patchNotesBadge');
+  if (badge) {
+    fetch('patch-notes.json').then(r => r.ok ? r.json() : []).then(notes => {
+      if (Array.isArray(notes) && notes.length && notes[0].id !== localStorage.getItem('hsPatchNotesSeen')) {
+        badge.classList.remove('hidden');
+      }
+    }).catch(() => {});
+  }
 }
 
 // ---------- Limpeza em cascata (pastas e mesas de um Mestre) ----------

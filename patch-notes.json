@@ -1,0 +1,34 @@
+[
+  {
+    "id": "2026-08-05-sistema-patch-notes",
+    "date": "2026-08-05",
+    "title": "Página de Patch Notes",
+    "tags": ["Sistema"],
+    "changes": [
+      "Nova página \"Novidades\" reunindo o histórico de mudanças do sistema Heartsoul, acessível pelo menu do topo.",
+      "Um indicador aparece no menu sempre que houver novidades que você ainda não viu."
+    ]
+  },
+  {
+    "id": "2026-08-05-tracos-elementais",
+    "date": "2026-08-05",
+    "title": "Traços elementais de Fogo e Gelo, e mais traços de combate",
+    "tags": ["Traços"],
+    "changes": [
+      "11 novos Traços Físicos: Mestre em Mobilidade Silenciosa, Veterano de Zona de Extermínio, Determinação de Aço, Memória de Combate, Corpo Intacto, Flexibilidade Extrema, Pulso Rápido, Resistência Tóxica, Quebra-Guarda, Resistência a Dor e Reflexos Felinos.",
+      "13 novos Traços Mentais: Intimidador Nato, Instinto Assassino, Concentração de Ferro, Adaptável, Mentalidade de Predador, Psicopata, Mestre Analista de Combate, Concentração Venenosa, Imunidade ao Medo, Fúria Calculada, Adaptador de Status, Comando de Unidade e Perseguidor Incansável.",
+      "10 novos Traços Especiais de Fogo e Gelo (benignos): Coração de Fogo, Chamas da Paixão, Tocha Viva, Explosão Contida, Pele de Brasa, Sangue Glacial, Toque do Inverno, Muralha de Gelo, Nevasca Interior e Lágrimas de Gelo.",
+      "4 novos Traços Especiais de Fogo e Gelo (malignos): Chama Maldita, Abraço do Inverno, Coração Congelado e Maldição do Gelo Eterno."
+    ]
+  },
+  {
+    "id": "2026-08-05-tracos-combate-lideranca",
+    "date": "2026-08-05",
+    "title": "Novos traços de combate e liderança",
+    "tags": ["Traços"],
+    "changes": [
+      "8 novos Traços Físicos: Sangue Grosso, Velocidade de Ataque, Fera da Resistência, Sobrevivente Nato, Arranque Relâmpago, Corrida Explosiva, Assassino Silencioso e Comando de Operações Especiais.",
+      "6 novos Traços Mentais: Líder de Vanguarda, Estratégia de Encurralamento, Manipulador Psicológico, Coração de Ferro, Líder Imponente e Mestre em Disfarces."
+    ]
+  }
+]

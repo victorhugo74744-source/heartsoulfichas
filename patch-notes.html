@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Novidades — Heartsoul</title>
+<link rel="icon" href="assets/favicon-32.png" type="image/png">
+<link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#120F0C">
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').catch(() => {});
+  });
+}
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,600;1,400&family=Cinzel:wght@500;600&family=JetBrains+Mono&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+<style>
+  /* Trilha vertical em "linha do tempo" à esquerda de cada entrada — mesma
+     linguagem visual de crônica/selo do resto do site, sem precisar de
+     nenhuma classe nova em style.css além do .tag.info e .new-dot
+     (esses dois já entraram lá por serem úteis fora desta página também). */
+  .patch-timeline{ position:relative; padding-left:26px; }
+  .patch-timeline::before{
+    content:''; position:absolute; left:5px; top:8px; bottom:8px; width:1px; background:var(--hairline);
+  }
+  .patch-card{ position:relative; margin-bottom:30px; }
+  .patch-card::before{
+    content:''; position:absolute; left:-26px; top:7px; width:9px; height:9px; border-radius:50%;
+    background:var(--panel-2); border:1px solid var(--gold-dim);
+  }
+  .patch-card.is-new::before{
+    background:var(--seal-bright); border-color:var(--seal-bright); box-shadow:0 0 8px rgba(196,67,60,.6);
+  }
+  .patch-card-head{ display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; }
+  .patch-date{ font-family:'JetBrains Mono', monospace; font-size:12.5px; color:var(--ink-mute); letter-spacing:.03em; }
+  .patch-tags{ display:flex; gap:6px; flex-wrap:wrap; }
+  .patch-card h3{
+    font-family:'Cinzel', serif; color:var(--gold); font-size:19px; margin:8px 0 10px;
+    display:flex; align-items:center;
+  }
+  .patch-changes{ margin:0; padding-left:20px; color:var(--ink-dim); font-size:15px; }
+  .patch-changes li{ margin-bottom:6px; }
+  .patch-changes li::marker{ color:var(--gold-dim); }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="brand">
+    <svg class="seal-icon" viewBox="0 0 120 120" fill="none">
+      <circle cx="60" cy="60" r="54" stroke="#C9A15C" stroke-width="2" opacity="0.5"/>
+      <circle cx="60" cy="60" r="4" fill="#C9A15C"/>
+      <path d="M60 24 L84 60 L60 96 L36 60 Z" stroke="#9C2B2B" stroke-width="2" opacity="0.55" fill="none"/>
+    </svg>
+    <div>
+      <div class="brand-title">HEARTSOUL</div>
+      <div class="brand-sub">Novidades</div>
+    </div>
+  </div>
+  <div class="topbar-right" id="topbarRight"></div>
+</div>
+
+<div class="shell">
+  <div class="page-head">
+    <div class="eyebrow">Registro de mudanças</div>
+    <h1>Novidades</h1>
+    <p>Tudo que mudou no sistema Heartsoul: novos traços, mecânicas, correções e ajustes — na ordem em que aconteceram.</p>
+  </div>
+
+  <div id="notesList" class="center-loading">Carregando novidades…</div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+<script src="js/firebase-config.js"></script>
+<script src="js/firebase-init.js"></script>
+<script>
+guardPage(null, async (user, profile) => {
+  renderTopbar(profile);
+  const listEl = document.getElementById('notesList');
+
+  // Data em ISO simples ("AAAA-MM-DD") formatada na mão em vez de
+  // `new Date(iso)` — isso evita o fuso horário deslocar a data pro dia
+  // anterior em quem está a oeste de UTC (o construtor de Date interpreta
+  // "AAAA-MM-DD" como meia-noite UTC, não meia-noite local).
+  function fmtPlainDate(iso) {
+    const [y, m, d] = String(iso).split('-');
+    return `${d}/${m}/${y}`;
+  }
+
+  // Cada tag do JSON vira uma cor de acordo com o tipo de mudança —
+  // mesma paleta usada nos traços benignos/malignos, mais uma variante
+  // neutra (dourada) pra tudo que não é claramente "conteúdo novo" nem
+  // "correção".
+  const TAG_CLASS = {
+    'Traços': 'benign', 'Conteúdo': 'benign', 'Mecânica': 'benign',
+    'Correção': 'malign', 'Bug': 'malign'
+  };
+  function tagClass(tag) { return TAG_CLASS[tag] || 'info'; }
+
+  function noteCard(note, isNew) {
+    const tags = (note.tags || []).map(t => `<span class="tag ${tagClass(t)}">${escapeHtml(t)}</span>`).join('');
+    const changes = (note.changes || []).map(c => `<li>${escapeHtml(c)}</li>`).join('');
+    return `
+      <div class="patch-card${isNew ? ' is-new' : ''}">
+        <div class="patch-card-head">
+          <div class="patch-date">${fmtPlainDate(note.date)}</div>
+          <div class="patch-tags">${tags}</div>
+        </div>
+        <h3>${escapeHtml(note.title)}${isNew ? '<span class="new-dot" title="Novidade"></span>' : ''}</h3>
+        <ul class="patch-changes">${changes}</ul>
+      </div>`;
+  }
+
+  try {
+    const resp = await fetch('patch-notes.json');
+    if (!resp.ok) throw new Error('patch-notes.json: HTTP ' + resp.status);
+    const notes = await resp.json();
+
+    listEl.classList.remove('center-loading');
+    if (!Array.isArray(notes) || notes.length === 0) {
+      listEl.innerHTML = `
+        <div class="empty-state">
+          <div class="es-icon">📜</div>
+          <p>Ainda não há nenhuma novidade registrada.</p>
+        </div>`;
+      return;
+    }
+
+    // O arquivo já vem ordenado do mais novo pro mais antigo (novas
+    // entradas entram no topo do array). "Novo" = tudo que veio antes,
+    // no array, do último id que este navegador já viu. Se nunca visitou
+    // esta página (nada salvo ainda), não marca nada como novo — a
+    // primeira leitura já mostra tudo, sem precisar destacar.
+    const lastSeenId = localStorage.getItem('hsPatchNotesSeen');
+    const lastSeenIdx = lastSeenId ? notes.findIndex(n => n.id === lastSeenId) : -1;
+
+    listEl.innerHTML = `<div class="patch-timeline">${
+      notes.map((n, i) => noteCard(n, lastSeenIdx > 0 && i < lastSeenIdx)).join('')
+    }</div>`;
+
+    localStorage.setItem('hsPatchNotesSeen', notes[0].id);
+    const badge = document.getElementById('patchNotesBadge');
+    if (badge) badge.classList.add('hidden');
+  } catch (err) {
+    listEl.classList.remove('center-loading');
+    listEl.innerHTML = `<div class="error-msg">Erro ao carregar novidades: ${escapeHtml(err.message)}</div>`;
+  }
+});
+</script>
+</body>
+</html>
