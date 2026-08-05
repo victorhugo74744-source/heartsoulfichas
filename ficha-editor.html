@@ -256,6 +256,35 @@ if ('serviceWorker' in navigator) {
     </div>
     <div id="traitMalignWarning"></div>
     <input type="text" class="trait-search" id="traitSearch" placeholder="Buscar traço por nome…">
+    <div class="trait-filters" id="traitFilters">
+      <div class="trait-filter-field">
+        <label for="traitFilterCost">Custo</label>
+        <select id="traitFilterCost">
+          <option value="">Qualquer custo</option>
+        </select>
+      </div>
+      <div class="trait-filter-field">
+        <label for="traitFilterAttr">Atributo concedido</label>
+        <select id="traitFilterAttr">
+          <option value="">Qualquer atributo</option>
+        </select>
+      </div>
+      <div class="trait-filter-field">
+        <label for="traitFilterTest">Adicional em testes</label>
+        <select id="traitFilterTest">
+          <option value="">Indiferente</option>
+          <option value="yes">Só com adicional em testes</option>
+        </select>
+      </div>
+      <div class="trait-filter-field">
+        <label for="traitFilterElement">Elemento</label>
+        <select id="traitFilterElement">
+          <option value="">Qualquer elemento</option>
+        </select>
+      </div>
+      <button type="button" class="btn secondary small" id="traitFilterClearBtn" style="width:auto;">Limpar filtros</button>
+    </div>
+    <p class="hint" id="traitFilterResultCount" style="margin:-4px 0 14px;"></p>
     <div id="traitCategories"></div>
     <div class="sheet-section-title">Traços escolhidos</div>
     <div class="chosen-list" id="chosenTraitsList"></div>

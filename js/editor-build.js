@@ -432,15 +432,102 @@ function updateBgSkillWarning() {
 // daquela categoria pra escolher. Clicar de novo no título fecha a categoria.
 let openTraitCats = new Set();
 
+// ---- Filtro de traços (custo / atributo concedido / adicional em testes /
+// elemento) ----
+// O texto do traço é livre (ver parseAttrBonusesFromText mais acima), então
+// esses filtros também são leitura de "melhor esforço" sobre o `desc`.
+const TRAIT_ELEMENTS = [
+  ['fogo', 'Fogo', /\bfogo\b/i],
+  ['gelo', 'Gelo / Frio', /\bgelo\b|\bgélid[oa]\b|\bcongelamento\b/i],
+  ['raio', 'Raio / Elétrico', /\braio\b|\belétric\w*/i],
+  ['acido', 'Ácido', /\bácido\b/i],
+  ['veneno', 'Veneno', /\bvenenos?\b|\btoxinas?\b/i],
+  ['sombra', 'Sombra / Trevas', /\bsombras?\b|\btrevas?\b/i],
+  ['luz', 'Luz', /\bluz\b/i],
+  ['vento', 'Vento / Ar', /\bvento\b/i],
+  ['agua', 'Água', /\bágua\b/i],
+];
+function traitGrantedAttrs(desc) {
+  return Object.keys(parseAttrBonusesFromText(desc || ''));
+}
+function traitHasTestBonus(desc) {
+  return /em\s+testes/i.test(desc || '');
+}
+function traitElementsFound(desc) {
+  if (!desc) return [];
+  return TRAIT_ELEMENTS.filter(([, , re]) => re.test(desc)).map(([key]) => key);
+}
+function getTraitFilters() {
+  const costEl = document.getElementById('traitFilterCost');
+  const attrEl = document.getElementById('traitFilterAttr');
+  const testEl = document.getElementById('traitFilterTest');
+  const elemEl = document.getElementById('traitFilterElement');
+  return {
+    cost: costEl && costEl.value ? parseInt(costEl.value) : null,
+    attr: attrEl ? attrEl.value : '',
+    testOnly: testEl ? testEl.value === 'yes' : false,
+    element: elemEl ? elemEl.value : '',
+  };
+}
+function traitMatchesFilters(it, filters) {
+  if (filters.cost !== null && it.cost !== filters.cost) return false;
+  if (filters.attr && !traitGrantedAttrs(it.desc).includes(filters.attr)) return false;
+  if (filters.testOnly && !traitHasTestBonus(it.desc)) return false;
+  if (filters.element && !traitElementsFound(it.desc).includes(filters.element)) return false;
+  return true;
+}
+function initTraitFilters() {
+  const costEl = document.getElementById('traitFilterCost');
+  const attrEl = document.getElementById('traitFilterAttr');
+  const elemEl = document.getElementById('traitFilterElement');
+  if (costEl && costEl.options.length <= 1) {
+    const costs = new Set();
+    TRAIT_CATS.forEach(([catKey]) => DATA.traits[catKey].items.forEach(it => costs.add(it.cost)));
+    Array.from(costs).sort((a, b) => a - b).forEach(c => {
+      costEl.insertAdjacentHTML('beforeend', `<option value="${c}">${c} ponto${c === 1 ? '' : 's'}</option>`);
+    });
+  }
+  if (attrEl && attrEl.options.length <= 1) {
+    ATTR_KEYS.forEach(([key, label]) => {
+      attrEl.insertAdjacentHTML('beforeend', `<option value="${key}">${label}</option>`);
+    });
+  }
+  if (elemEl && elemEl.options.length <= 1) {
+    TRAIT_ELEMENTS.forEach(([key, label]) => {
+      elemEl.insertAdjacentHTML('beforeend', `<option value="${key}">${label}</option>`);
+    });
+  }
+  ['traitFilterCost', 'traitFilterAttr', 'traitFilterTest', 'traitFilterElement'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('change', () => renderTraitCategories(document.getElementById('traitSearch').value));
+  });
+  const clearBtn = document.getElementById('traitFilterClearBtn');
+  if (clearBtn) {
+    clearBtn.addEventListener('click', () => {
+      document.getElementById('traitSearch').value = '';
+      if (costEl) costEl.value = '';
+      if (attrEl) attrEl.value = '';
+      const testEl = document.getElementById('traitFilterTest');
+      if (testEl) testEl.value = '';
+      if (elemEl) elemEl.value = '';
+      renderTraitCategories('');
+    });
+  }
+}
+
 function renderTraitCategories(filter) {
   const wrap = document.getElementById('traitCategories');
   const f = (filter || '').toLowerCase();
+  const filters = getTraitFilters();
+  const hasActiveFilter = !!(f || filters.cost !== null || filters.attr || filters.testOnly || filters.element);
+  let totalMatches = 0;
   wrap.innerHTML = TRAIT_CATS.map(([catKey, kind]) => {
     const cat = DATA.traits[catKey];
-    const items = cat.items.filter(it => !f || it.name.toLowerCase().includes(f));
+    const items = cat.items.filter(it => (!f || it.name.toLowerCase().includes(f)) && traitMatchesFilters(it, filters));
     if (items.length === 0) return '';
-    // Durante uma busca, abre automaticamente as categorias com resultado.
-    const isOpen = f ? true : openTraitCats.has(catKey);
+    totalMatches += items.length;
+    // Durante uma busca ou filtro ativo, abre automaticamente as categorias com resultado.
+    const isOpen = hasActiveFilter ? true : openTraitCats.has(catKey);
     return `
       <div class="trait-cat">
         <button type="button" class="trait-cat-title" data-cat-toggle="${catKey}">
@@ -466,6 +553,16 @@ function renderTraitCategories(filter) {
         </div>
       </div>`;
   }).join('');
+
+  const resultCountEl = document.getElementById('traitFilterResultCount');
+  if (resultCountEl) {
+    resultCountEl.textContent = hasActiveFilter
+      ? `${totalMatches} traço${totalMatches === 1 ? '' : 's'} encontrado${totalMatches === 1 ? '' : 's'}.`
+      : '';
+  }
+  if (totalMatches === 0 && hasActiveFilter) {
+    wrap.innerHTML = `<p class="hint" style="margin:0;">Nenhum traço corresponde aos filtros escolhidos.</p>`;
+  }
 
   wrap.querySelectorAll('[data-cat-toggle]').forEach(btn => {
     btn.addEventListener('click', () => {

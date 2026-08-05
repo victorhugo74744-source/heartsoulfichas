@@ -17,6 +17,7 @@ guardPage(null, async (user, profile) => {
   renderSkills(); updateSkillPoolDisplay();
   renderRaceGrid();
   renderBackgroundSelect();
+  initTraitFilters();
   renderTraitCategories(''); renderChosenTraits(); updateTraitPoolDisplay();
   initInventoryUI();
   initNotesUI();

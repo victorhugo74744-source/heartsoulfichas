@@ -1,5 +1,16 @@
 [
   {
+    "id": "2026-08-05-filtro-tracos-editor",
+    "date": "2026-08-05",
+    "title": "Filtro de Traços na Ficha",
+    "tags": ["Sistema"],
+    "changes": [
+      "Nova barra de filtros na etapa \"Traços Adicionais\" do editor de ficha, combinável com a busca por nome: custo do traço, atributo concedido, adicional em testes e elemento (Fogo, Gelo/Frio, Raio/Elétrico, Ácido, Veneno, Sombra/Trevas, Luz, Vento/Ar, Água).",
+      "As categorias de traço com resultado abrem automaticamente enquanto algum filtro estiver ativo, e um contador mostra quantos traços correspondem aos filtros escolhidos.",
+      "Botão \"Limpar filtros\" para resetar busca e todos os filtros de uma vez."
+    ]
+  },
+  {
     "id": "2026-08-05-sistema-patch-notes",
     "date": "2026-08-05",
     "title": "Página de Patch Notes",
