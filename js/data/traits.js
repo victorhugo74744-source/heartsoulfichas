@@ -163,6 +163,101 @@ window.HEARTSOUL_TRAITS = {
      "name": "Veterano de Guerra",
      "cost": 2,
      "desc": "Sobreviveu a conflitos que mataram muitos. +2 Constituição, +2 Vontade. Perícia sugerida: Sobrevivência."
+    },
+    {
+     "name": "Sangue Grosso",
+     "cost": 1,
+     "desc": "Seu sangue coagula com rapidez incomum, fechando ferimentos antes que se agravem. +2 em testes de Constituição para resistir a sangramento. Sempre que sofrer sangramento, reduza sua duração em 1 turno (mínimo 1)."
+    },
+    {
+     "name": "Velocidade de Ataque",
+     "cost": 2,
+     "desc": "Você consegue desferir golpes em rápida sucessão, sacrificando a precisão pela quantidade. Uma vez por combate, ao realizar a ação Atacar, você pode fazer um ataque extra com -2 no teste de acerto."
+    },
+    {
+     "name": "Fera da Resistência",
+     "cost": 2,
+     "desc": "Quanto mais longo o combate, mais seu corpo se adapta, liberando adrenalina e força. A partir da 2ª rodada de combate contínuo, você ganha +1 Força. Na 4ª rodada, esse bônus aumenta para +2. O bônus permanece até o fim do combate."
+    },
+    {
+     "name": "Sobrevivente Nato",
+     "cost": 1,
+     "desc": "Você é sempre o último a cair, recusando-se a ceder mesmo quando o corpo já desistiu. Uma vez por combate, quando o HP de uma parte vital (cabeça ou tronco) chegar a 0, você pode fazer um teste de Constituição (CD 18). Se passar, permanece com 1 HP nessa parte e continua consciente."
+    },
+    {
+     "name": "Arranque Relâmpago",
+     "cost": 1,
+     "desc": "Sua aceleração inicial é explosiva, como um predador saltando sobre a presa. +2 Iniciativa. No primeiro turno de cada combate, seu deslocamento aumenta em 3 metros."
+    },
+    {
+     "name": "Corrida Explosiva",
+     "cost": 1,
+     "desc": "Você consegue atingir velocidades absurdas em curtas distâncias. +1 Destreza. Uma vez por combate, ao usar a ação de Movimento, você pode dobrar a distância percorrida nesse turno."
+    },
+    {
+     "name": "Assassino Silencioso",
+     "cost": 2,
+     "desc": "Você é um especialista em golpes letais furtivos, atacando de onde o inimigo menos espera. +2 em testes de ataque ao realizar emboscadas ou atacar de surpresa. Se o alvo não percebeu você, seu dano crítico é triplicado em vez de dobrado."
+    },
+    {
+     "name": "Comando de Operações Especiais",
+     "cost": 2,
+     "desc": "Você foi treinado para missões furtivas e de alto risco, sabendo se mover nas sombras e neutralizar ameaças rapidamente. +1 em Furtividade, +1 em testes para sabotar equipamentos ou armadilhas, +1 em ataque corpo a corpo em espaços confinados (becos, salas pequenas, túneis)."
+    },
+    {
+     "name": "Mestre em Mobilidade Silenciosa",
+     "cost": 1,
+     "desc": "Você se move sem fazer o menor ruído, mesmo nos solos mais traiçoeiros. +2 Furtividade. Pisos difíceis (metal, vidro, cascalho) não impõem desvantagem em seus testes de Furtividade."
+    },
+    {
+     "name": "Veterano de Zona de Extermínio",
+     "cost": 2,
+     "desc": "Você sobreviveu a várias operações em áreas infestadas de criaturas hostis. Seus nervos são de aço. +1 Constituição, +2 Vontade para resistir a medo e horrores."
+    },
+    {
+     "name": "Determinação de Aço",
+     "cost": 2,
+     "desc": "Mesmo ferido, você não recua; a dor só o fortalece. Quando o HP de uma parte vital (cabeça ou tronco) ficar abaixo de 50%, você ganha +1 Força e +1 Constituição até o fim do combate."
+    },
+    {
+     "name": "Memória de Combate",
+     "cost": 2,
+     "desc": "Após receber um ataque, seu corpo aprende e reage melhor. Após sofrer um ataque de um inimigo, você ganha +1 Defesa contra ataques subsequentes dele. Acumula até +2. O bônus dura até o fim do combate."
+    },
+    {
+     "name": "Corpo Intacto",
+     "cost": 1,
+     "desc": "Seu corpo parece estar mais forte enquanto não sofre um arranhão. Enquanto você não tiver sofrido dano em nenhuma parte do corpo, ganha +1 Força e +1 Destreza. O bônus se perde ao receber o primeiro dano."
+    },
+    {
+     "name": "Flexibilidade Extrema",
+     "cost": 1,
+     "desc": "Você consegue passar por espaços apertados e fazer movimentos de contorcionista. +1 Destreza, +2 em testes de Acrobacia para contorcionismo ou fuga de amarras."
+    },
+    {
+     "name": "Pulso Rápido",
+     "cost": 2,
+     "desc": "Seu coração bombeia sangue de forma mais eficiente, aumentando sua energia em momentos críticos. +1 Constituição. Uma vez por combate, você pode realizar uma Ação de Suporte extra (não acumula com outras fontes)."
+    },
+    {
+     "name": "Resistência Tóxica",
+     "cost": 1,
+     "desc": "Seu corpo é menos afetado por venenos e toxinas. +2 em testes de Constituição para resistir a venenos e toxinas. Reduz em 1 o nível de efeitos de Envenenamento sofridos (mínimo 1)."
+    },
+    {
+     "name": "Quebra-Guarda",
+     "cost": 1,
+     "desc": "Você sabe muito bem como desestabilizar a defesa de um inimigo antes de atacar. Após acertar um ataque corpo a corpo, você pode gastar uma Ação de Suporte para forçar o alvo a um teste de Destreza (CD 15). Se falhar, ele sofre -1 Defesa por 1 turno."
+    },
+    {
+     "name": "Resistência a Dor",
+     "cost": 1,
+     "desc": "Mesmo com o corpo ferido gravemente, você consegue continuar lutando. Uma vez por combate, você pode ignorar todas as penalidades de ferimentos por 2 rodadas."
+    },
+    {
+     "name": "Reflexos Felinos",
+     "cost": 2,
+     "desc": "Seu tempo de reação é absurdo, como um felino pronto para o bote. +1 Destreza, +2 em testes de Esquiva."
     }
    ]
   },
@@ -403,6 +498,101 @@ window.HEARTSOUL_TRAITS = {
      "name": "Espírito Indomável",
      "cost": 1,
      "desc": "Sua força de vontade é tanta que, mesmo inconsciente, seu corpo continua lutando. +1 Vontade. Uma vez por combate, se você for nocauteado (inconsciente) mas ainda tiver Estamina, pode fazer um teste de Vontade (CD 18). Se passar, você permanece de pé com 1 PV na parte que foi zerada e pode agir por mais 1 rodada."
+    },
+    {
+     "name": "Líder de Vanguarda",
+     "cost": 2,
+     "desc": "Você lidera a linha de frente, inspirando seus aliados com sua determinação inabalável. +1 Vontade. Aliados em alcance corpo a corpo (adjacentes) recebem +1 em testes de defesa enquanto você estiver consciente e lutando."
+    },
+    {
+     "name": "Estratégia de Encurralamento",
+     "cost": 1,
+     "desc": "Você sabe como forçar os inimigos a se moverem para onde você deseja, como um caçador conduzindo a presa. +2 em testes para criar ou perceber armadilhas. Inimigos encurralados (cercados por você e aliados) sofrem -1 em Defesa."
+    },
+    {
+     "name": "Manipulador Psicológico",
+     "cost": 2,
+     "desc": "Você sabe como jogar com a mente dos seus inimigos, plantando dúvidas e hesitações. +2 em testes de Enganação e Persuasão. Uma vez por combate, ao usar uma Ação de Suporte, você pode fazer um teste de Persuasão ou Enganação (CD 15). Se passar, um inimigo hesita e sofre -2 em seu próximo teste de ataque."
+    },
+    {
+     "name": "Coração de Ferro",
+     "cost": 2,
+     "desc": "Mesmo diante do horror, você nunca perde a compostura, e sua calma serve de âncora para seus aliados. +2 em testes de Vontade contra medo e desespero. Aliados próximos que possam vê-lo recebem +1 nesses mesmos testes."
+    },
+    {
+     "name": "Líder Imponente",
+     "cost": 1,
+     "desc": "Sua simples presença inspira seus subordinados a lutar com mais intensidade. +2 em testes de Intimidação e Liderança. Uma vez por descanso curto, ao usar uma Ação de Suporte, você pode motivar um aliado que esteja hesitando ou com medo, concedendo +2 no próximo teste dele."
+    },
+    {
+     "name": "Mestre em Disfarces",
+     "cost": 1,
+     "desc": "Você sabe se infiltrar e se misturar em qualquer ambiente, passando-se por outra pessoa com naturalidade. +2 em testes de Atuação e Enganação ao se disfarçar ou interpretar um papel."
+    },
+    {
+     "name": "Intimidador Nato",
+     "cost": 1,
+     "desc": "Sua presença causa temor. +2 Intimidação."
+    },
+    {
+     "name": "Instinto Assassino",
+     "cost": 1,
+     "desc": "Sua mente é adaptada para combate furtivo. +1 Destreza ao realizar ataques furtivos ou emboscadas."
+    },
+    {
+     "name": "Concentração de Ferro",
+     "cost": 1,
+     "desc": "É quase impossível você perder o foco em batalha. +2 Vontade para resistir a distrações e interrupções de concentração."
+    },
+    {
+     "name": "Adaptável",
+     "cost": 1,
+     "desc": "Você se adapta rápido a novas situações. +2 em testes de improviso ou ao usar ferramentas/perícias que não domina."
+    },
+    {
+     "name": "Mentalidade de Predador",
+     "cost": 1,
+     "desc": "Você está sempre em alerta, como um caçador. +1 em Percepção e +1 em Investigação."
+    },
+    {
+     "name": "Psicopata",
+     "cost": 2,
+     "desc": "Você não tem senso de empatia e consegue manipular os outros com frieza. +2 em testes de Enganação, Intimidação e Persuasão. Uma vez por cena, ao manipular alguém, você pode forçar o alvo a um teste de Vontade (CD 15). Se falhar, ele age como você sugerir por 1 rodada (não pode causar dano direto a si mesmo)."
+    },
+    {
+     "name": "Mestre Analista de Combate",
+     "cost": 1,
+     "desc": "Você consegue analisar padrões com rapidez. Após 1 rodada enfrentando o mesmo inimigo, você ganha +1 Esquiva contra os ataques dele (não acumula)."
+    },
+    {
+     "name": "Concentração Venenosa",
+     "cost": 1,
+     "desc": "Sua mente fica mais afiada sob efeitos de envenenamento. Enquanto estiver sob efeito de veneno, você ganha +1 Foco em testes de ataque e perícias cognitivas."
+    },
+    {
+     "name": "Imunidade ao Medo",
+     "cost": 3,
+     "desc": "Sua mente é uma fortaleza contra o medo. +3 Vontade para resistir a efeitos de medo, pânico e terror. Uma vez por sessão, ao falhar em um teste contra medo, você pode repeti-lo com vantagem."
+    },
+    {
+     "name": "Fúria Calculada",
+     "cost": 1,
+     "desc": "Mesmo com raiva extrema, você mantém o controle total. +2 Vontade para resistir a efeitos de Frenesi. Enquanto estiver sob efeito de raiva (como Fúria de Batalha), você não sofre penalidades em testes de ataque por emoção."
+    },
+    {
+     "name": "Adaptador de Status",
+     "cost": 2,
+     "desc": "Sua mente cria rapidamente uma resposta ao que está sofrendo. Reduz em 1 turno a duração de efeitos de status mentais (medo, confusão, enfeitiçado, etc.). Uma vez por combate, ao sofrer um desses efeitos, você pode fazer um teste de Vontade (CD 15) para reduzi-lo em mais 1 turno."
+    },
+    {
+     "name": "Comando de Unidade",
+     "cost": 2,
+     "desc": "Você sabe coordenar esquadrões de forma mais eficiente. Aliados próximos que possam ouvi-lo recebem +1 em testes de ataque enquanto você estiver consciente e comandando."
+    },
+    {
+     "name": "Perseguidor Incansável",
+     "cost": 1,
+     "desc": "Quando você escolhe um alvo, não desiste dele. +2 em testes de rastreamento e perseguição. Uma vez por cena, ao falhar em um teste de rastreamento, você pode repeti-lo imediatamente."
     }
    ]
   },
@@ -613,6 +803,56 @@ window.HEARTSOUL_TRAITS = {
      "name": "Estrela Guia",
      "cost": 1,
      "desc": "Você sempre sabe onde está o norte. Imune a se perder (sabe direções cardeais instintivamente). +2 em testes de Sobrevivência para navegação. Uma vez por sessão, pode encontrar o caminho mais seguro para um destino conhecido."
+    },
+    {
+     "name": "Coração de Fogo",
+     "cost": 2,
+     "desc": "Você nasceu com uma centelha de fogo no peito. Seu sangue é quente demais para o frio tocá-lo, e suas mãos podem incendiar o que tocam. +2 em testes de Constituição contra ambientes frios e dano Gélido. Seus ataques desarmados podem causar 1d4 de dano de Calor adicional (uma vez por turno)."
+    },
+    {
+     "name": "Chamas da Paixão",
+     "cost": 2,
+     "desc": "Sua vontade é uma fornalha que não se apaga. Quanto mais ferido, mais quente sua chama queima. Quando estiver com metade ou menos do HP total, seus ataques corpo a corpo causam +2 de dano de Calor. +1 Vontade."
+    },
+    {
+     "name": "Tocha Viva",
+     "cost": 1,
+     "desc": "Seu corpo emite um calor reconfortante que aquece aliados e repele o frio. Luz natural em um raio de 3 metros. Aliados nesse raio ignoram penalidades de frio ambiental leve. Resistência a dano de Calor: reduz 1 ponto de dano recebido."
+    },
+    {
+     "name": "Explosão Contida",
+     "cost": 2,
+     "desc": "Você pode liberar uma onda de calor devastadora quando encurralado, mas isso drena suas forças. Uma vez por combate, como Ação de Suporte, cause 2d4 de dano de Calor em um raio de 3 metros ao seu redor (aliados são imunes). Após usar, sofre -1 em testes físicos por 1 rodada."
+    },
+    {
+     "name": "Pele de Brasa",
+     "cost": 1,
+     "desc": "Sua pele é áspera e quente como carvão em brasa. Inimigos que errarem ataques corpo a corpo contra você sofrem 1 de dano de Calor. Você não sofre dano por tocar superfícies quentes (como metal aquecido)."
+    },
+    {
+     "name": "Sangue Glacial",
+     "cost": 2,
+     "desc": "O frio das montanhas corre em suas veias. O gelo não o fere — ele o acolhe. +2 em testes de Constituição contra ambientes quentes e dano de Calor. Seus ataques desarmados podem causar 1d4 de dano Gélido adicional (uma vez por turno)."
+    },
+    {
+     "name": "Toque do Inverno",
+     "cost": 2,
+     "desc": "Suas mãos carregam o frio da nevasca. Onde toca, o gelo se forma. Ao acertar um ataque desarmado, o alvo deve fazer um teste de Constituição (CD 15). Se falhar, sofre Congelamento nível 1 por 2 turnos. Uma vez por combate."
+    },
+    {
+     "name": "Muralha de Gelo",
+     "cost": 1,
+     "desc": "Você pode condensar a umidade do ar em uma barreira de gelo protetora. Uma vez por combate, como Reação ao ser atacado, você pode criar um escudo de gelo que concede +2 de Defesa até o início do seu próximo turno. O escudo se quebra após absorver o primeiro golpe."
+    },
+    {
+     "name": "Nevasca Interior",
+     "cost": 2,
+     "desc": "Mesmo sob o sol escaldante, você carrega o inverno dentro de si. Imune a penalidades de calor ambiental leve. Uma vez por combate, como Ação de Suporte, você pode criar uma aura de frio em 3 metros: inimigos na área têm seu deslocamento reduzido em 2 metros por 2 rodadas."
+    },
+    {
+     "name": "Lágrimas de Gelo",
+     "cost": 1,
+     "desc": "Você pode congelar a própria dor, ignorando ferimentos por breves momentos. Uma vez por combate, ao sofrer dano, você pode reduzir o dano recebido em 1d4. Se o dano for de Calor, a redução é de apenas 1."
     }
    ]
   },
@@ -668,6 +908,26 @@ window.HEARTSOUL_TRAITS = {
      "name": "Morto-Vivo Parcial",
      "cost": 2,
      "desc": "Você não está completamente vivo, mas também não está morto, e os dois mundos o rejeitam. Imune a doenças e venenos naturais. Não precisa comer, beber ou respirar. No entanto, você é afetado por cura como um morto-vivo: cura mágica só funciona com metade da eficácia, e você sofre 1d6 de dano de luz solar direta por turno. Além disso, animais e crianças o temem instintivamente."
+    },
+    {
+     "name": "Chama Maldita",
+     "cost": 2,
+     "desc": "Suas chamas queimam mais forte, mas se alimentam de você. +2 de dano de Calor em todos os ataques. Sempre que causar dano de Calor, role 1d4. Com 1, você também sofre 1d4 de dano de Calor (a chama lambe sua própria carne)."
+    },
+    {
+     "name": "Abraço do Inverno",
+     "cost": 2,
+     "desc": "O frio que você carrega é tão intenso que machuca quem se aproxima — inclusive aliados. Inimigos que terminem seus turnos adjacentes a você sofrem 1 de dano Gélido. Aliados adjacentes também sofrem 1 de dano Gélido (você não pode desligar essa aura). +2 em testes de Intimidação (sua presença gélida é assustadora)."
+    },
+    {
+     "name": "Coração Congelado",
+     "cost": 2,
+     "desc": "Você sacrificou suas emoções para dominar o gelo absoluto. Imune a efeitos de medo e encantamento (seu coração não sente). +2 Vontade. -2 em testes de Persuasão e Diplomacia (você é frio e distante). Você não pode usar empatia ou intuição para entender os sentimentos alheios."
+    },
+    {
+     "name": "Maldição do Gelo Eterno",
+     "cost": 3,
+     "desc": "Você foi amaldiçoado por uma entidade glacial. O gelo obedece, mas cobra seu preço. Seus ataques com gelo causam +1d6 de dano Gélido adicional. Sempre que usar uma habilidade de gelo, role 1d6. Com 1, uma parte aleatória do seu corpo sofre Congelamento nível 2 por 3 turnos (ignore imunidades). Você nunca sente calor — mesmo sob o sol, sua pele é fria como um cadáver."
     }
    ]
   }
