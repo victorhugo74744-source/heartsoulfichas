@@ -1,5 +1,19 @@
 [
   {
+    "id": "2026-08-05-tracos-escuridao-raio-luz-vento-agua",
+    "date": "2026-08-05",
+    "title": "Traços elementais de Escuridão, Raio, Luz, Vento e Água",
+    "tags": ["Traços"],
+    "changes": [
+      "1 novo Traço Físico: Reflexos de Tempestade.",
+      "7 novos Traços Especiais de Escuridão: Abraço das Sombras, Visão do Abismo, Passo Sombrio e Guardião do Crepúsculo (benignos); Amaldiçoado pelas Sombras, Olhos que Apagam e Coração das Trevas (malignos).",
+      "9 novos Traços Especiais de Raio: Centelha Viva, Passo do Relâmpago, Elo Condutor e Coração de Tempestade (benignos); Sobrecarga Nervosa, Raio Errante, Marca do Choque, Conduíte Amaldiçoado e Tempestade Interior (malignos).",
+      "10 novos Traços Especiais de Luz: Toque Iluminado, Aura de Esperança, Lâmina de Luz, Reflexo Celestial e Bênção da Aurora (benignos); Luz Ofuscante, Farol da Verdade, Mártir da Luz, Julgamento Solar e Brilho Eterno (malignos).",
+      "10 novos Traços Especiais de Vento: Graça do Zéfiro, Sussurro do Vento, Escudo de Zéfiro, Lâmina de Vento, Olho da Tempestade e Asas do Viajante (benignos); Vendaval Incontrolável, Redemoinho de Poeira, Sopro do Abismo e Maldição do Errante (malignos).",
+      "10 novos Traços Especiais de Água: Coração das Marés, Toque Curativo das Ondas, Manto de Névoa, Bolha Protetora, Jato Cortante e Fluidez Aquática (benignos); Maldição da Sede, Inundação Descontrolada, Lágrimas que Afogam e Fome das Profundezas (malignos)."
+    ]
+  },
+  {
     "id": "2026-08-05-filtro-tracos-editor",
     "date": "2026-08-05",
     "title": "Filtro de Traços na Ficha",

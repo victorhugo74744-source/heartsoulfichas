@@ -258,6 +258,11 @@ window.HEARTSOUL_TRAITS = {
      "name": "Reflexos Felinos",
      "cost": 2,
      "desc": "Seu tempo de reação é absurdo, como um felino pronto para o bote. +1 Destreza, +2 em testes de Esquiva."
+    },
+    {
+     "name": "Reflexos de Tempestade",
+     "cost": 2,
+     "desc": "Seus reflexos são sobre-humanos, como se a eletricidade corresse diretamente em seus nervos. +1 Destreza. Uma vez por combate, ao ser atacado, você pode gastar uma Reação para adicionar +3 em sua Esquiva ou Parry naquele teste."
     }
    ]
   },
@@ -853,6 +858,131 @@ window.HEARTSOUL_TRAITS = {
      "name": "Lágrimas de Gelo",
      "cost": 1,
      "desc": "Você pode congelar a própria dor, ignorando ferimentos por breves momentos. Uma vez por combate, ao sofrer dano, você pode reduzir o dano recebido em 1d4. Se o dano for de Calor, a redução é de apenas 1."
+    },
+    {
+     "name": "Abraço das Sombras",
+     "cost": 2,
+     "desc": "Você se funde à escuridão como se ela fosse uma segunda pele. Onde outros veem o vazio, você vê abrigo. +2 em testes de Furtividade em ambientes de penumbra ou escuridão. Uma vez por cena, ao ser atacado na escuridão, você pode gastar uma Reação para desaparecer nas sombras e reaparecer a até 3 metros de distância (não provoca ataques de oportunidade)."
+    },
+    {
+     "name": "Visão do Abismo",
+     "cost": 1,
+     "desc": "Seus olhos foram tocados pela escuridão primordial. Nenhum véu de sombras pode ocultar a verdade de você. Visão no escuro total até 18 metros (em preto e branco). Você enxerga através de escuridão mágica de nível 2 ou inferior como se fosse penumbra."
+    },
+    {
+     "name": "Passo Sombrio",
+     "cost": 1,
+     "desc": "Você aprendeu a caminhar entre as sombras, encurtando distâncias como se o espaço não existisse. Uma vez por descanso curto, você pode se teletransportar de uma área de escuridão ou penumbra para outra em até 12 metros. +1 Foco."
+    },
+    {
+     "name": "Guardião do Crepúsculo",
+     "cost": 2,
+     "desc": "Você é um vigilante que protege os inocentes sob o manto da noite, e as sombras atendem ao seu chamado. Enquanto estiver em escuridão ou penumbra, você recebe +1 em testes de ataque e +1 em testes de Percepção. Aliados a até 3 metros de você também se beneficiam da escuridão: +1 em testes de Furtividade."
+    },
+    {
+     "name": "Centelha Viva",
+     "cost": 1,
+     "desc": "Seu corpo acumula estática constantemente, liberando pequenas descargas ao toque. Seus ataques desarmados causam 1d4 de dano Elétrico adicional. Você pode usar uma Ação de Suporte para carregar uma arma metálica com eletricidade: o próximo ataque com ela causa +1d4 de dano Elétrico (uma vez por combate)."
+    },
+    {
+     "name": "Passo do Relâmpago",
+     "cost": 2,
+     "desc": "Você pode se mover numa faísca, como se o ar não oferecesse resistência. +1 Deslocamento base. Uma vez por combate, ao usar a ação de Movimento, você pode se teletransportar até 6 metros em linha reta (sem provocar ataques de oportunidade)."
+    },
+    {
+     "name": "Elo Condutor",
+     "cost": 2,
+     "desc": "Seus ataques elétricos saltam de inimigo para inimigo, como raios em uma tempestade. Quando você causa dano Elétrico a um inimigo, um segundo inimigo adjacente a ele sofre 1d4 de dano Elétrico (uma vez por turno). +1 Foco."
+    },
+    {
+     "name": "Coração de Tempestade",
+     "cost": 2,
+     "desc": "Você está em sintonia com as nuvens carregadas. Sob os céus cinzentos, seu poder floresce. Durante chuvas, tempestades ou ambientes com eletricidade natural, você recebe +1 em todos os testes físicos e +2 de dano Elétrico. Você nunca sofre dano por raios naturais (eles o energizam em vez de ferir)."
+    },
+    {
+     "name": "Toque Iluminado",
+     "cost": 1,
+     "desc": "Suas mãos emitem uma luz suave que acalma e cura. Onde você toca, a escuridão recua e a dor diminui. Luz natural em um raio de 3 metros. Uma vez por descanso curto, como Ação de Suporte, você pode curar 1d4+1 PV em um aliado tocado."
+    },
+    {
+     "name": "Aura de Esperança",
+     "cost": 2,
+     "desc": "Você é um farol de coragem para aqueles que lutam ao seu lado. Sua presença inspira e fortalece. Aliados a até 6 metros de você recebem +1 em testes de resistência contra medo e desespero. +1 Vontade."
+    },
+    {
+     "name": "Lâmina de Luz",
+     "cost": 2,
+     "desc": "Você pode canalizar a luz em uma arma, tornando-a incandescente e letal contra as trevas. Uma vez por combate, como Ação de Suporte, você imbui sua arma com luz radiante: por 2 rodadas, ela causa +1d6 de dano radiante e emite luz em 6 metros. Contra mortos-vivos, profanos e criaturas das trevas, o dano adicional dobra."
+    },
+    {
+     "name": "Reflexo Celestial",
+     "cost": 1,
+     "desc": "Sua pele reflete a luz de forma hipnotizante, desnorteando quem tenta atingi-lo. +1 Defesa contra ataques à distância (a luz atrapalha a mira). Uma vez por cena, ao ser atacado, você pode emitir um flash que força o atacante a um teste de Foco (CD 15). Se falhar, ele sofre -2 no teste de ataque."
+    },
+    {
+     "name": "Bênção da Aurora",
+     "cost": 2,
+     "desc": "Você carrega em si a luz do amanhecer, um poder que se renova a cada novo dia. No primeiro turno de cada combate, você recebe +2 em Iniciativa e +1 em testes de ataque. Uma vez por sessão, ao nascer do sol, você pode remover um efeito de status negativo de si mesmo (nível 2 ou inferior)."
+    },
+    {
+     "name": "Graça do Zéfiro",
+     "cost": 1,
+     "desc": "O vento dança ao seu redor, aliviando seus passos e guiando seus movimentos. +1 Destreza. Seu deslocamento base aumenta em 1 metro."
+    },
+    {
+     "name": "Sussurro do Vento",
+     "cost": 1,
+     "desc": "Você ouve as vozes carregadas pela brisa — segredos, avisos e ecos distantes. +2 em testes de Foco (Percepção) para ouvir sons distantes ou abafados. Uma vez por cena, você pode \"lançar sua voz\" ao vento: um aliado a até 30 metros ouve uma mensagem curta sua como um sussurro."
+    },
+    {
+     "name": "Escudo de Zéfiro",
+     "cost": 2,
+     "desc": "Uma corrente de ar envolve seu corpo, desviando projéteis e amortecendo impactos. +1 Defesa contra ataques à distância. Uma vez por combate, como Reação, você pode criar uma rajada defensiva: reduz em 1d6 o dano de um ataque à distância ou de uma arma de haste."
+    },
+    {
+     "name": "Lâmina de Vento",
+     "cost": 2,
+     "desc": "Você pode estender seu braço e disparar uma lâmina de ar comprimido, cortante como vidro. Como Ação Principal, você dispara uma rajada cortante contra um alvo a até 12 metros: 1d6 + Destreza de dano Cortante. -3 Estamina."
+    },
+    {
+     "name": "Olho da Tempestade",
+     "cost": 2,
+     "desc": "No centro do caos, você encontra a calma. O vento furioso não o toca, e sua mente permanece clara. +2 em testes de Vontade para resistir a efeitos de confusão e atordoamento. Você ignora penalidades de vento forte, tempestades e ambientes turbulentos (como convés de navio em tormenta)."
+    },
+    {
+     "name": "Asas do Viajante",
+     "cost": 1,
+     "desc": "O vento sopra a seu favor, encurtando as longas jornadas com um empurrão invisível. Sobreviver a longas viagens não consome Estamina adicional (veja regras de viagem). +1 em testes de Constituição para marchas forçadas."
+    },
+    {
+     "name": "Coração das Marés",
+     "cost": 1,
+     "desc": "Você está em sintonia com o ritmo do oceano, e a água o aceita como um filho. Você pode respirar debaixo d'água normalmente. Seu deslocamento de natação é de 9 metros."
+    },
+    {
+     "name": "Toque Curativo das Ondas",
+     "cost": 2,
+     "desc": "Suas mãos carregam a pureza das nascentes, aliviando dores e fechando feridas com um toque úmido e refrescante. Uma vez por descanso curto, como Ação de Suporte, você pode curar 1d6+1 PV em um aliado tocado. Se o aliado estiver com sangramento, a cura interrompe o sangramento automaticamente."
+    },
+    {
+     "name": "Manto de Névoa",
+     "cost": 1,
+     "desc": "Você pode exalar uma névoa densa que oculta seus movimentos e confunde os inimigos. Uma vez por combate, como Ação de Suporte, você cria uma névoa em um raio de 3 metros ao seu redor por 3 rodadas. A área é considerada obscurecida (camuflagem para aliados, penalidade de -1 em ataques à distância através dela)."
+    },
+    {
+     "name": "Bolha Protetora",
+     "cost": 2,
+     "desc": "Você envolve a si mesmo ou a um aliado em uma esfera de água cristalina que amortece impactos e repele o fogo. Uma vez por combate, como Reação, você pode criar uma bolha protetora ao redor de um alvo tocado: ela reduz o dano do próximo ataque em 2d4. Se o dano for de Calor (fogo), a redução é de 3d4."
+    },
+    {
+     "name": "Jato Cortante",
+     "cost": 2,
+     "desc": "Você condensa a umidade do ar em um projétil de alta pressão, cortante como vidro. Como Ação Principal, você dispara um jato d'água contra um alvo a até 9 metros: 1d6 + Destreza de dano Cortante. Se o alvo estiver em chamas ou sob efeito de Queimadura, o dano é dobrado e a queimadura é extinta. -3 Estamina."
+    },
+    {
+     "name": "Fluidez Aquática",
+     "cost": 1,
+     "desc": "Seu corpo se move como a água, escapando de agarrões e deslizando por espaços estreitos. +2 em testes para escapar de agarramentos, correntes ou espaços confinados. Você pode passar por aberturas tão pequenas quanto 30 cm sem penalidade (como se seu corpo se adaptasse)."
     }
    ]
   },
@@ -928,6 +1058,111 @@ window.HEARTSOUL_TRAITS = {
      "name": "Maldição do Gelo Eterno",
      "cost": 3,
      "desc": "Você foi amaldiçoado por uma entidade glacial. O gelo obedece, mas cobra seu preço. Seus ataques com gelo causam +1d6 de dano Gélido adicional. Sempre que usar uma habilidade de gelo, role 1d6. Com 1, uma parte aleatória do seu corpo sofre Congelamento nível 2 por 3 turnos (ignore imunidades). Você nunca sente calor — mesmo sob o sol, sua pele é fria como um cadáver."
+    },
+    {
+     "name": "Amaldiçoado pelas Sombras",
+     "cost": 2,
+     "desc": "Algo nas trevas colocou sua marca em você. As sombras o obedecem, mas também o perseguem. +2 em testes de Furtividade e Intimidação. Uma vez por cena, você pode invocar uma aura de escuridão em 3 metros que reduz a visão de todos (exceto você) a apenas 1 metro por 2 turnos. Sob luz solar intensa, você sofre -2 em todos os testes (a luz o enfraquece)."
+    },
+    {
+     "name": "Olhos que Apagam",
+     "cost": 1,
+     "desc": "Seu olhar carrega a escuridão. Onde você fixa os olhos, a luz tremula e morre. Você pode gastar uma Ação de Suporte para apagar qualquer fonte de luz não-mágica a até 6 metros. Uma vez por combate, ao encarar um inimigo, você pode forçá-lo a um teste de Vontade (CD 15). Se falhar, ele fica cego por 1 turno. Seus próprios olhos não refletem luz — você é permanentemente cego durante o dia (sob luz solar intensa, -3 em testes de Percepção visual)."
+    },
+    {
+     "name": "Coração das Trevas",
+     "cost": 3,
+     "desc": "Você substituiu seu coração por um fragmento de escuridão pura. Ele bate, mas não com sangue — com poder. +2 Vontade. Sempre que você matar uma criatura, recupera 2d4 PV e ganha +1 em testes de ataque por 2 turnos (não acumula). Sob a luz da lua cheia, seus bônus são dobrados. No entanto, você não pode ser curado por magia divina de deuses da Luz (como Luxios ou Helinas), e sua presença causa desconforto em animais e crianças."
+    },
+    {
+     "name": "Sobrecarga Nervosa",
+     "cost": 2,
+     "desc": "A eletricidade em seu corpo é instável. Ela o torna mais rápido, mas também mais frágil. +2 Destreza. Sempre que você falhar em um teste de resistência, sofre 1d4 de dano Elétrico (feedback interno). Se falhar por 5 ou mais, fica atordoado por 1 turno."
+    },
+    {
+     "name": "Raio Errante",
+     "cost": 2,
+     "desc": "Você pode invocar um raio poderoso, mas ele nem sempre obedece. Uma vez por combate, como Ação Principal, você pode disparar um raio contra um alvo a até 12 metros: 2d6 + Foco de dano Elétrico. No entanto, role 1d6. Com 1, o raio atinge um aliado aleatório no caminho ou ricocheteia em você. Com 2-3, atinge o alvo mas você sofre 1d4 de dano de feedback."
+    },
+    {
+     "name": "Marca do Choque",
+     "cost": 1,
+     "desc": "Você foi atingido por uma descarga tão violenta que seu corpo jamais esqueceu. +2 em testes de Constituição contra dano Elétrico. No entanto, sempre que sofrer dano Elétrico, mesmo que mínimo, seus músculos se contraem involuntariamente: -2 em testes de Destreza e ataque por 1 turno. Você tem cicatrizes arroxeadas visíveis que assustam os mais sensíveis (-1 em testes sociais iniciais)."
+    },
+    {
+     "name": "Conduíte Amaldiçoado",
+     "cost": 3,
+     "desc": "Você é um para-raios vivo. A eletricidade busca você, para o bem e para o mal. Sempre que uma fonte de dano Elétrico estiver a até 6 metros, você pode redirecioná-la para si mesmo (absorvendo o dano no lugar de aliados). Quando absorve eletricidade, seu próximo ataque causa +2d4 de dano Elétrico adicional. No entanto, você não pode evitar dano Elétrico — sempre sofre o dano total, sem direito a testes de resistência ou reduções."
+    },
+    {
+     "name": "Tempestade Interior",
+     "cost": 2,
+     "desc": "Uma fúria elétrica vive em seu peito, pronta para explodir. Uma vez por sessão, você pode liberar uma explosão de raios em cadeia: todos num raio de 6 metros sofrem 3d6 de dano Elétrico (teste de Destreza CD 15 para metade). Após usar, você fica inconsciente por 1d4 rodadas (o corpo desliga). Se estiver em uma tempestade real, o dano dobra, mas o período de inconsciência também dobra."
+    },
+    {
+     "name": "Luz Ofuscante",
+     "cost": 2,
+     "desc": "Seu brilho é tão intenso que fere até mesmo aqueles que você ama. Você não controla completamente seu poder. +2 em testes de Intimidação (sua presença luminosa é imponente). Uma vez por combate, você pode emitir um clarão em 6 metros: inimigos fazem teste de Constituição (CD 15) ou ficam cegos por 1 turno. Aliados na área também são afetados, a menos que fechem os olhos (gastando sua Reação)."
+    },
+    {
+     "name": "Farol da Verdade",
+     "cost": 1,
+     "desc": "Você enxerga mentiras como manchas escuras na alma alheia, mas a verdade que você revela nem sempre é bem-vinda. +2 em testes de Intuição para detectar mentiras. Quando você acusa alguém de mentir, essa pessoa sofre -2 em testes sociais contra você pelo resto da cena. No entanto, você não consegue mentir — sempre que tenta, sua luz interior o denuncia (desvantagem em Enganação)."
+    },
+    {
+     "name": "Mártir da Luz",
+     "cost": 2,
+     "desc": "Você queima sua própria vida para iluminar os outros. Quanto mais brilha, mais se consome. Uma vez por combate, como Ação de Suporte, você pode transferir até 3 PV de qualquer parte do seu corpo para curar um aliado tocado. Você também pode gastar 2 Pontos de Estamina para adicionar +1d4 de dano radiante ao ataque de um aliado adjacente. Cada uso causa 1 de dano a si mesmo (a luz o queima por dentro)."
+    },
+    {
+     "name": "Julgamento Solar",
+     "cost": 3,
+     "desc": "Você pode invocar um feixe de luz divina que incinera os ímpios, mas o julgamento também pesa sobre você. Uma vez por dia, você pode invocar um pilar de luz solar sobre um alvo a até 12 metros: 3d6 de dano radiante (teste de Destreza CD 15 para metade). Se o alvo for profano, morto-vivo ou tiver cometido um ato cruel recentemente, o dano é máximo (18 + bônus). No entanto, se você usar este poder contra um inocente ou hesitar em usá-lo contra um culpado, você sofre o dano no lugar do alvo."
+    },
+    {
+     "name": "Brilho Eterno",
+     "cost": 2,
+     "desc": "Sua luz nunca se apaga — mesmo quando você dorme, mesmo quando você sangra. Isso atrai olhares, e também predadores. Você emite luz constante equivalente a uma tocha (6 metros). Não pode desligá-la. +2 em testes de Persuasão com criaturas que veneram a luz. -3 em testes de Furtividade (impossível se esconder na escuridão). Criaturas noturnas e mortos-vivos sempre sabem sua localização exata enquanto estiverem nesse raio."
+    },
+    {
+     "name": "Vendaval Incontrolável",
+     "cost": 2,
+     "desc": "Você carrega uma tempestade dentro de si, e às vezes ela escapa — para o azar de todos ao redor. +2 de dano em ataques que envolvam vento ou ar. Sempre que você sofrer um acerto crítico, uma rajada de vento explode de você: todos em 3 metros (aliados e inimigos) devem fazer um teste de Força (CD 18) ou serem empurrados 3 metros para trás e irão tomar 2d4 de dano de vento."
+    },
+    {
+     "name": "Redemoinho de Poeira",
+     "cost": 1,
+     "desc": "Você está sempre envolto por uma leve nuvem de poeira e vento, que irrita os olhos e revela sua posição. Inimigos a até 3 metros que estejam de olhos abertos sofrem -1 em testes de ataque à distância (a poeira atrapalha). Você não pode se esconder em ambientes abertos ou com poeira: -3 em Furtividade. Sua aproximação é sempre notada pelo vento."
+    },
+    {
+     "name": "Sopro do Abismo",
+     "cost": 2,
+     "desc": "Você pode exalar um vento gélido que rouba o fôlego dos vivos, mas o esforço drena sua própria energia. Uma vez por combate, como Ação Principal, você sopra um cone de vento necrótico de 3 metros: os inimigos na área sofrem 1d6 de dano Gélido e perdem 2 pontos de Estamina. Após usar, você sofre 2 de dano Gélido (o vento também o queima por dentro)."
+    },
+    {
+     "name": "Maldição do Errante",
+     "cost": 2,
+     "desc": "Você nunca pode ficar parado. O vento o empurra constantemente, tornando o descanso difícil e os laços impossíveis. +1 Destreza (o vento acelera seus movimentos). Você não pode permanecer no mesmo lugar por mais de 10 minutos: se tentar, sofre -1 em todos os testes até se mover novamente. Descansos longos em ambientes fechados recuperam apenas metade dos recursos (o vento sussurra para você partir)."
+    },
+    {
+     "name": "Maldição da Sede",
+     "cost": 2,
+     "desc": "Seu poder sobre a água vem com um preço: seu próprio corpo desidrata rapidamente, exigindo hidratação constante. +2 em testes de ataque com água ou gelo. Você precisa consumir o dobro de água por dia. Se não o fizer, sofre -1 em todos os modificadores de atributo. Em ambientes desérticos ou muito secos, essa penalidade é aplicada após apenas 6 horas sem água."
+    },
+    {
+     "name": "Inundação Descontrolada",
+     "cost": 2,
+     "desc": "Quando você sangra, a água ao seu redor reage — e às vezes reage demais. +2 em testes de Intimidação (sua aura aquática é opressiva). Sempre que você sofrer dano Cortante ou Perfurante acima de 5 pontos, uma onda de água é liberada do ferimento: todos em 3 metros (aliados e inimigos) devem fazer um teste de Destreza (CD 18) ou cair no chão."
+    },
+    {
+     "name": "Lágrimas que Afogam",
+     "cost": 1,
+     "desc": "Você pode sentir as emoções alheias tão intensamente que seu corpo responde com água — lágrimas, suor, e uma aura úmida que incomoda. +2 em testes de Intuição para detectar emoções. No entanto, sempre que estiver perto de alguém em sofrimento intenso, você sofre -2 em todos os testes físicos (suas mãos ficam úmidas, seus olhos embaçam). Você não pode desligar essa empatia."
+    },
+    {
+     "name": "Fome das Profundezas",
+     "cost": 3,
+     "desc": "Você fez um pacto com algo que vive no fundo do mar. Ele lhe concede poder, mas cobra sacrifícios. +2 em testes de ataque com armas de água ou gelo. Uma vez por combate, você pode invocar um tentáculo espectral de água que ataca um inimigo a até 9 metros: 2d6 de dano e agarra o alvo (teste de Força CD 18 para escapar). No entanto, cada uso consome 5 PV seus (o tentáculo se alimenta de sua vitalidade). Se você usar este poder sob a lua cheia, o tentáculo pode se voltar contra você (teste de Vontade CD 20 ou você é agarrado)."
     }
    ]
   }
