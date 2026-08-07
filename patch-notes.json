@@ -1,5 +1,16 @@
 [
   {
+    "id": "2026-08-06-busca-tracos-e-correcao-elemento",
+    "date": "2026-08-06",
+    "title": "Busca de traços melhorada + correção nos filtros de Água e Ácido",
+    "tags": ["Sistema"],
+    "changes": [
+      "A busca de traços (etapa \"Traços Adicionais\" do editor de ficha) agora também procura no texto do efeito, não só no nome — buscar \"vontade\", por exemplo, encontra qualquer traço que mexa com Vontade, mesmo que a palavra não esteja no nome dele.",
+      "A busca também ignora acento: escrever \"eletrico\" ou \"agua\" sem acentuar já encontra \"Elétrico\"/\"Água\" normalmente.",
+      "Corrigido: os filtros de elemento \"Água\" e \"Ácido\" não mostravam nenhum traço, mesmo havendo traços desses elementos no catálogo."
+    ]
+  },
+  {
     "id": "2026-08-05-tracos-escuridao-raio-luz-vento-agua",
     "date": "2026-08-05",
     "title": "Traços elementais de Escuridão, Raio, Luz, Vento e Água",

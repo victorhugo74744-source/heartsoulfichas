@@ -440,12 +440,21 @@ const TRAIT_ELEMENTS = [
   ['fogo', 'Fogo', /\bfogo\b/i],
   ['gelo', 'Gelo / Frio', /\bgelo\b|\bgélid[oa]\b|\bcongelamento\b/i],
   ['raio', 'Raio / Elétrico', /\braio\b|\belétric\w*/i],
-  ['acido', 'Ácido', /\bácido\b/i],
+  // O \b do JS só reconhece [A-Za-z0-9_] como "caractere de palavra" — não
+  // conhece acento. Um padrão que COMEÇA com letra acentuada (á, é...)
+  // nunca bate com \b, porque o próprio primeiro caractere do padrão já
+  // não conta como fronteira de palavra: "ácido"/"água" ficavam sem
+  // resultado NENHUM no filtro de elemento, sempre (bug pego pelos testes
+  // em tests/client/trait-parser.test.js — ver "catálogo real" nesse
+  // arquivo). Por isso usam (?<!...)/(?!...) com \p{L}/\p{N} (Unicode-aware
+  // de verdade, ao contrário de \b) no lugar de \b. Qualquer elemento novo
+  // que comece com letra acentuada precisa do mesmo tratamento.
+  ['acido', 'Ácido', /(?<![\p{L}\p{N}_])ácido(?![\p{L}\p{N}_])/iu],
   ['veneno', 'Veneno', /\bvenenos?\b|\btoxinas?\b/i],
   ['sombra', 'Sombra / Trevas', /\bsombras?\b|\btrevas?\b/i],
   ['luz', 'Luz', /\bluz\b/i],
   ['vento', 'Vento / Ar', /\bvento\b/i],
-  ['agua', 'Água', /\bágua\b/i],
+  ['agua', 'Água', /(?<![\p{L}\p{N}_])água(?![\p{L}\p{N}_])/iu],
 ];
 function traitGrantedAttrs(desc) {
   return Object.keys(parseAttrBonusesFromText(desc || ''));
@@ -456,6 +465,12 @@ function traitHasTestBonus(desc) {
 function traitElementsFound(desc) {
   if (!desc) return [];
   return TRAIT_ELEMENTS.filter(([, , re]) => re.test(desc)).map(([key]) => key);
+}
+// Tira acentos pra busca não exigir digitar "é"/"ç" certinho (ex.: "eletrico"
+// encontra "Elétrico", "agua" encontra "Água"). Usado só pra comparação —
+// o texto exibido continua com acento normal.
+function normalizeSearchText(s) {
+  return (s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
 }
 function getTraitFilters() {
   const costEl = document.getElementById('traitFilterCost');
@@ -517,13 +532,25 @@ function initTraitFilters() {
 
 function renderTraitCategories(filter) {
   const wrap = document.getElementById('traitCategories');
-  const f = (filter || '').toLowerCase();
+  // Busca global: um único campo de texto cruza as 6 categorias (físico,
+  // mental, especial × benigno/maligno) de uma vez, e bate tanto contra o
+  // nome do traço quanto contra a descrição/efeito — assim "vontade" ou
+  // "escuridão" acham qualquer traço que mencione isso, não só quem tem
+  // isso no nome. Combina com os filtros estruturados (custo/atributo/
+  // elemento) ao mesmo tempo.
+  const f = normalizeSearchText(filter);
   const filters = getTraitFilters();
   const hasActiveFilter = !!(f || filters.cost !== null || filters.attr || filters.testOnly || filters.element);
   let totalMatches = 0;
   wrap.innerHTML = TRAIT_CATS.map(([catKey, kind]) => {
     const cat = DATA.traits[catKey];
-    const items = cat.items.filter(it => (!f || it.name.toLowerCase().includes(f)) && traitMatchesFilters(it, filters));
+    const items = cat.items.filter(it => {
+      if (f) {
+        const hay = it.__searchHay || (it.__searchHay = normalizeSearchText(it.name + ' ' + it.desc));
+        if (!hay.includes(f)) return false;
+      }
+      return traitMatchesFilters(it, filters);
+    });
     if (items.length === 0) return '';
     totalMatches += items.length;
     // Durante uma busca ou filtro ativo, abre automaticamente as categorias com resultado.

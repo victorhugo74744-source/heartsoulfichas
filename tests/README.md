@@ -1,3 +1,15 @@
+# Testes automatizados
+
+Duas suítes independentes, cada uma no seu canto:
+
+- **`tests/client/`** — o parser de texto de traço do editor de ficha
+  (bônus de atributo, elemento, perícia). Sem emulador, sem internet:
+  `npm test`. Ver `tests/client/README.md`.
+- **Este diretório (`tests/*.test.js`)** — as regras do Firestore,
+  descritas abaixo. Precisa do emulador: `npm run test:rules`.
+
+---
+
 # Testes das regras do Firestore
 
 Testa `firestore.rules` direto contra o emulador local do Firestore —

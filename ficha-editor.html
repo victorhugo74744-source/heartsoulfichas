@@ -255,7 +255,7 @@ if ('serviceWorker' in navigator) {
       <button type="button" class="btn secondary small" id="convertInspirationBtn" style="width:auto;">Converter 3 Inspiração → 1 Ponto de Traço</button>
     </div>
     <div id="traitMalignWarning"></div>
-    <input type="text" class="trait-search" id="traitSearch" placeholder="Buscar traço por nome…">
+    <input type="text" class="trait-search" id="traitSearch" placeholder="Buscar traço por nome ou efeito (ex.: “vontade”, “escuridão”)…">
     <div class="trait-filters" id="traitFilters">
       <div class="trait-filter-field">
         <label for="traitFilterCost">Custo</label>
@@ -335,21 +335,30 @@ if ('serviceWorker' in navigator) {
   </div><!-- /wizard-layout -->
 </div>
 
-<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
-<script src="js/firebase-config.js"></script>
-<script src="js/firebase-init.js"></script>
-<script src="js/data/races.js"></script>
-<script src="js/data/traits.js"></script>
-<script src="js/data/backgrounds.js"></script>
-<script src="js/data.js"></script>
-<script src="js/editor-core.js"></script>
-<script src="js/editor-build.js"></script>
-<script src="js/editor-abilities.js"></script>
-<script src="js/editor-misc.js"></script>
-<script src="js/editor-save.js"></script>
-<script src="js/editor-init.js"></script>
+<!-- defer: eram scripts bloqueantes em sequência (cada um só era buscado
+     depois que o anterior terminava de baixar+executar). Com defer, o
+     navegador busca todos em paralelo assim que os vê no HTML e só executa
+     na ordem depois que o parsing termina — mesmo comportamento de hoje,
+     só que a busca dos ~180KB de races/traits/backgrounds não fica mais
+     serializada. Preserva a ordem entre si, então a dependência
+     (firebase → firebase-config → firebase-init → dados → editor-*) continua
+     garantida. O script inline de navegação lateral, logo abaixo, não depende
+     de nada daqui e por isso não precisa de defer. -->
+<script defer src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script defer src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+<script defer src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+<script defer src="js/firebase-config.js"></script>
+<script defer src="js/firebase-init.js"></script>
+<script defer src="js/data/races.js"></script>
+<script defer src="js/data/traits.js"></script>
+<script defer src="js/data/backgrounds.js"></script>
+<script defer src="js/data.js"></script>
+<script defer src="js/editor-core.js"></script>
+<script defer src="js/editor-build.js"></script>
+<script defer src="js/editor-abilities.js"></script>
+<script defer src="js/editor-misc.js"></script>
+<script defer src="js/editor-save.js"></script>
+<script defer src="js/editor-init.js"></script>
 <script>
 // ---- Navegação lateral fixa: destaca a etapa visível conforme a rolagem ----
 (function () {
