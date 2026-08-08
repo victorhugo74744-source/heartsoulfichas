@@ -1,5 +1,24 @@
 [
   {
+    "id": "2026-08-07-filtro-tracos-funil",
+    "date": "2026-08-07",
+    "title": "Filtro de Traços atrás de um botão-funil + correção no acordeão",
+    "tags": ["Sistema", "Correção"],
+    "changes": [
+      "Na etapa \"Traços Adicionais\" do editor de ficha, a barra de filtros (custo, atributo concedido, adicional em testes, elemento) agora fica escondida por padrão e só aparece ao clicar no botão-funil ao lado da busca — o botão fica destacado e mostra quantos filtros estão ativos, mesmo com o painel fechado.",
+      "Corrigido: com uma busca ou filtro ativo, não era possível fechar manualmente uma categoria de traço que tinha resultado — ela reabria sozinha no clique seguinte. Agora o clique no título da categoria funciona normalmente também durante uma busca/filtro."
+    ]
+  },
+  {
+    "id": "2026-08-07-capacidade-carga-tracos-mesa",
+    "date": "2026-08-07",
+    "title": "Correção: Capacidade de Carga na mesa não somava bônus de traços",
+    "tags": ["Correção"],
+    "changes": [
+      "A caixa \"Seu inventário\" na mesa (aba do jogador) calculava a Capacidade de Carga usando só a Constituição base + ajuste manual, ignorando bônus de Constituição vindos de traço racial, traço extra ou antecedente. Agora ela soma esses bônus, igual já acontecia no editor de ficha e em \"📜 Ver ficha\"."
+    ]
+  },
+  {
     "id": "2026-08-06-busca-tracos-e-correcao-elemento",
     "date": "2026-08-06",
     "title": "Busca de traços melhorada + correção nos filtros de Água e Ácido",

@@ -27,7 +27,8 @@ function sheetSectionHtml() {
     <button class="btn secondary small" id="viewSheetBtn" style="width:auto; margin-top:8px;">📜 Ver ficha</button>
     <button class="btn secondary small hidden" id="leaveBoardBtn" style="width:auto; margin-top:8px;">Sair da mesa</button>
     <div class="error-msg hidden" id="enterErr"></div>
-    <div id="myResourcesBox"></div>`;
+    <div id="myResourcesBox"></div>
+    <div id="myInventoryBox"></div>`;
 }
 function wireSheetSection() {
   if (mySheets.length === 0) return;
@@ -181,6 +182,160 @@ async function setMyResourceField(sheetId, field, rawValue) {
     await db.collection('sheets').doc(sheetId).update(payload);
   } catch (err) {
     console.error('Erro ao atualizar recursos da ficha:', err);
+  }
+}
+
+// -------------------------------------------- INVENTÁRIO RÁPIDO (EU) --
+// Mesma ideia da caixa "Seus recursos" acima, mas para o Inventário
+// (nome + peso + quantidade), editável direto na mesa sem abrir a ficha.
+// Reimplementa aqui a mesma mecânica de peso de js/editor-core.js e
+// js/view.js (carryCapacity / inventoryTotalWeight / weightStatus) porque
+// mesa.html não carrega esses arquivos.
+//
+// Capacidade de Carga = 15 + mod.(Constituição base + bônus de traço/
+// antecedente + ajuste manual) — mesma leitura "melhor esforço" de padrões
+// "+2 Constituição" no texto dos traços usada em js/editor-core.js
+// (traitAttrBonuses) e js/view.js (traitAttrBonusesV). Não precisa carregar
+// os catálogos inteiros de raças/traços porque os textos relevantes já vêm
+// salvos na própria ficha (raceFixedTrait, raceOptionalTraits,
+// raceTraitsBought, backgroundAtributos, extraTraits[].desc).
+const ATTR_NAME_TO_KEY_QUICK = {
+  'Força': 'forca', 'Foco': 'foco', 'Vontade': 'vontade',
+  'Intelecto': 'intelecto', 'Destreza': 'destreza', 'Constituição': 'constituicao'
+};
+function parseAttrBonusesFromTextQuick(text) {
+  const bonuses = {};
+  if (!text) return bonuses;
+  const re = /\+(\d+)\s*(Força|Foco|Vontade|Intelecto|Destreza|Constituição)\b/g;
+  let m;
+  while ((m = re.exec(text))) {
+    const key = ATTR_NAME_TO_KEY_QUICK[m[2]];
+    bonuses[key] = (bonuses[key] || 0) + parseInt(m[1]);
+  }
+  return bonuses;
+}
+function traitAttrBonusesQuick(sheet) {
+  const texts = [];
+  if (sheet.raceFixedTrait) texts.push(sheet.raceFixedTrait);
+  if (sheet.raceVariantTrait) texts.push(sheet.raceVariantTrait);
+  (sheet.raceOptionalTraits || []).forEach(t => texts.push(t));
+  (sheet.raceTraitsBought || []).forEach(t => texts.push(t));
+  if (sheet.backgroundAtributos) texts.push(sheet.backgroundAtributos);
+  (sheet.extraTraits || []).forEach(t => texts.push(t && t.desc));
+  const total = { forca: 0, foco: 0, vontade: 0, intelecto: 0, destreza: 0, constituicao: 0 };
+  texts.map(parseAttrBonusesFromTextQuick).forEach(b => {
+    Object.keys(b).forEach(k => { total[k] += b[k]; });
+  });
+  return total;
+}
+function attrModQuick(v) { return Math.floor(v / 2); }
+function carryCapacityQuick(sheet) {
+  const attrs = sheet.attributes || {};
+  const traitBonus = traitAttrBonusesQuick(sheet).constituicao || 0;
+  const manual = (sheet.attrManualBonus && sheet.attrManualBonus.constituicao) || 0;
+  return 15 + attrModQuick((attrs.constituicao || 0) + traitBonus + manual);
+}
+function ensureInventoryItemShapeQuick(it) {
+  if (typeof it === 'string') return { name: it, weight: 0, qty: 1 };
+  return {
+    name: (it && it.name) || '',
+    weight: (it && it.weight !== undefined && it.weight !== null) ? it.weight : 0,
+    qty: (it && it.qty !== undefined && it.qty !== null) ? it.qty : 1
+  };
+}
+function inventoryTotalWeightQuick(items) {
+  return items.reduce((sum, it) => {
+    const w = parseFloat(it.weight) || 0;
+    const q = parseInt(it.qty, 10);
+    return sum + w * (isNaN(q) ? 1 : q);
+  }, 0);
+}
+function weightStatusQuick(total, capacity) {
+  const cap = capacity > 0 ? capacity : 1;
+  if (total > cap) {
+    const excess = total - cap;
+    return { key: 'sobrecarga', label: 'Sobrecarga', penalty: -5 - 2 * excess };
+  }
+  if (total === cap) return { key: 'maxima', label: 'Carga Máxima', penalty: -5 };
+  if (total >= cap * 0.5) return { key: 'pesada', label: 'Carga Pesada', penalty: -2 };
+  return { key: 'normal', label: 'Normal', penalty: 0 };
+}
+function renderMyInventoryBox() {
+  const box = document.getElementById('myInventoryBox');
+  if (!box) return;
+  const tok = liveTokens[curUser.uid];
+  const sheet = (tok && tok.sheetId) ? mySheets.find(s => s.id === tok.sheetId) : null;
+  if (!sheet) { box.innerHTML = ''; return; }
+  // Não redesenha enquanto o jogador está digitando dentro da caixa (nome
+  // do item, peso, quantidade) — renderAllTokens() chama esta função a
+  // cada atualização de tokens/pan/zoom, e recriar os campos no meio da
+  // digitação apagaria o que a pessoa está escrevendo.
+  if (box.contains(document.activeElement)) return;
+
+  const items = (sheet.inventoryItems || []).map(ensureInventoryItemShapeQuick);
+  if (!items.length) items.push({ name: '', weight: 0, qty: 1 });
+  const capacity = carryCapacityQuick(sheet);
+  const total = inventoryTotalWeightQuick(items);
+  const st = weightStatusQuick(total, capacity);
+  const tagClass = st.key === 'normal' ? 'benign' : (st.key === 'pesada' ? 'info' : 'malign');
+
+  box.innerHTML = `
+    <div class="my-resources-box my-inventory-box">
+      <h4>Seu inventário</h4>
+      ${items.map((it, i) => `
+        <div class="inventory-item">
+          <input type="text" class="inv-name" data-mi-name="${i}" placeholder="Nome do item" value="${escapeHtml(it.name)}">
+          <input type="number" class="inv-weight" data-mi-weight="${i}" placeholder="Peso" min="0" step="0.5" value="${it.weight}">
+          <input type="number" class="inv-qty" data-mi-qty="${i}" placeholder="Qtd" min="0" step="1" value="${it.qty}">
+          <button type="button" class="skill-remove" data-mi-remove="${i}" ${items.length <= 1 ? 'style="visibility:hidden;"' : ''}>✕</button>
+        </div>`).join('')}
+      <button type="button" class="btn secondary small line-list-add" data-mi-add style="width:auto;">+ Adicionar item</button>
+      <div class="weight-summary-row" style="margin-top:8px;">
+        <span>Peso: <b style="color:var(--gold);">${total}</b> / ${capacity}</span>
+        <span class="tag ${tagClass}">${st.label}</span>
+      </div>
+    </div>`;
+
+  const commit = () => setMyInventoryItems(sheet.id, items);
+  box.querySelectorAll('[data-mi-name]').forEach(inp => {
+    inp.addEventListener('click', (e) => e.stopPropagation());
+    inp.addEventListener('change', () => { items[parseInt(inp.dataset.miName)].name = inp.value; commit(); });
+  });
+  box.querySelectorAll('[data-mi-weight]').forEach(inp => {
+    inp.addEventListener('click', (e) => e.stopPropagation());
+    inp.addEventListener('change', () => { items[parseInt(inp.dataset.miWeight)].weight = parseFloat(inp.value) || 0; commit(); });
+  });
+  box.querySelectorAll('[data-mi-qty]').forEach(inp => {
+    inp.addEventListener('click', (e) => e.stopPropagation());
+    inp.addEventListener('change', () => { items[parseInt(inp.dataset.miQty)].qty = parseInt(inp.value, 10) || 0; commit(); });
+  });
+  box.querySelectorAll('[data-mi-remove]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      if (items.length <= 1) return;
+      items.splice(parseInt(btn.dataset.miRemove), 1);
+      commit();
+    });
+  });
+  const addBtn = box.querySelector('[data-mi-add]');
+  if (addBtn) addBtn.addEventListener('click', () => {
+    items.push({ name: '', weight: 0, qty: 1 });
+    commit();
+  });
+}
+// Grava o array inteiro de volta no documento — diferente de resources
+// (campos soltos que dá pra atualizar um a um com notação de ponto),
+// inventoryItems é um array, então qualquer alteração exige regravar a
+// lista completa.
+async function setMyInventoryItems(sheetId, items) {
+  const sheet = mySheets.find(s => s.id === sheetId); if (!sheet) return;
+  const cleaned = items.map(ensureInventoryItemShapeQuick).filter(it => it.name.trim() || it.weight || it.qty !== 1);
+  sheet.inventoryItems = cleaned;
+  renderMyInventoryBox();
+  try {
+    await db.collection('sheets').doc(sheetId)
+      .update({ inventoryItems: cleaned, updatedAt: firebase.firestore.FieldValue.serverTimestamp() });
+  } catch (err) {
+    console.error('Erro ao atualizar inventário da ficha:', err);
   }
 }
 
@@ -378,6 +533,7 @@ function renderAllTokens() {
   renderDiceTargetOptions();
   updateSelectionHandles();
   renderMyResourcesBox();
+  renderMyInventoryBox();
 
   if (!isTableOwner()) {
     updateMyTokenUiState(!!liveTokens[curUser.uid]);

@@ -306,13 +306,39 @@ textarea{ resize:vertical; min-height:70px; }
 .trait-pick .tname{ color:var(--gold); font-weight:600; font-size:15px; }
 .trait-pick .tcost{ font-family:'JetBrains Mono', monospace; color:var(--ink-mute); font-size:12.5px; flex-shrink:0; }
 .trait-pick .tdesc{ font-size:14px; color:var(--ink-dim); margin-top:6px; }
-.trait-search{ margin-bottom:14px; }
+.trait-search{ margin-bottom:0; flex:1 1 auto; }
+
+.trait-search-row{ display:flex; align-items:center; gap:10px; margin-bottom:14px; }
+.trait-search-row .trait-search{ margin-bottom:0; }
+
+/* Botão-funil: abre/fecha o painel de filtros avançados (escondido por
+   padrão — ver .trait-filters abaixo). Fica destacado (borda/texto dourados)
+   quando o painel está aberto OU quando há algum filtro estruturado ativo,
+   pra dar pista visual mesmo com o painel fechado. */
+.trait-filter-toggle{
+  display:flex; align-items:center; gap:6px; flex:0 0 auto;
+  padding:9px 14px; border:1px solid var(--hairline-soft); border-radius:var(--radius);
+  background:var(--bg-alt); color:var(--ink-dim); cursor:pointer;
+  font-family:'Cinzel', serif; font-size:12.5px; text-transform:uppercase; letter-spacing:.04em;
+  transition:border-color .15s, color .15s;
+}
+.trait-filter-toggle:hover{ border-color:var(--gold-dim); color:var(--ink); }
+.trait-filter-toggle svg{ fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; flex-shrink:0; }
+.trait-filter-toggle[aria-expanded="true"],
+.trait-filter-toggle.has-active{ border-color:var(--gold-dim); color:var(--gold); }
+.trait-filter-badge{
+  display:inline-flex; align-items:center; justify-content:center;
+  min-width:17px; height:17px; padding:0 4px; border-radius:999px;
+  background:var(--seal-bright); color:#fff; font-size:10.5px; font-family:'JetBrains Mono', monospace;
+  line-height:1;
+}
 
 .trait-filters{
-  display:flex; flex-wrap:wrap; align-items:flex-end; gap:14px 18px;
+  display:none; flex-wrap:wrap; align-items:flex-end; gap:14px 18px;
   margin-bottom:6px; padding:14px 16px; border:1px solid var(--hairline-soft);
   border-radius:var(--radius); background:var(--bg-alt);
 }
+.trait-filters.open{ display:flex; }
 .trait-filter-field{ display:flex; flex-direction:column; gap:5px; min-width:170px; flex:1 1 170px; }
 .trait-filter-field label{
   font-family:'Cinzel', serif; font-size:11px; color:var(--ink-mute);
@@ -322,7 +348,9 @@ textarea{ resize:vertical; min-height:70px; }
 #traitFilterClearBtn{ flex:0 0 auto; align-self:flex-end; }
 #traitFilterResultCount{ color:var(--ink-mute); font-size:13px; }
 @media (max-width: 640px){
+  .trait-search-row{ flex-wrap:wrap; }
   .trait-filters{ flex-direction:column; align-items:stretch; }
+  .trait-filters.open{ display:flex; }
   .trait-filter-field{ min-width:0; }
   #traitFilterClearBtn{ align-self:stretch; }
 }
@@ -488,8 +516,29 @@ textarea.auto-expand{
 .sheet-line-list .li{ padding:5px 0; border-bottom:1px dotted var(--hairline-soft); }
 .sheet-line-list .li:last-child{ border-bottom:none; }
 
+/* ---- Inventário (nome + peso + quantidade) ---- */
+.inventory-item{ display:grid; grid-template-columns:1fr 90px 70px auto; gap:8px; align-items:center; margin-bottom:8px; }
+.inventory-item .inv-name{ min-width:0; }
+.inventory-item .inv-weight, .inventory-item .inv-qty{ text-align:center; }
+@media (max-width:520px){ .inventory-item{ grid-template-columns:1fr 1fr; grid-template-areas:"name name" "weight qty" "remove remove"; } .inventory-item .inv-name{ grid-area:name; } .inventory-item .inv-weight{ grid-area:weight; } .inventory-item .inv-qty{ grid-area:qty; } .inventory-item .skill-remove{ grid-area:remove; justify-self:end; } }
+.weight-summary{
+  background:var(--bg-alt); border:1px solid var(--hairline); border-radius:var(--radius);
+  padding:10px 14px; margin-top:10px; font-size:14px;
+}
+.weight-summary-row{ display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; }
+.sheet-inventory-table{ width:100%; border-collapse:collapse; font-size:14px; }
+.sheet-inventory-table th{ text-align:left; color:var(--ink-mute); font-size:11px; text-transform:uppercase; letter-spacing:.06em; padding:0 8px 6px 0; font-weight:normal; }
+.sheet-inventory-table td{ padding:5px 8px 5px 0; border-bottom:1px dotted var(--hairline-soft); }
+.sheet-inventory-table tr:last-child td{ border-bottom:none; }
+
 /* ---- Painel do Mestre na ficha ---- */
 .master-notes-box textarea{ min-height:160px; }
+
+/* ---- Inventário rápido na mesa (sidebar mais estreita que a ficha) ---- */
+.my-inventory-box{ margin-top:14px; }
+.my-inventory-box .inventory-item{ grid-template-columns:1fr 62px 48px auto; gap:6px; margin-bottom:6px; }
+.my-inventory-box .inv-weight, .my-inventory-box .inv-qty{ padding:6px 4px; font-size:12.5px; }
+.my-inventory-box .inv-name{ padding:6px 8px; font-size:12.5px; }
 
 /* ---- Edição de Traços pelo Mestre ---- */
 .master-trait-editor .field-row{ gap:14px 18px; }

@@ -554,6 +554,11 @@ function renderResources() {
   renderSanityBox();
   renderStaminaVigorBox();
   renderEconomy();
+  // A Capacidade de Carga depende da Constituição total, então recalcula o
+  // painel de peso sempre que renderResources() roda (mudança de atributo,
+  // nível, traço etc.) — sem isso o painel ficaria desatualizado depois de
+  // qualquer ajuste que não mexa diretamente no inventário.
+  if (typeof renderInventoryWeightSummary === 'function') renderInventoryWeightSummary();
 }
 
 function flashMsg(elId, text, isError) {

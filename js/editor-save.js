@@ -16,8 +16,12 @@ function collectFormIntoState() {
   state.xp = Math.max(0, parseInt(document.getElementById('fXP').value) || 0);
   state.history = document.getElementById('fHistory').value;
   // state.appearanceImage já é atualizado diretamente pelo upload em initAppearanceUI().
-  const invRaw = document.getElementById('fInventory') ? document.getElementById('fInventory').value : '';
-  state.inventoryItems = cleanLineList(invRaw.split('\n'));
+  // state.inventoryItems já é mantido atualizado por referência pelos listeners
+  // de renderInventoryUI() (js/editor-misc.js) — aqui só descarta linhas em
+  // branco (sem nome e com peso/quantidade zerados) antes de salvar.
+  state.inventoryItems = (state.inventoryItems || [])
+    .map(ensureInventoryItemShape)
+    .filter(it => it.name.trim() || it.weight || it.qty !== 1);
   const notesRaw = document.getElementById('fNotes') ? document.getElementById('fNotes').value : '';
   state.notes = cleanLineList(notesRaw.split('\n'));
   const folderSel = document.getElementById('fFolder');
@@ -43,7 +47,9 @@ function populateFormFromState() {
   document.getElementById('fBackground').value = state.backgroundId || '';
   const folderSel = document.getElementById('fFolder');
   if (folderSel) folderSel.value = state.folderId || '';
-  state.inventoryItems = (state.inventoryItems && state.inventoryItems.length) ? state.inventoryItems.slice() : [''];
+  state.inventoryItems = (state.inventoryItems && state.inventoryItems.length)
+    ? state.inventoryItems.map(ensureInventoryItemShape)
+    : [{ name: '', weight: 0, qty: 1 }];
   state.notes = (state.notes && state.notes.length) ? state.notes.slice() : [''];
   state.techniques = state.techniques || [];
   initInventoryUI();
@@ -261,7 +267,11 @@ async function loadExistingSheet(id, user, profile) {
   state.history = s.history || '';
   // Compatibilidade com fichas salvas antes desta atualização.
   state.appearanceImage = s.appearanceImage || '';
-  state.inventoryItems = s.inventoryItems || (s.inventory ? [s.inventory] : ['']);
+  // Compatibilidade: fichas antigas tinham inventário como texto livre (uma
+  // string por linha) ou um único campo "inventory". ensureInventoryItemShape
+  // converte cada item antigo para { name, weight: 0, qty: 1 }.
+  const rawInventory = s.inventoryItems || (s.inventory ? [s.inventory] : [{ name: '', weight: 0, qty: 1 }]);
+  state.inventoryItems = rawInventory.map(ensureInventoryItemShape);
   state.notes = s.notes || [''];
   state.folderId = s.folderId || '';
   state.folderName = s.folderName || '';

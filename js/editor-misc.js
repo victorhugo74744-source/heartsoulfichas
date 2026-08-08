@@ -72,20 +72,96 @@ function cleanLineList(items) {
   return cleaned;
 }
 
-// ================= INVENTÁRIO (caixa única, expande para baixo) =================
-// Em vez de uma linha por item com botão de "+ Adicionar linha", o Inventário
-// agora é uma única caixa de texto (um item por linha) que cresce em altura
-// conforme o jogador digita, ao invés de estourar/rolar para o lado.
+// ================= INVENTÁRIO (itens estruturados: nome + peso + qtd) =================
+// Cada linha do inventário virou um item estruturado — nome, peso unitário
+// (conforme a mecânica de Peso do livro de regras) e quantidade — em vez de
+// texto livre. Um painel logo abaixo soma peso × quantidade de todos os
+// itens e mostra a Capacidade de Carga (15 + mod. Constituição) e a faixa
+// de penalidade atual (Normal / Carga Pesada / Carga Máxima / Sobrecarga).
 function autoExpandTextarea(el) {
   el.style.height = 'auto';
   el.style.height = el.scrollHeight + 'px';
 }
+// Compatibilidade: fichas salvas antes desta atualização guardavam cada
+// item como uma string solta ("Espada longa"). Elas viram um item com peso 0
+// e quantidade 1 — o jogador só precisa preencher o peso depois.
+function ensureInventoryItemShape(it) {
+  if (typeof it === 'string') return { name: it, weight: 0, qty: 1 };
+  return {
+    name: (it && it.name) || '',
+    weight: (it && it.weight !== undefined && it.weight !== null) ? it.weight : 0,
+    qty: (it && it.qty !== undefined && it.qty !== null) ? it.qty : 1
+  };
+}
 function initInventoryUI() {
-  const ta = document.getElementById('fInventory');
-  if (!ta) return;
-  ta.value = (state.inventoryItems || []).join('\n');
-  autoExpandTextarea(ta);
-  ta.addEventListener('input', () => autoExpandTextarea(ta));
+  const box = document.getElementById('fInventory');
+  if (!box) return;
+  if (!state.inventoryItems || !state.inventoryItems.length) state.inventoryItems = [{ name: '', weight: 0, qty: 1 }];
+  state.inventoryItems = state.inventoryItems.map(ensureInventoryItemShape);
+  renderInventoryUI();
+}
+function renderInventoryUI() {
+  const box = document.getElementById('fInventory');
+  if (!box) return;
+  const items = state.inventoryItems;
+  box.innerHTML = items.map((it, i) => `
+    <div class="inventory-item">
+      <input type="text" class="inv-name" data-inv-name="${i}" placeholder="Nome do item" value="${escapeHtml(it.name)}">
+      <input type="number" class="inv-weight" data-inv-weight="${i}" placeholder="Peso" min="0" step="0.5" value="${it.weight}">
+      <input type="number" class="inv-qty" data-inv-qty="${i}" placeholder="Qtd" min="0" step="1" value="${it.qty}">
+      <button type="button" class="skill-remove" data-inv-remove="${i}" ${items.length <= 1 ? 'style="visibility:hidden;"' : ''}>✕</button>
+    </div>`).join('') + `<button type="button" class="btn secondary small line-list-add" data-inv-add style="width:auto;">+ Adicionar item</button>`;
+
+  box.querySelectorAll('[data-inv-name]').forEach(inp => {
+    inp.addEventListener('input', () => { items[parseInt(inp.dataset.invName)].name = inp.value; });
+  });
+  box.querySelectorAll('[data-inv-weight]').forEach(inp => {
+    inp.addEventListener('input', () => {
+      items[parseInt(inp.dataset.invWeight)].weight = parseFloat(inp.value) || 0;
+      renderInventoryWeightSummary();
+    });
+  });
+  box.querySelectorAll('[data-inv-qty]').forEach(inp => {
+    inp.addEventListener('input', () => {
+      items[parseInt(inp.dataset.invQty)].qty = parseInt(inp.value, 10) || 0;
+      renderInventoryWeightSummary();
+    });
+  });
+  box.querySelectorAll('[data-inv-remove]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      if (items.length <= 1) return;
+      items.splice(parseInt(btn.dataset.invRemove), 1);
+      renderInventoryUI();
+    });
+  });
+  const addBtn = box.querySelector('[data-inv-add]');
+  if (addBtn) addBtn.addEventListener('click', () => {
+    items.push({ name: '', weight: 0, qty: 1 });
+    renderInventoryUI();
+    const nameInputs = box.querySelectorAll('[data-inv-name]');
+    nameInputs[nameInputs.length - 1].focus();
+  });
+
+  renderInventoryWeightSummary();
+}
+// Painel de capacidade — chamado sempre que peso/quantidade de um item muda
+// e também pelo renderResources() (definido em editor-abilities.js), que já
+// é disparado toda vez que a Constituição muda, então o total acompanha o
+// atributo automaticamente.
+function renderInventoryWeightSummary() {
+  const el = document.getElementById('inventoryWeightSummary');
+  if (!el) return;
+  const capacity = carryCapacity();
+  const total = inventoryTotalWeight();
+  const st = weightStatus(total, capacity);
+  const tagClass = st.key === 'normal' ? 'benign' : (st.key === 'pesada' ? 'info' : 'malign');
+  el.innerHTML = `
+    <div class="weight-summary-row">
+      <span>Peso total: <b style="color:var(--gold);">${total}</b> / ${capacity} (Capacidade de Carga)</span>
+      <span class="tag ${tagClass}">${st.label}</span>
+    </div>
+    ${st.penalty ? `<p class="hint" style="margin:6px 0 0;">${st.penalty} em todos os testes físicos (Força, Destreza e Constituição)${st.note ? ' · ' + st.note : ''}</p>` : ''}
+  `;
 }
 
 // ================= ANOTAÇÕES (mesma caixa única do Inventário) =================

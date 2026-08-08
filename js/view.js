@@ -64,6 +64,64 @@ function renderLineListView(items) {
   return `<div class="sheet-line-list">${cleaned.map(v => `<div class="li">${escapeHtml(v)}</div>`).join('')}</div>`;
 }
 
+// ================= INVENTÁRIO (visualização) =================
+// Mesma lógica de peso do editor (js/editor-core.js: carryCapacity,
+// inventoryTotalWeight, weightStatus) reimplementada aqui porque view.js
+// não carrega os scripts do editor. Compatível com fichas antigas, cujos
+// itens eram strings soltas sem peso.
+function ensureInventoryItemShapeV(it) {
+  if (typeof it === 'string') return { name: it, weight: 0, qty: 1 };
+  return {
+    name: (it && it.name) || '',
+    weight: (it && it.weight !== undefined && it.weight !== null) ? it.weight : 0,
+    qty: (it && it.qty !== undefined && it.qty !== null) ? it.qty : 1
+  };
+}
+function carryCapacityV(constTotal) { return 15 + attrModV(constTotal); }
+function inventoryTotalWeightV(items) {
+  return items.reduce((sum, it) => {
+    const w = parseFloat(it.weight) || 0;
+    const q = parseInt(it.qty, 10);
+    return sum + w * (isNaN(q) ? 1 : q);
+  }, 0);
+}
+function weightStatusV(total, capacity) {
+  const cap = capacity > 0 ? capacity : 1;
+  if (total > cap) {
+    const excess = total - cap;
+    return {
+      key: 'sobrecarga', label: 'Sobrecarga',
+      penalty: -5 - 2 * excess,
+      note: `Deslocamento reduzido à metade; não pode correr ou esquivar. ${excess} ponto(s) de peso excedente(s)${excess > 5 ? ' — acima do limite de +5 recomendado pelo livro de regras (a critério do mestre).' : '.'}`
+    };
+  }
+  if (total === cap) return { key: 'maxima', label: 'Carga Máxima', penalty: -5, note: 'Deslocamento reduzido em 2 metros.' };
+  if (total >= cap * 0.5) return { key: 'pesada', label: 'Carga Pesada', penalty: -2, note: '' };
+  return { key: 'normal', label: 'Normal', penalty: 0, note: '' };
+}
+function renderInventoryView(rawItems, constTotal) {
+  const items = (rawItems || []).map(ensureInventoryItemShapeV).filter(it => it.name.trim());
+  const capacity = carryCapacityV(constTotal);
+  const total = inventoryTotalWeightV(items);
+  const st = weightStatusV(total, capacity);
+  const tagClass = st.key === 'normal' ? 'benign' : (st.key === 'pesada' ? 'info' : 'malign');
+  const tableHtml = items.length
+    ? `<table class="sheet-inventory-table">
+        <thead><tr><th>Item</th><th>Peso</th><th>Qtd.</th><th>Subtotal</th></tr></thead>
+        <tbody>${items.map(it => `<tr><td>${escapeHtml(it.name)}</td><td>${it.weight}</td><td>${it.qty}</td><td>${(it.weight * it.qty)}</td></tr>`).join('')}</tbody>
+      </table>`
+    : '<p class="hint" style="margin:0;">Nada registrado ainda.</p>';
+  return `
+    ${tableHtml}
+    <div class="weight-summary" style="margin-top:10px;">
+      <div class="weight-summary-row">
+        <span>Peso total: <b style="color:var(--gold);">${total}</b> / ${capacity} (Capacidade de Carga)</span>
+        <span class="tag ${tagClass}">${st.label}</span>
+      </div>
+      ${st.penalty ? `<p class="hint" style="margin:6px 0 0;">${st.penalty} em todos os testes físicos (Força, Destreza e Constituição)${st.note ? ' · ' + st.note : ''}</p>` : ''}
+    </div>`;
+}
+
 // ================= EDIÇÃO DE TRAÇOS PELO MESTRE =================
 // Painel exclusivo da aba "Mestre": deixa editar o Traço Fixo da raça e a
 // lista de Traços Adicionais direto na ficha, sem passar pelo assistente de
@@ -278,6 +336,10 @@ function renderSheet(s, ownerProfile, canManage, sheetId, isMaster, activeTab) {
   const el = document.getElementById('content');
   const traitBonuses = traitAttrBonusesV(s);
   const manualBonus = s.attrManualBonus || {};
+  // Usado tanto pelo grid de atributos quanto pelo painel de Capacidade de
+  // Carga do inventário (ver renderInventoryView), que depende da
+  // Constituição total (base + bônus de traço/antecedente + ajuste manual).
+  const constTotalV = (s.attributes.constituicao || 0) + (traitBonuses.constituicao || 0) + (manualBonus.constituicao || 0);
   const attrHtml = Object.entries(ATTR_LABELS_V).map(([k, label]) => {
     const base = s.attributes[k];
     const tb = traitBonuses[k] || 0;
@@ -409,7 +471,7 @@ function renderSheet(s, ownerProfile, canManage, sheetId, isMaster, activeTab) {
       <h2>Detalhes</h2>
       ${s.history ? `<div class="sheet-section-title" style="margin-top:0;">História</div><p class="sheet-list" style="white-space:pre-wrap;">${escapeHtml(s.history)}</p>` : ''}
       <div class="sheet-section-title" style="${s.history ? '' : 'margin-top:0;'}">Inventário</div>
-      ${renderLineListView(s.inventoryItems)}
+      ${renderInventoryView(s.inventoryItems, constTotalV)}
       <div class="sheet-section-title">Anotações</div>
       ${renderLineListView(s.notes)}
     </div>` : ''}

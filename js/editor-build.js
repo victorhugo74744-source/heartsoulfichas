@@ -430,7 +430,18 @@ function updateBgSkillWarning() {
 // As categorias de traço funcionam como um acordeão: ficam fechadas por
 // padrão (só o título aparece) e abrem ao clicar, mostrando os traços
 // daquela categoria pra escolher. Clicar de novo no título fecha a categoria.
+// openTraitCats guarda o estado "aberta" fora de qualquer busca/filtro (o
+// que o jogador deixou aberto navegando manualmente pelo catálogo inteiro).
 let openTraitCats = new Set();
+// closedTraitCats guarda categorias que o jogador fechou manualmente
+// ENQUANTO havia busca/filtro ativo. Existe separado de openTraitCats porque,
+// com filtro ativo, toda categoria com resultado abre automaticamente (ver
+// hasActiveFilter mais abaixo) — sem esse segundo set, o clique no título
+// pra fechar a categoria era ignorado (a categoria reabria sozinha no
+// próximo render, porque o cálculo de isOpen olhava só pra hasActiveFilter
+// e nunca pra essa escolha manual). Fica esvaziado sempre que a busca/filtro
+// volta a ficar vazia, porque só faz sentido dentro de uma sessão de filtro.
+let closedTraitCats = new Set();
 
 // ---- Filtro de traços (custo / atributo concedido / adicional em testes /
 // elemento) ----
@@ -528,6 +539,33 @@ function initTraitFilters() {
       renderTraitCategories('');
     });
   }
+  // Painel de filtros avançados (custo/atributo/teste/elemento) começa
+  // escondido — só aparece ao clicar no botão-funil, pra não ocupar espaço
+  // de tela pra quem só quer usar a busca por texto.
+  const toggleBtn = document.getElementById('traitFilterToggleBtn');
+  const filtersBox = document.getElementById('traitFilters');
+  if (toggleBtn && filtersBox) {
+    toggleBtn.addEventListener('click', () => {
+      const willOpen = !filtersBox.classList.contains('open');
+      filtersBox.classList.toggle('open', willOpen);
+      toggleBtn.setAttribute('aria-expanded', String(willOpen));
+    });
+  }
+}
+
+// Reflete no botão-funil (fora do painel, então continua visível mesmo com
+// o painel fechado) se há algum filtro estruturado ativo — cost/attr/
+// testOnly/element. A busca por texto já aparece no próprio campo, então
+// não entra nessa contagem.
+function updateTraitFilterToggleUI(filters) {
+  const btn = document.getElementById('traitFilterToggleBtn');
+  const badge = document.getElementById('traitFilterBadge');
+  if (!btn || !badge) return;
+  const f = filters || getTraitFilters();
+  const count = (f.cost !== null ? 1 : 0) + (f.attr ? 1 : 0) + (f.testOnly ? 1 : 0) + (f.element ? 1 : 0);
+  badge.textContent = String(count);
+  badge.hidden = count === 0;
+  btn.classList.toggle('has-active', count > 0);
 }
 
 function renderTraitCategories(filter) {
@@ -541,6 +579,11 @@ function renderTraitCategories(filter) {
   const f = normalizeSearchText(filter);
   const filters = getTraitFilters();
   const hasActiveFilter = !!(f || filters.cost !== null || filters.attr || filters.testOnly || filters.element);
+  // Sem filtro/busca ativos, "fechar manualmente durante o filtro" deixa de
+  // fazer sentido — limpa pra não sobrar estado preso de uma sessão de
+  // filtro anterior.
+  if (!hasActiveFilter) closedTraitCats.clear();
+  updateTraitFilterToggleUI(filters);
   let totalMatches = 0;
   wrap.innerHTML = TRAIT_CATS.map(([catKey, kind]) => {
     const cat = DATA.traits[catKey];
@@ -553,8 +596,12 @@ function renderTraitCategories(filter) {
     });
     if (items.length === 0) return '';
     totalMatches += items.length;
-    // Durante uma busca ou filtro ativo, abre automaticamente as categorias com resultado.
-    const isOpen = hasActiveFilter ? true : openTraitCats.has(catKey);
+    // Durante uma busca ou filtro ativo, abre automaticamente as categorias
+    // com resultado — a menos que o jogador já tenha fechado essa categoria
+    // manualmente dentro desta mesma sessão de filtro (closedTraitCats).
+    const isOpen = hasActiveFilter
+      ? !closedTraitCats.has(catKey)
+      : openTraitCats.has(catKey);
     return `
       <div class="trait-cat">
         <button type="button" class="trait-cat-title" data-cat-toggle="${catKey}">
@@ -594,7 +641,13 @@ function renderTraitCategories(filter) {
   wrap.querySelectorAll('[data-cat-toggle]').forEach(btn => {
     btn.addEventListener('click', () => {
       const key = btn.dataset.catToggle;
-      if (openTraitCats.has(key)) openTraitCats.delete(key); else openTraitCats.add(key);
+      if (hasActiveFilter) {
+        // Com filtro ativo a categoria começa aberta — clicar aqui é o
+        // jogador fechando-a manualmente (ou reabrindo, se já tinha fechado).
+        if (closedTraitCats.has(key)) closedTraitCats.delete(key); else closedTraitCats.add(key);
+      } else {
+        if (openTraitCats.has(key)) openTraitCats.delete(key); else openTraitCats.add(key);
+      }
       renderTraitCategories(document.getElementById('traitSearch').value);
     });
   });

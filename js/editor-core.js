@@ -140,7 +140,7 @@ let state = {
   techniques: [], // {name, cost, actionType, desc} — técnicas criadas a partir de habilidades/traços/raça/energia; cost é texto livre
   resources: emptyResources(),
   inspirationPoints: 0, traitBonusFromInspiration: 0,
-  history: '', appearanceImage: '', inventoryItems: [''], notes: [''],
+  history: '', appearanceImage: '', inventoryItems: [{ name: '', weight: 0, qty: 1 }], notes: [''],
   folderId: '', folderName: '', masterId: null
 };
 
@@ -297,6 +297,47 @@ function attrPoolSpent() {
   return ATTR_KEYS.reduce((sum, [k]) => sum + (state.attributes[k] - 1), 0);
 }
 function attrMod(v) { return Math.floor(v / 2); }
+
+// ================= MECÂNICA DE PESO (Livro de Regras — "Mão Principal e Peso") =================
+// Capacidade de Carga = 15 + modificador de Constituição (atributo total, já
+// com bônus de traço/antecedente e ajuste manual, igual ao usado no HP).
+function carryCapacity() {
+  return 15 + attrMod(attrTotalValue('constituicao'));
+}
+// Soma peso × quantidade de cada item do inventário (itens sem nome ainda
+// contam pro total, já que o jogador pode estar só ajustando o peso antes
+// de nomear o item).
+function inventoryTotalWeight() {
+  return (state.inventoryItems || []).reduce((sum, it) => {
+    const w = parseFloat(it && it.weight) || 0;
+    const q = parseInt(it && it.qty, 10);
+    return sum + w * (isNaN(q) ? 1 : q);
+  }, 0);
+}
+// Faixas de penalidade do livro de regras:
+//  - Carga Pesada: 50% a 99% da capacidade → -2 em testes físicos.
+//  - Carga Máxima: exatamente 100% da capacidade → -5 em testes físicos, -2m de deslocamento.
+//  - Sobrecarga: acima da capacidade → -5 adicional de -2 por ponto excedente (acumulativo),
+//    deslocamento pela metade, sem correr ou esquivar. O livro só recomenda até 5 pontos
+//    de sobrecarga; acima disso fica a critério do mestre.
+function weightStatus(total, capacity) {
+  const cap = capacity > 0 ? capacity : 1;
+  if (total > cap) {
+    const excess = total - cap;
+    return {
+      key: 'sobrecarga', label: 'Sobrecarga',
+      penalty: -5 - 2 * excess,
+      note: `Deslocamento reduzido à metade; não pode correr ou esquivar. ${excess} ponto(s) de peso excedente(s)${excess > 5 ? ' — acima do limite de +5 recomendado pelo livro de regras (a critério do mestre).' : '.'}`
+    };
+  }
+  if (total === cap) {
+    return { key: 'maxima', label: 'Carga Máxima', penalty: -5, note: 'Deslocamento reduzido em 2 metros.' };
+  }
+  if (total >= cap * 0.5) {
+    return { key: 'pesada', label: 'Carga Pesada', penalty: -2, note: '' };
+  }
+  return { key: 'normal', label: 'Normal', penalty: 0, note: '' };
+}
 
 // Perícias vindas de Antecedente ou de Traço já entram com 1 ponto grátis,
 // que não é descontado da Reserva de Perícia (esse "chão" gratuito é o que

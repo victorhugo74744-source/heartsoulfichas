@@ -255,7 +255,14 @@ if ('serviceWorker' in navigator) {
       <button type="button" class="btn secondary small" id="convertInspirationBtn" style="width:auto;">Converter 3 Inspiração → 1 Ponto de Traço</button>
     </div>
     <div id="traitMalignWarning"></div>
-    <input type="text" class="trait-search" id="traitSearch" placeholder="Buscar traço por nome ou efeito (ex.: “vontade”, “escuridão”)…">
+    <div class="trait-search-row">
+      <input type="text" class="trait-search" id="traitSearch" placeholder="Buscar traço por nome ou efeito (ex.: “vontade”, “escuridão”)…">
+      <button type="button" class="trait-filter-toggle" id="traitFilterToggleBtn" aria-expanded="false" aria-controls="traitFilters" title="Mostrar/ocultar filtros avançados">
+        <svg viewBox="0 0 24 24" width="17" height="17" aria-hidden="true"><polygon points="3,4 21,4 14,12.5 14,20 10,18 10,12.5"></polygon></svg>
+        Filtros
+        <span class="trait-filter-badge" id="traitFilterBadge" hidden>0</span>
+      </button>
+    </div>
     <div class="trait-filters" id="traitFilters">
       <div class="trait-filter-field">
         <label for="traitFilterCost">Custo</label>
@@ -315,8 +322,9 @@ if ('serviceWorker' in navigator) {
     </div>
     <div class="field">
       <label>Inventário</label>
-      <textarea id="fInventory" class="auto-expand" rows="1" placeholder="Liste os itens do personagem, um por linha (Ex.: Espada longa, Poção de cura...)"></textarea>
-      <p class="hint" style="margin:6px 0 0;">Um item por linha. A caixa cresce para baixo conforme você escreve, sem limite de caracteres.</p>
+      <div id="fInventory"></div>
+      <p class="hint" style="margin:6px 0 10px;">Peso de cada item conforme a lista de equipamentos (ou definido pelo mestre). A quantidade multiplica o peso unitário.</p>
+      <div id="inventoryWeightSummary" class="weight-summary"></div>
     </div>
     <div class="field">
       <label>Anotações</label>
