@@ -57,7 +57,7 @@ function renderGroups(groups, filter, folderId) {
             </div>
             <div class="sc-owner">Atualizada em ${fmtDate(s.updatedAt)}</div>
             <div class="sc-folder-move" style="margin-top:8px;">
-              <select data-move-folder="${s.id}" style="font-size:13px; padding:5px 8px; width:auto;">
+              <select data-move-folder="${s.id}">
                 <option value="">Sem pasta / campanha</option>
                 ${allFolders.map(f => `<option value="${f.id}"${(s.folderId || '') === f.id ? ' selected' : ''}>${escapeHtml(f.name)}</option>`).join('')}
               </select>

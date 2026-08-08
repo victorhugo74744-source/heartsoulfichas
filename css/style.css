@@ -349,10 +349,22 @@ textarea{ resize:vertical; min-height:70px; }
 #traitFilterResultCount{ color:var(--ink-mute); font-size:13px; }
 @media (max-width: 640px){
   .trait-search-row{ flex-wrap:wrap; }
-  .trait-filters{ flex-direction:column; align-items:stretch; }
-  .trait-filters.open{ display:flex; }
-  .trait-filter-field{ min-width:0; }
-  #traitFilterClearBtn{ align-self:stretch; }
+  /* BUG CORRIGIDO: antes disso o painel virava flex-direction:column mas
+     cada .trait-filter-field mantinha "flex:1 1 170px" — regra pensada pro
+     layout em LINHA (largura mínima de 170px). Num container em COLUNA o
+     eixo principal do flex é o vertical, então esse "170px" passava a valer
+     como ALTURA mínima de cada campo, e o flex-grow:1 esticava os 4 campos
+     pra dividir toda a altura sobrando no painel — cada um ficava com um
+     vão vazio enorme embaixo do select. Aqui a gente troca o painel pra
+     grid de 2 colunas (mesmo padrão já usado em .attr-grid), o que resolve
+     o esticamento E deixa os 4 filtros mais compactos, sem tanta rolagem. */
+  .trait-filters{ display:none; grid-template-columns:1fr 1fr; align-items:start; gap:14px 12px; }
+  .trait-filters.open{ display:grid; }
+  .trait-filter-field{ min-width:0; flex:0 0 auto; }
+  #traitFilterClearBtn{ grid-column:1 / -1; align-self:stretch; margin-top:2px; }
+}
+@media (max-width: 380px){
+  .trait-filters{ grid-template-columns:1fr; }
 }
 
 .chosen-list{ display:flex; flex-wrap:wrap; gap:8px; margin-top:10px; }
@@ -614,6 +626,18 @@ textarea.auto-expand{
 .folder-badge{
   display:inline-block; margin-top:4px; font-size:11.5px; color:var(--gold-dim);
   border:1px solid var(--hairline); border-radius:20px; padding:2px 9px;
+}
+
+/* ---- Select de "mover pasta" (card de ficha, Painel do Mestre) ----
+   BUG CORRIGIDO: o padding vinha direto inline (padding:5px 8px), menor que
+   os 34px de padding-right que todo <select> do site reserva pra caber a
+   seta dourada (ver regra global de "select" mais abaixo) — o texto da
+   opção mais longa ("Sem pasta / campanha") ficava espremido por baixo da
+   seta, com um risco no meio. Aqui a gente dá padding-right suficiente e
+   largura total do cartão, em vez de "width:auto" (que dependia do texto
+   pra decidir a largura e nunca sobrava espaço pra seta nenhuma). */
+.sc-folder-move select{
+  width:100%; font-size:13px; padding:6px 30px 6px 10px;
 }
 
 /* ===== Responsivo (mobile) =====
