@@ -376,51 +376,73 @@ mark{ background:var(--seal); color:#fff; padding:0 1px; border-radius:2px; }
   margin:0 0 32px; max-width:760px;
 }
 .deity-grid{
-  display:grid; grid-template-columns:repeat(2,1fr); gap:16px; margin:0 0 50px;
+  display:grid; grid-template-columns:repeat(auto-fill, minmax(240px,1fr)); gap:14px; margin:0 0 50px;
+  align-items:start;
 }
-@media (max-width:700px){ .deity-grid{ grid-template-columns:1fr; } }
 .deity-card{
   position:relative; border:1px solid var(--hairline); background:var(--panel);
-  border-radius:var(--radius); padding:22px 22px 20px; overflow:hidden;
+  border-radius:var(--radius); padding:18px 20px; overflow:hidden;
   border-top:2px solid var(--gold-dim);
-  transition:border-color .18s, transform .18s, background .18s;
+  transition:border-color .18s, background .18s;
 }
 .deity-card::before{
   content:''; position:absolute; top:-30px; right:-30px; width:100px; height:100px;
   background:radial-gradient(circle, rgba(201,161,92,0.10), transparent 70%);
   pointer-events:none;
 }
-.deity-card:hover{ border-color:var(--gold-dim); background:var(--panel-2); transform:translateY(-2px); }
+.deity-card:hover{ border-color:var(--gold-dim); background:var(--panel-2); }
 .deity-card.demon{ border-top-color:var(--seal); }
 .deity-card.demon::before{ background:radial-gradient(circle, rgba(156,43,43,0.13), transparent 70%); }
-.deity-icon{ font-size:28px; line-height:1; margin-bottom:10px; }
+.deity-card-top{ display:flex; align-items:flex-start; gap:12px; cursor:pointer; }
+.deity-icon{ font-size:26px; line-height:1; flex-shrink:0; margin-top:1px; }
+.deity-headtext{ flex:1; min-width:0; }
 .deity-name{
-  font-family:'Cinzel', serif; color:var(--gold); font-size:19px; margin:0 0 3px; font-weight:600;
+  font-family:'Cinzel', serif; color:var(--gold); font-size:18px; margin:0 0 2px; font-weight:600;
 }
 .deity-card.demon .deity-name{ color:var(--seal-bright); }
 .deity-epithet{
-  font-size:12.5px; letter-spacing:.06em; text-transform:uppercase; color:var(--ink-mute);
-  font-style:italic; margin-bottom:12px;
+  font-size:12px; letter-spacing:.05em; text-transform:uppercase; color:var(--ink-mute);
+  font-style:italic; line-height:1.4;
 }
-.deity-desc{ color:var(--ink-dim); font-size:15.5px; line-height:1.65; margin:0; }
+.deity-caret{
+  flex-shrink:0; opacity:.55; font-size:11px; color:var(--gold-dim); margin-top:5px;
+  transition:transform .2s ease;
+}
+.deity-card.demon .deity-caret{ color:var(--seal-bright); }
+.deity-card.expanded .deity-caret{ transform:rotate(90deg); }
+.deity-body{ max-height:0; overflow:hidden; transition:max-height .3s ease; }
+.deity-card.expanded .deity-body{ max-height:600px; }
+.deity-desc{
+  color:var(--ink-dim); font-size:15px; line-height:1.6; margin:0;
+  padding-top:14px; margin-top:14px; border-top:1px dotted var(--hairline);
+}
 
 .continent-intro{
   border-left:2px solid var(--gold-dim); padding:2px 0 2px 20px; margin:0 0 38px;
 }
 .continent-intro p{ color:var(--ink); font-size:18.5px; font-style:italic; line-height:1.75; }
 
-.kingdom-grid{ display:flex; flex-direction:column; gap:26px; margin-bottom:20px; }
+.kingdom-grid{ display:flex; flex-direction:column; gap:18px; margin-bottom:20px; }
 .kingdom-card{
   border:1px solid var(--hairline); background:var(--panel); border-radius:var(--radius);
-  padding:28px 30px 30px;
+  padding:22px 26px;
+  transition:border-color .18s, background .18s;
 }
-.kingdom-head{ display:flex; align-items:center; gap:14px; margin-bottom:16px; }
-.kingdom-icon{ font-size:32px; line-height:1; flex-shrink:0; }
-.kingdom-name{ font-family:'Cinzel', serif; color:var(--gold); font-size:23px; margin:0; font-weight:600; }
-.kingdom-epithet{ color:var(--ink-mute); font-style:italic; font-size:14.5px; margin-top:2px; }
+.kingdom-head{ display:flex; align-items:center; gap:14px; cursor:pointer; }
+.kingdom-icon{ font-size:30px; line-height:1; flex-shrink:0; }
+.kingdom-name{ font-family:'Cinzel', serif; color:var(--gold); font-size:21px; margin:0; font-weight:600; }
+.kingdom-epithet{ color:var(--ink-mute); font-style:italic; font-size:14px; margin-top:2px; }
+.kingdom-caret{
+  margin-left:auto; opacity:.55; font-size:13px; color:var(--gold-dim); flex-shrink:0;
+  transition:transform .2s ease;
+}
+.kingdom-card.expanded .kingdom-caret{ transform:rotate(90deg); }
+.kingdom-body{ max-height:0; overflow:hidden; transition:max-height .35s ease; }
+.kingdom-card.expanded .kingdom-body{ max-height:4000px; }
+.kingdom-intro{ padding-top:18px; margin-top:18px; border-top:1px dotted var(--hairline); }
 .kingdom-intro p{ color:var(--ink); margin:0 0 16px; }
 .kingdom-sections{
-  margin-top:18px; padding-top:18px; border-top:1px dotted var(--hairline);
+  margin-top:4px; padding-top:14px; border-top:1px dotted var(--hairline);
   display:grid; grid-template-columns:repeat(2,1fr); gap:10px 28px;
 }
 @media (max-width:760px){ .kingdom-sections{ grid-template-columns:1fr; } }
@@ -654,10 +676,15 @@ mark{ background:var(--seal); color:#fff; padding:0 1px; border-radius:2px; }
   function renderPantheon(s){
     const cards = (s.entities||[]).map(e => `
       <div class="deity-card ${s.variant==='demon'?'demon':''}">
-        <div class="deity-icon">${e.icon||''}</div>
-        <h3 class="deity-name">${escapeHtml(e.name)}</h3>
-        <div class="deity-epithet">${escapeHtml(e.epithet||'')}</div>
-        <p class="deity-desc">${mdInline(e.desc||'')}</p>
+        <div class="deity-card-top">
+          <div class="deity-icon">${e.icon||''}</div>
+          <div class="deity-headtext">
+            <h3 class="deity-name">${escapeHtml(e.name)}</h3>
+            <div class="deity-epithet">${escapeHtml(e.epithet||'')}</div>
+          </div>
+          <span class="deity-caret">▸</span>
+        </div>
+        <div class="deity-body"><p class="deity-desc">${mdInline(e.desc||'')}</p></div>
       </div>`).join('');
     return `${s.lead ? `<p class="pantheon-lead">${mdInline(s.lead)}</p>` : ''}<div class="deity-grid">${cards}</div>`;
   }
@@ -679,9 +706,12 @@ mark{ background:var(--seal); color:#fff; padding:0 1px; border-radius:2px; }
               <h3 class="kingdom-name">${escapeHtml(k.name)}</h3>
               <div class="kingdom-epithet">${escapeHtml(k.epithet||'')}</div>
             </div>
+            <span class="kingdom-caret">▸</span>
           </div>
-          <div class="kingdom-intro">${introK}</div>
-          <div class="kingdom-sections">${sections}</div>
+          <div class="kingdom-body">
+            <div class="kingdom-intro">${introK}</div>
+            <div class="kingdom-sections">${sections}</div>
+          </div>
         </div>`;
     }).join('');
     return `<div class="continent-intro">${introHtml}</div><div class="kingdom-grid">${kingdoms}</div>`;
@@ -792,6 +822,12 @@ mark{ background:var(--seal); color:#fff; padding:0 1px; border-radius:2px; }
     content.querySelector('[data-nav-home]')?.addEventListener('click', () => navigate(null));
     content.querySelectorAll('[data-jump]').forEach(el => el.addEventListener('click', () => {
       navigate(chapterId, el.dataset.jump, true);
+    }));
+    content.querySelectorAll('.deity-card-top').forEach(el => el.addEventListener('click', () => {
+      el.closest('.deity-card').classList.toggle('expanded');
+    }));
+    content.querySelectorAll('.kingdom-head').forEach(el => el.addEventListener('click', () => {
+      el.closest('.kingdom-card').classList.toggle('expanded');
     }));
 
     if(subId){
