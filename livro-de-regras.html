@@ -411,11 +411,15 @@ mark{ background:var(--seal); color:#fff; padding:0 1px; border-radius:2px; }
 .deity-card.demon .deity-caret{ color:var(--seal-bright); }
 .deity-card.expanded .deity-caret{ transform:rotate(90deg); }
 .deity-body{ max-height:0; overflow:hidden; transition:max-height .3s ease; }
-.deity-card.expanded .deity-body{ max-height:600px; }
 .deity-desc{
-  color:var(--ink-dim); font-size:15px; line-height:1.6; margin:0;
+  color:var(--ink-dim); font-size:15.5px; line-height:1.7; margin:0;
   padding-top:14px; margin-top:14px; border-top:1px dotted var(--hairline);
 }
+/* Quando expandido, o card ocupa a linha inteira do grid — assim o texto
+   da descrição não fica espremido na largura estreita de uma coluna. */
+.deity-card.expanded{ grid-column:1 / -1; }
+.deity-card.expanded .deity-body{ max-height:400px; }
+.deity-card.expanded .deity-desc{ max-width:760px; font-size:16px; }
 
 .continent-intro{
   border-left:2px solid var(--gold-dim); padding:2px 0 2px 20px; margin:0 0 38px;
