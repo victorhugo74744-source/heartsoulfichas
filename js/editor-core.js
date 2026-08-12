@@ -181,7 +181,12 @@ function currentRaceBoughtTexts(race) {
   }
   return (state.raceTraitsBought || []).map(i => race.optionalTraits[i]).filter(Boolean);
 }
-function traitAttrBonuses() {
+// Junta todos os textos de traço relevantes da ficha (Traço Fixo da raça,
+// traços raciais opcionais/comprados, variante de raça, antecedente e
+// traços adicionais). Extraído de traitAttrBonuses() pra ser reaproveitado
+// também pelo cálculo de bônus de Energia (Mana/Fé/Aura) — ver
+// traitEnergyBonus() logo abaixo.
+function traitTextsList() {
   const texts = [];
   if (state.raceId) {
     const race = DATA.races.find(r => r.id === state.raceId);
@@ -201,6 +206,10 @@ function traitAttrBonuses() {
     if (bg && bg.atributos) texts.push(bg.atributos);
   }
   state.extraTraits.forEach(t => texts.push(t.desc));
+  return texts;
+}
+function traitAttrBonuses() {
+  const texts = traitTextsList();
   const total = { forca: 0, foco: 0, vontade: 0, intelecto: 0, destreza: 0, constituicao: 0 };
   texts.map(parseAttrBonusesFromText).forEach(b => {
     Object.keys(b).forEach(k => { total[k] += b[k]; });
@@ -211,6 +220,46 @@ function attrTotalValue(k) {
   const bonuses = traitAttrBonuses();
   const manual = (state.attrManualBonus && state.attrManualBonus[k]) || 0;
   return state.attributes[k] + (bonuses[k] || 0) + manual;
+}
+
+// ================= BÔNUS DE ENERGIA (RESERVATÓRIO DE CLASSE) VINDOS DE TRAÇOS =================
+// Mesma leitura "melhor esforço" usada acima para atributos, agora pro
+// reservatório de Energia (Mana, Fé ou Aura, conforme a energia escolhida
+// na etapa 1). Três padrões de texto cobertos, vistos nos traços raciais
+// já cadastrados:
+//  - Nomeando a energia específica — "+2 pontos de Mana adicionais",
+//    "+3 pontos de Fé adicionais [ao reservatório]" — só conta se a energia
+//    escolhida da ficha (state.energyType) for essa mesma. Como o próprio
+//    traço já é condicionado a essa energia no texto ("Se a classe for
+//    Crença (Fé): ..."), bastar checar o nome basta pra não aplicar bônus
+//    de Fé em quem escolheu Mana, por exemplo.
+//  - "Coringa", sem nomear energia — "+2 pontos adicionais da energia de
+//    sua classe" (Draconato) — conta sempre, seja qual for a energia.
+//  - Percentual — "Reservatório Ampliado: [...] é 50% maior" (Fada) —
+//    aplicado depois de tudo (dado + atributo + bônus fixo), como o
+//    próprio texto do traço descreve.
+function parseEnergyBonusFromText(text, energyType) {
+  let flat = 0, percent = 0;
+  if (!text || !energyType) return { flat, percent };
+  const namedRe = /\+(\d+)\s*pontos?\s+de\s+(Mana|Fé|Aura)\s+adicionais/gi;
+  let m;
+  while ((m = namedRe.exec(text))) {
+    if (m[2].toLowerCase() === energyType.toLowerCase()) flat += parseInt(m[1], 10);
+  }
+  const anyRe = /\+(\d+)\s*pontos?\s+adicionais\s+da\s+energia\s+de\s+sua\s+classe/gi;
+  while ((m = anyRe.exec(text))) flat += parseInt(m[1], 10);
+  const pctMatch = text.match(/reservat[oó]rio\s+de\s+energia\s+de\s+classe[^.]*?(\d+)%\s+maior/i);
+  if (pctMatch) percent += parseInt(pctMatch[1], 10);
+  return { flat, percent };
+}
+function traitEnergyBonus() {
+  const total = { flat: 0, percent: 0 };
+  traitTextsList().forEach(t => {
+    const b = parseEnergyBonusFromText(t, state.energyType);
+    total.flat += b.flat;
+    total.percent += b.percent;
+  });
+  return total;
 }
 
 // ================= PERÍCIA VINDA DE TRAÇO =================

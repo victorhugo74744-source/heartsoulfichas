@@ -265,12 +265,31 @@ function renderSanityBox() {
 //  - Fichas criadas antes desta atualização não têm dado registrado
 //    (die === null): elas continuam com os campos numéricos antigos,
 //    editáveis à mão, para não perder os valores já salvos.
-function renderResourceDiceRow({ boxId, curField, dieField, rollsField, sides, attrKey, label, formulaLabel, missingAttrHint, levelBonusField, levelRollsField }) {
+// energyBonusEnabled: só true pra Energia (Mana/Fé/Aura) — soma o bônus de
+// traço racial ao reservatório (ver traitEnergyBonus() em editor-core.js).
+// Não se aplica à Estamina, que não é "energia de classe".
+function renderResourceDiceRow({ boxId, curField, dieField, rollsField, sides, attrKey, label, formulaLabel, missingAttrHint, levelBonusField, levelRollsField, energyBonusEnabled }) {
   const box = document.getElementById(boxId);
   if (!box) return;
   const res = state.resources;
   const die = res[dieField];
   const levelBonus = res[levelBonusField] || 0;
+  const energyBonus = energyBonusEnabled ? traitEnergyBonus() : null;
+  // O percentual (Reservatório Ampliado) é aplicado por último, sobre o
+  // total já com dado + atributo + dado de nível + bônus fixo de traço —
+  // igual o próprio texto do traço descreve.
+  function applyEnergyBonus(base) {
+    if (!energyBonus) return base;
+    const withFlat = base + energyBonus.flat;
+    return withFlat + Math.floor(withFlat * energyBonus.percent / 100);
+  }
+  function energyBonusLabel() {
+    if (!energyBonus || (!energyBonus.flat && !energyBonus.percent)) return '';
+    const parts = [];
+    if (energyBonus.flat) parts.push(`+${energyBonus.flat}`);
+    if (energyBonus.percent) parts.push(`+${energyBonus.percent}%`);
+    return ` + ${parts.join(' ')} (traço)`;
+  }
 
   if (die === null || die === undefined) {
     if (!editingSheetId) {
@@ -294,7 +313,7 @@ function renderResourceDiceRow({ boxId, curField, dieField, rollsField, sides, a
       document.getElementById(`${boxId}RollBtn`).addEventListener('click', () => {
         res[dieField] = rollDie(sides);
         res[rollsField] = 1;
-        const max = res[dieField] + attrTotalValue(attrKey) + levelBonus;
+        const max = applyEnergyBonus(res[dieField] + attrTotalValue(attrKey) + levelBonus);
         res[curField.max] = max;
         res[curField.cur] = max;
         renderStaminaVigorBox();
@@ -316,15 +335,15 @@ function renderResourceDiceRow({ boxId, curField, dieField, rollsField, sides, a
     return;
   }
 
-  // Dado já rolado: o máximo é sempre recalculado (dado fixo + atributo atual + bônus de nível).
-  const max = die + (attrKey ? attrTotalValue(attrKey) : 0) + levelBonus;
+  // Dado já rolado: o máximo é sempre recalculado (dado fixo + atributo atual + bônus de nível + bônus de traço de energia, se houver).
+  const max = applyEnergyBonus(die + (attrKey ? attrTotalValue(attrKey) : 0) + levelBonus);
   res[curField.max] = max;
   if (res[curField.cur] === undefined || res[curField.cur] === null) res[curField.cur] = max;
   const rolls = res[rollsField] || 0;
   const canReroll = !editingSheetId && rolls < 2;
   box.innerHTML = `
     <div class="resource-row">
-      <span class="resource-label">${label} — 1d${sides} (rolado: ${die}) + ${attrKeyLabel(attrKey)}${levelBonus ? ` + ${levelBonus} (dado de nível)` : ''}</span>
+      <span class="resource-label">${label} — 1d${sides} (rolado: ${die}) + ${attrKeyLabel(attrKey)}${levelBonus ? ` + ${levelBonus} (dado de nível)` : ''}${energyBonusLabel()}</span>
       <div class="resource-inputs">
         <input type="number" id="${boxId}CurInput" min="0" max="${max}" value="${res[curField.cur]}">
         <span>/ ${max} (máx.)</span>
@@ -342,7 +361,7 @@ function renderResourceDiceRow({ boxId, curField, dieField, rollsField, sides, a
     document.getElementById(`${boxId}RerollBtn`).addEventListener('click', () => {
       res[dieField] = rollDie(sides);
       res[rollsField] = rolls + 1;
-      const newMax = res[dieField] + (attrKey ? attrTotalValue(attrKey) : 0) + levelBonus;
+      const newMax = applyEnergyBonus(res[dieField] + (attrKey ? attrTotalValue(attrKey) : 0) + levelBonus);
       res[curField.max] = newMax;
       res[curField.cur] = newMax;
       renderStaminaVigorBox();
@@ -404,7 +423,8 @@ function renderStaminaVigorBox() {
     sides: 12, attrKey: energyAttrKey(), label: 'Energia',
     formulaLabel: `1d12 + ${energyAttrLabel()}`,
     missingAttrHint: 'Escolha uma energia (Aura, Mana ou Fé) na etapa 1 para poder rolar a Energia.',
-    levelBonusField: 'vigorLevelBonus', levelRollsField: 'vigorLevelRolls'
+    levelBonusField: 'vigorLevelBonus', levelRollsField: 'vigorLevelRolls',
+    energyBonusEnabled: true
   });
 }
 // ================= ECONOMIA (moedas: Bronze, Prata, Ouro, Platina) =================

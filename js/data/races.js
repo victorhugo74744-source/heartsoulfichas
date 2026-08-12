@@ -156,7 +156,6 @@ window.HEARTSOUL_RACES = [
     "Forma da Noite: Você aprendeu a se transformar em uma criatura da escuridão. Ação Principal: transforma-se em enxame de morcegos ou névoa densa por até 1 minuto. Enxame: voa até 12 metros por turno, imune a ataques corpo a corpo, mas sofre +50% de dano de área. Névoa: imune a dano físico, mas não pode atacar ou interagir com objetos. Uma vez por descanso médio.",
     "Hipnose Predatória: Seu olhar prende a vontade dos fracos. Ação de Suporte: faça contato visual com um alvo humanoide. O alvo faz teste de Vontade (CD 15). Se falhar, fica fascinado e obedece a uma ordem simples (como \"largue a arma\", \"sente-se\", \"não grite\"). Ordens suicidas quebram o efeito. Dura 1 minuto ou até o alvo sofrer dano. Uma vez por cena.",
     "Passos das Sombras: Você se funde com a escuridão como se fosse parte dela. Em áreas de penumbra ou escuridão total: invisível para criaturas que dependam de visão normal. Criaturas com visão no escuro ainda podem vê-lo. +2 em testes de Furtividade em ambientes noturnos ou subterrâneos.",
-    "Passos das Sombras: Você se funde com a escuridão como se fosse parte dela. Em áreas de penumbra ou escuridão total: invisível para criaturas que dependam de visão normal. Criaturas com visão no escuro ainda podem vê- lo. +2 em testes de Furtividade em ambientes noturnos ou subterrâneos.",
     "Força Vampirica: Seu corpo morto-vivo é mais forte do que aparenta. +2 Força. Ao usar armas corpo a corpo, uma vez por turno: +1d3 de dano extra (energia necrótica/carmesim)."
    ]
   },
