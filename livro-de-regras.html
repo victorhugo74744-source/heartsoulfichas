@@ -359,6 +359,83 @@ a{ color:inherit; }
   color:var(--ink-dim); background:var(--panel-2);
 }
 
+/* ===== Lore do Mundo — Panteão & Reinos ===== */
+.lore-continent-head{
+  display:flex; align-items:baseline; gap:10px; flex-wrap:wrap;
+  font-family:'Cinzel', serif; color:var(--gold); font-size:24px; margin:52px 0 6px;
+}
+.lore-continent-head:first-of-type{ margin-top:20px; }
+.lore-continent-head .lc-icon{ font-size:22px; }
+.lore-continent-head .lc-epithet{ font-size:14.5px; font-style:italic; color:var(--ink-dim); font-family:'EB Garamond', Georgia, serif; letter-spacing:0; }
+
+.deity-grid, .kingdom-grid{
+  display:grid; grid-template-columns:repeat(auto-fill, minmax(260px,1fr)); gap:16px; margin:22px 0 44px;
+}
+.kingdom-grid{ grid-template-columns:repeat(auto-fill, minmax(300px,1fr)); }
+
+.deity-card{
+  border:1px solid var(--hairline); background:var(--panel); border-radius:var(--radius);
+  overflow:hidden; transition:border-color .18s ease, box-shadow .18s ease;
+}
+.deity-card:hover{ border-color:var(--gold-dim); }
+.deity-card.divine:hover{ box-shadow:0 0 0 1px rgba(201,161,92,0.25); }
+.deity-card.infernal:hover{ box-shadow:0 0 0 1px rgba(156,43,43,0.3); }
+.deity-card.infernal{ border-color:var(--hairline); }
+.deity-card.infernal .deity-epithet{ color:var(--seal-bright); }
+.deity-card.divine .deity-epithet{ color:var(--gold-dim); }
+
+.deity-card-head{
+  display:flex; align-items:center; gap:12px; padding:16px 16px 16px 14px; cursor:pointer;
+  user-select:none;
+}
+.deity-icon{ font-size:26px; line-height:1; flex-shrink:0; }
+.deity-name-wrap{ flex:1; min-width:0; }
+.deity-name{ font-family:'Cinzel', serif; font-weight:600; color:var(--ink); font-size:16.5px; }
+.deity-epithet{ font-size:12.5px; font-style:italic; margin-top:2px; }
+.deity-caret{ color:var(--ink-mute); font-size:13px; transition:transform .2s ease; flex-shrink:0; }
+.deity-card.expanded .deity-caret{ transform:rotate(180deg); color:var(--gold); }
+
+.deity-card-body{
+  display:grid; grid-template-rows:0fr; transition:grid-template-rows .25s ease;
+}
+.deity-card.expanded .deity-card-body{ grid-template-rows:1fr; }
+.deity-card-body > div{ overflow:hidden; }
+.deity-card-body p{
+  margin:0; padding:0 18px 20px 52px; color:var(--ink-dim); font-size:15px; line-height:1.6;
+  border-top:1px dotted var(--hairline-soft); padding-top:16px;
+}
+
+/* Kingdom cards — same accordion mechanic, richer body with sub-sections */
+.kingdom-card{
+  border:1px solid var(--hairline); background:var(--panel); border-radius:var(--radius);
+  overflow:hidden; transition:border-color .18s ease;
+}
+.kingdom-card:hover{ border-color:var(--gold-dim); }
+.kingdom-card-head{
+  display:flex; align-items:center; gap:12px; padding:18px 18px 18px 16px; cursor:pointer; user-select:none;
+}
+.kingdom-icon{ font-size:28px; line-height:1; flex-shrink:0; }
+.kingdom-name-wrap{ flex:1; min-width:0; }
+.kingdom-name{ font-family:'Cinzel', serif; font-weight:600; color:var(--gold); font-size:18px; }
+.kingdom-epithet{ font-size:13px; font-style:italic; color:var(--ink-dim); margin-top:2px; }
+.kingdom-card .deity-caret{ font-size:14px; }
+.kingdom-card.expanded .deity-caret{ transform:rotate(180deg); color:var(--gold); }
+.kingdom-card-body{
+  display:grid; grid-template-rows:0fr; transition:grid-template-rows .28s ease;
+}
+.kingdom-card.expanded .kingdom-card-body{ grid-template-rows:1fr; }
+.kingdom-card-body > div{ overflow:hidden; }
+.kingdom-section{
+  padding:0 20px 22px 20px; border-top:1px dotted var(--hairline-soft); padding-top:16px; margin-top:0;
+}
+.kingdom-section:first-child{ padding-top:18px; }
+.kingdom-section .ks-label{
+  font-family:'Cinzel', serif; font-size:11.5px; letter-spacing:.12em; text-transform:uppercase;
+  color:var(--seal-bright); margin-bottom:8px;
+}
+.kingdom-section p{ margin:0 0 10px; color:var(--ink-dim); font-size:14.5px; line-height:1.62; }
+.kingdom-section p:last-child{ margin-bottom:0; }
+
 /* search results */
 .search-results{ padding:8px; }
 .search-hit{
@@ -581,6 +658,59 @@ mark{ background:var(--seal); color:#fff; padding:0 1px; border-radius:2px; }
     </div>`;
   }
 
+  function renderDeityCard(d, kind){
+    const prefix = kind === 'divine' ? 'deus' : 'demonio';
+    return `<div class="deity-card ${kind}" data-accordion id="sub-${prefix}-${d.id}">
+      <div class="deity-card-head" data-toggle>
+        <span class="deity-icon">${escapeHtml(d.icon)}</span>
+        <div class="deity-name-wrap">
+          <div class="deity-name">${escapeHtml(d.name)}</div>
+          <div class="deity-epithet">${escapeHtml(d.epithet)}</div>
+        </div>
+        <span class="deity-caret">▾</span>
+      </div>
+      <div class="deity-card-body"><div><p>${escapeHtml(d.desc)}</p></div></div>
+    </div>`;
+  }
+
+  function renderKingdomCard(k){
+    const sectionsHtml = k.sections.map(s =>
+      `<div class="kingdom-section"><div class="ks-label">${escapeHtml(s.label)}</div>${s.paragraphs.map(p => `<p>${escapeHtml(p)}</p>`).join('')}</div>`
+    ).join('');
+    return `<div class="kingdom-card" data-accordion id="sub-${k.id}">
+      <div class="kingdom-card-head" data-toggle>
+        <span class="kingdom-icon">${escapeHtml(k.icon)}</span>
+        <div class="kingdom-name-wrap">
+          <div class="kingdom-name">${escapeHtml(k.name)}</div>
+          <div class="kingdom-epithet">${escapeHtml(k.epithet)}</div>
+        </div>
+        <span class="deity-caret">▾</span>
+      </div>
+      <div class="kingdom-card-body"><div>${sectionsHtml}</div></div>
+    </div>`;
+  }
+
+  function renderLoreChapter(chapter){
+    let html = '';
+    if(chapter.intro && chapter.intro.length) html += renderEntryParagraphs(chapter.intro);
+
+    html += `<div class="subsection-title" id="sub-panteao-deuses">🌟 Os Doze Deuses da Alma</div>`;
+    if(chapter.pantheon.gods_intro) html += renderEntryParagraphs(chapter.pantheon.gods_intro);
+    html += `<div class="deity-grid">${chapter.pantheon.gods.map(g => renderDeityCard(g,'divine')).join('')}</div>`;
+
+    html += `<div class="subsection-title" id="sub-panteao-demonios">💀 Os Doze Demônios do Coração</div>`;
+    if(chapter.pantheon.demons_intro) html += renderEntryParagraphs(chapter.pantheon.demons_intro);
+    html += `<div class="deity-grid">${chapter.pantheon.demons.map(d => renderDeityCard(d,'infernal')).join('')}</div>`;
+
+    chapter.continents.forEach(c => {
+      html += `<div class="lore-continent-head" id="sub-continente-${c.id}"><span class="lc-icon">${escapeHtml(c.icon)}</span> ${escapeHtml(c.name)} <span class="lc-epithet">— ${escapeHtml(c.epithet)}</span></div>`;
+      if(c.intro && c.intro.length) html += renderEntryParagraphs(c.intro);
+      html += `<div class="kingdom-grid">${c.kingdoms.map(k => renderKingdomCard(k)).join('')}</div>`;
+    });
+
+    return html;
+  }
+
   function escapeHtml(s){
     return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
   }
@@ -631,7 +761,9 @@ mark{ background:var(--seal); color:#fff; padding:0 1px; border-radius:2px; }
     topbarTitle.textContent = chapter.title;
     setActiveNav(chapterId, subId);
 
-    let html = `<div class="crumb"><a data-nav-home>Heartsoul</a> / ${escapeHtml(chapter.title)}${subId ? ' / ' + escapeHtml((chapter.subsections.find(s=>s.id===subId)||{}).title||'') : ''}</div>`;
+    const subList = chapter.subsections || chapter.subsections_search;
+    const subTitle = subId && subList ? (subList.find(s=>s.id===subId)||{}).title||'' : '';
+    let html = `<div class="crumb"><a data-nav-home>Heartsoul</a> / ${escapeHtml(chapter.title)}${subTitle ? ' / ' + escapeHtml(subTitle) : ''}</div>`;
 
     html += `<div class="chapter-header">
       <div class="chapter-number">Capítulo ${String(idx+1).padStart(2,'0')}</div>
@@ -645,7 +777,9 @@ mark{ background:var(--seal); color:#fff; padding:0 1px; border-radius:2px; }
       html += renderEntryParagraphs(chapter.intro);
     }
 
-    if(chapter.id === 'antecedentes' && chapter.subsections){
+    if(chapter.id === 'lore-mundo'){
+      html += renderLoreChapter(chapter);
+    } else if(chapter.id === 'antecedentes' && chapter.subsections){
       html += `<div class="race-subnav">${chapter.subsections.map(s => `<span class="race-chip${s.id===subId?' active':''}" data-jump="${s.id}">${escapeHtml(s.title)}</span>`).join('')}</div>`;
       chapter.subsections.forEach(s => { html += renderAntecedenteCard(s); });
     } else if(chapter.subsections){
@@ -682,10 +816,16 @@ mark{ background:var(--seal); color:#fff; padding:0 1px; border-radius:2px; }
     content.querySelectorAll('[data-jump]').forEach(el => el.addEventListener('click', () => {
       navigate(chapterId, el.dataset.jump, true);
     }));
+    content.querySelectorAll('[data-toggle]').forEach(el => el.addEventListener('click', () => {
+      el.closest('[data-accordion]').classList.toggle('expanded');
+    }));
 
     if(subId){
       const target = document.getElementById('sub-' + subId);
-      if(target) target.scrollIntoView({behavior:'smooth', block:'start'});
+      if(target){
+        if(target.hasAttribute('data-accordion')) target.classList.add('expanded');
+        target.scrollIntoView({behavior:'smooth', block:'start'});
+      }
     } else {
       window.scrollTo(0,0);
     }
@@ -723,7 +863,7 @@ mark{ background:var(--seal); color:#fff; padding:0 1px; border-radius:2px; }
     if(q.length < 2){ buildSidebar(); return; }
     const hits = [];
     CH.forEach(c => {
-      const scanList = c.subsections ? c.subsections : [{id:null, title:null, paragraphs:c.paragraphs||[]}];
+      const scanList = c.subsections ? c.subsections : (c.subsections_search ? c.subsections_search : [{id:null, title:null, paragraphs:c.paragraphs||[]}]);
       scanList.forEach(block => {
         (block.paragraphs||[]).forEach(p => {
           const li = p.toLowerCase().indexOf(q);
