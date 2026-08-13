@@ -47,7 +47,8 @@ function renderToolToolbar() {
       <button type="button" id="undoDrawBtn" title="Desfazer o último traço — atalho: Ctrl/Cmd+Z"><span class="tool-label">↩️ Desfazer</span><kbd class="tool-key">Ctrl+Z</kbd></button>
       <button type="button" id="clearDrawBtn" title="Apagar todos os desenhos desta cena — dica: com a ferramenta de desenho ativa, clique num traço pra apagar só ele — atalho: X"><span class="tool-label">🧹 Limpar desenhos</span><kbd class="tool-key">X</kbd></button>
       <div class="tt-sep"></div>
-      <button type="button" data-tool="fog" title="Cobrir/revelar áreas do mapa (clique numa área coberta para revelar) — atalho: F"><span class="tool-label">🌫 Névoa</span><kbd class="tool-key">F</kbd></button>
+      <button type="button" data-tool="fog" title="Cobrir/revelar em retângulo: arraste pra cobrir uma área (clique numa área coberta para revelar) — atalho: F"><span class="tool-label">🌫 Névoa</span><kbd class="tool-key">F</kbd></button>
+      <button type="button" data-tool="fogPoly" title="Cobrir/revelar em área livre: clique ponto a ponto contornando a área e clique no ponto inicial (ou dê 2 cliques) para fechar e preencher o contorno — clique numa área coberta para revelar, botão direito desfaz o último ponto, Esc cancela o contorno atual — atalho: N"><span class="tool-label">🖊️ Névoa (contorno)</span><kbd class="tool-key">N</kbd></button>
       <button type="button" id="clearFogBtn" title="Revelar o mapa inteiro — atalho: Shift+F"><span class="tool-label">☀️ Revelar tudo</span><kbd class="tool-key">⇧F</kbd></button>
     ` : ''}`;
 
@@ -107,25 +108,33 @@ function updateToolToolbarActive() {
   if (snapBtn) snapBtn.classList.toggle('tool-active', snapToGrid);
   const wrap = document.getElementById('boardWrap');
   if (wrap) {
-    wrap.classList.remove('tool-draw', 'tool-fog', 'tool-ruler', 'tool-ping', 'tool-template');
+    wrap.classList.remove('tool-draw', 'tool-fog', 'tool-fogPoly', 'tool-ruler', 'tool-ping', 'tool-template');
     if (boardTool !== 'pan') wrap.classList.add('tool-' + boardTool);
   }
 }
 
 function setBoardTool(tool) {
+  // Trocar de ferramenta no meio de um contorno de névoa cancela o contorno
+  // em andamento (senão os pontos marcados ficariam soltos, sem nunca
+  // virar névoa nem sumir da tela).
+  if (boardTool === 'fogPoly' && tool !== 'fogPoly' && typeof cancelFogPoly === 'function') cancelFogPoly();
   boardTool = tool;
   updateToolToolbarActive();
 }
 
 // ------------------------------------------------------- ATALHOS DE TECLADO --
 // V/R/P trocam de ferramenta, 1/2/3 escolhem o formato de área, C limpa as
-// áreas, G liga/desliga o encaixe na grade, D/F/X/Shift+F são só do Mestre
-// (desenhar/névoa/limpar desenhos/revelar tudo), Ctrl+Z desfaz o último
-// traço, Esc volta pra "Mover". Ganha muito em mesas de combate corrido,
-// onde alternar régua/marcar/área toda hora só de mouse atrapalha o ritmo.
-// Ignorado por completo enquanto o foco está num campo de texto (chat,
-// input de dados, nome de cena etc.) — senão digitar "d" numa mensagem de
-// chat trocaria a ferramenta do mapa sem querer.
+// áreas, G liga/desliga o encaixe na grade, D/F/N/X/Shift+F são só do
+// Mestre (desenhar/névoa em retângulo/névoa em contorno livre/limpar
+// desenhos/revelar tudo), Ctrl+Z desfaz o último traço, Esc volta pra
+// "Mover" (ou, com um contorno de névoa em andamento, cancela só o
+// contorno). Com a névoa em contorno livre ativa, Enter fecha o contorno
+// atual e Backspace desfaz o último ponto marcado — igual ao botão direito
+// do mouse. Ganha muito em mesas de combate corrido, onde alternar
+// régua/marcar/área toda hora só de mouse atrapalha o ritmo. Ignorado por
+// completo enquanto o foco está num campo de texto (chat, input de dados,
+// nome de cena etc.) — senão digitar "d" numa mensagem de chat trocaria a
+// ferramenta do mapa sem querer.
 function handleBoardKeydown(e) {
   if (!curTable || !document.getElementById('boardView') ||
       document.getElementById('boardView').style.display === 'none') return;
@@ -138,8 +147,15 @@ function handleBoardKeydown(e) {
   if (e.altKey) return; // Alt é usado por outras ferramentas (medir/soltar livre)
   const isMaster = isTableOwner();
   const key = e.key.toLowerCase();
+  if (boardTool === 'fogPoly' && isMaster) {
+    if (key === 'enter' && fogPolyPoints.length >= 3) { e.preventDefault(); finishFogPoly(); return; }
+    if (key === 'backspace' && fogPolyPoints.length) { e.preventDefault(); fogPolyPoints.pop(); renderFogPolyPreview(); return; }
+  }
   switch (key) {
-    case 'escape': setBoardTool('pan'); break;
+    case 'escape':
+      if (boardTool === 'fogPoly' && fogPolyPoints.length) cancelFogPoly(); // primeiro Esc só limpa o contorno em andamento
+      else setBoardTool('pan');
+      break;
     case 'v': setBoardTool('pan'); break;
     case 'r': setBoardTool('ruler'); break;
     case 'p': setBoardTool('ping'); break;
@@ -150,6 +166,7 @@ function handleBoardKeydown(e) {
     case 'g': toggleSnapToGrid(); break;
     case 'd': if (isMaster) setBoardTool('draw'); break;
     case 'f': if (isMaster) { if (e.shiftKey) clearAllFog(); else setBoardTool('fog'); } break;
+    case 'n': if (isMaster) setBoardTool('fogPoly'); break;
     case 'x': if (isMaster) clearAllDrawings(); break;
     default: return;
   }
@@ -458,16 +475,31 @@ async function clearAllDrawings() {
 }
 
 // ------------------------------------------------------------- NÉVOA --
-// Retângulos de névoa de guerra: o Mestre arrasta pra cobrir uma área, e
-// clica numa área já coberta pra revelá-la (some o retângulo). Jogadores
-// veem a névoa totalmente opaca; o Mestre a vê semitransparente, pra
-// saber o que está escondendo sem perder a visão geral do mapa.
+// Duas formas de cobrir o mapa com névoa de guerra:
+// - Retângulo (ferramenta "fog"): o Mestre arrasta de um canto ao outro.
+// - Contorno livre (ferramenta "fogPoly"): o Mestre clica ponto a ponto ao
+//   redor da área desejada; ao fechar o contorno (clicando de volta perto
+//   do primeiro ponto, dando 2 cliques, apertando Enter ou clicando no
+//   botão "Fechar contorno"), a região delimitada pelos pontos vira névoa —
+//   útil pra cobrir salas, corredores ou áreas com formato irregular que
+//   um retângulo não cobre bem.
+// Em ambos os casos, clicar numa área já coberta a revela (ela some).
+// Jogadores veem a névoa totalmente opaca; o Mestre a vê semitransparente,
+// pra saber o que está escondendo sem perder a visão geral do mapa.
 let fogPointerId = null, fogStartPoint = null;
+let fogPolyPoints = [], fogPolyHoverPoint = null;
+
+// Com qualquer uma das duas ferramentas de névoa ativas, clicar numa área
+// já coberta revela ela — não só com a ferramenta que a criou.
+function isFogToolActive() {
+  return boardTool === 'fog' || boardTool === 'fogPoly';
+}
 
 function attachFogHandlers(wrap) {
+  // -- Retângulo: clicar e arrastar --
   wrap.addEventListener('pointerdown', (e) => {
     if (boardTool !== 'fog' || !isTableOwner()) return;
-    if (e.target.closest('.fog-rect')) return; // clique num retângulo existente: ver handler próprio dele
+    if (e.target.closest('.fog-rect') || e.target.closest('.fog-poly-shape')) return; // clique numa área existente: ver handler próprio dela
     fogPointerId = e.pointerId;
     fogStartPoint = boardPointFromEvent(e);
     wrap.setPointerCapture(e.pointerId);
@@ -494,6 +526,34 @@ function attachFogHandlers(wrap) {
   };
   wrap.addEventListener('pointerup', endFog);
   wrap.addEventListener('pointercancel', endFog);
+
+  // -- Contorno livre: clique a clique, marcando os pontos da borda --
+  wrap.addEventListener('pointerdown', (e) => {
+    if (boardTool !== 'fogPoly' || !isTableOwner()) return;
+    if (e.target.closest('.fog-rect') || e.target.closest('.fog-poly-shape')) return; // clique numa área existente: revela, não marca ponto
+    if (e.button === 2) return; // botão direito: ver "contextmenu" (desfaz o último ponto)
+    e.preventDefault();
+    const pt = boardPointFromEvent(e);
+    // Clicar perto do ponto inicial (com pelo menos 3 já marcados) fecha o contorno.
+    if (fogPolyPoints.length >= 3 && isNearFogPolyStart(pt)) { finishFogPoly(); return; }
+    fogPolyPoints.push(pt);
+    renderFogPolyPreview();
+  });
+  wrap.addEventListener('pointermove', (e) => {
+    if (boardTool !== 'fogPoly' || !fogPolyPoints.length) return;
+    fogPolyHoverPoint = boardPointFromEvent(e);
+    renderFogPolyPreview();
+  });
+  wrap.addEventListener('dblclick', (e) => {
+    if (boardTool !== 'fogPoly' || !fogPolyPoints.length) return;
+    e.preventDefault();
+    finishFogPoly();
+  });
+  wrap.addEventListener('contextmenu', (e) => {
+    if (boardTool !== 'fogPoly') return;
+    e.preventDefault();
+    if (fogPolyPoints.length) { fogPolyPoints.pop(); renderFogPolyPreview(); }
+  });
 }
 
 function renderLiveFogPreview(a, b) {
@@ -515,33 +575,150 @@ function removeLiveFogPreview() {
   if (el) el.remove();
 }
 
+// Camada SVG compartilhada onde vivem os polígonos de névoa já salvos e a
+// prévia do contorno em andamento — mesmo padrão de drawSvgLayer() (a
+// viewBox usa as mesmas unidades de baseMapW/baseMapH, então os pontos
+// normalizados 0..1 dos fogs viram coordenadas diretas, sem conversão).
+function fogPolySvgLayer() {
+  let svg = document.getElementById('fogPolySvgLayer');
+  if (!svg) {
+    svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.id = 'fogPolySvgLayer';
+    svg.style.position = 'absolute'; svg.style.top = '0'; svg.style.left = '0';
+    svg.style.pointerEvents = 'none';
+    document.getElementById('boardSurface').appendChild(svg);
+  }
+  svg.setAttribute('width', baseMapW); svg.setAttribute('height', baseMapH);
+  svg.setAttribute('viewBox', `0 0 ${baseMapW} ${baseMapH}`);
+  return svg;
+}
+
+// Raio (em px de mapa) considerado "perto o bastante do primeiro ponto"
+// pra fechar o contorno com um clique — acompanha o tamanho da grade pra
+// funcionar bem tanto em mapas com casas grandes quanto pequenas.
+function isNearFogPolyStart(pt) {
+  const first = fogPolyPoints[0];
+  const dx = (pt.x - first.x) * baseMapW, dy = (pt.y - first.y) * baseMapH;
+  return Math.hypot(dx, dy) < Math.max(14, boardCellPx * 0.25);
+}
+
+// Prévia ao vivo do contorno: linha ligando os pontos já marcados até o
+// cursor, preenchimento provisório (não salvo ainda) e uma bolinha maior
+// no primeiro ponto, indicando onde clicar pra fechar a área.
+function renderFogPolyPreview() {
+  const svg = fogPolySvgLayer();
+  if (!fogPolyPoints.length) { removeFogPolyPreview(); return; }
+  let g = svg.querySelector('#liveFogPolyPreview');
+  if (!g) {
+    g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+    g.id = 'liveFogPolyPreview';
+    g.innerHTML = '<polygon class="fog-poly-live-shape"></polygon><polyline class="fog-poly-live-line"></polyline>';
+    svg.appendChild(g);
+  }
+  const linePts = fogPolyHoverPoint ? [...fogPolyPoints, fogPolyHoverPoint] : fogPolyPoints;
+  const attr = pointsToPathAttr(linePts);
+  g.querySelector('.fog-poly-live-line').setAttribute('points', attr);
+  g.querySelector('.fog-poly-live-shape').setAttribute('points', attr);
+  g.querySelectorAll('.fog-poly-live-dot, .fog-poly-live-first').forEach(el => el.remove());
+  fogPolyPoints.forEach((p, i) => {
+    const c = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+    c.setAttribute('cx', p.x * baseMapW); c.setAttribute('cy', p.y * baseMapH);
+    const isFirst = i === 0 && fogPolyPoints.length >= 3;
+    c.setAttribute('r', isFirst ? 8 : 4);
+    c.setAttribute('class', isFirst ? 'fog-poly-live-first' : 'fog-poly-live-dot');
+    g.appendChild(c);
+  });
+}
+
+function removeFogPolyPreview() {
+  const g = document.querySelector('#fogPolySvgLayer #liveFogPolyPreview');
+  if (g) g.remove();
+}
+
+// Fecha o contorno atual e salva a névoa em formato de polígono. Pede ao
+// menos 3 pontos (senão não delimita área nenhuma).
+async function finishFogPoly() {
+  const pts = fogPolyPoints;
+  fogPolyPoints = []; fogPolyHoverPoint = null;
+  removeFogPolyPreview();
+  if (pts.length < 3 || !curTable.activeSceneId) return;
+  try {
+    await db.collection('tables').doc(curTable.id).collection('fog').add({
+      type: 'poly',
+      points: pts.map(p => ({ x: p.x, y: p.y })),
+      sceneId: curTable.activeSceneId
+    });
+  } catch (err) { console.error('Erro ao salvar névoa (contorno):', err); }
+}
+
+// Descarta o contorno em andamento sem salvar nada (Esc, ou troca de
+// ferramenta/cena no meio do desenho).
+function cancelFogPoly() {
+  fogPolyPoints = []; fogPolyHoverPoint = null;
+  removeFogPolyPreview();
+}
+
 function renderFog() {
   const surface = document.getElementById('boardSurface');
   if (!surface) return;
   surface.querySelectorAll('.fog-rect[data-fog-id]').forEach(el => {
     if (!liveFog[el.dataset.fogId]) el.remove();
   });
+  const svg = fogPolySvgLayer();
+  svg.querySelectorAll('polygon[data-fog-id]').forEach(el => {
+    if (!liveFog[el.dataset.fogId]) el.remove();
+  });
   const isMaster = isTableOwner();
   Object.values(liveFog).forEach(f => {
-    let el = surface.querySelector(`.fog-rect[data-fog-id="${f.id}"]`);
-    if (!el) {
-      el = document.createElement('div');
-      el.dataset.fogId = f.id;
-      el.className = 'fog-rect';
-      surface.appendChild(el);
-      el.addEventListener('pointerdown', async (e) => {
-        if (boardTool !== 'fog' || !isTableOwner()) return;
-        e.stopPropagation();
-        try { await db.collection('tables').doc(curTable.id).collection('fog').doc(f.id).delete(); }
-        catch (err) { console.error('Erro ao revelar névoa:', err); }
-      });
+    // Névoas antigas (salvas antes desta função existir) não têm "type" e
+    // continuam sendo retângulos — só as novas, marcadas type:'poly' com
+    // pontos suficientes, usam o caminho de polígono.
+    if (f.type === 'poly' && Array.isArray(f.points) && f.points.length >= 3) {
+      renderFogPolyShape(f, svg, isMaster);
+    } else {
+      renderFogRectShape(f, surface, isMaster);
     }
-    el.classList.toggle('fog-master', isMaster);
-    el.style.left = (f.x * baseMapW) + 'px';
-    el.style.top = (f.y * baseMapH) + 'px';
-    el.style.width = (f.w * baseMapW) + 'px';
-    el.style.height = (f.h * baseMapH) + 'px';
   });
+}
+
+function renderFogRectShape(f, surface, isMaster) {
+  let el = surface.querySelector(`.fog-rect[data-fog-id="${f.id}"]`);
+  if (!el) {
+    el = document.createElement('div');
+    el.dataset.fogId = f.id;
+    el.className = 'fog-rect';
+    surface.appendChild(el);
+    el.addEventListener('pointerdown', async (e) => {
+      if (!isFogToolActive() || !isTableOwner()) return;
+      e.stopPropagation();
+      try { await db.collection('tables').doc(curTable.id).collection('fog').doc(f.id).delete(); }
+      catch (err) { console.error('Erro ao revelar névoa:', err); }
+    });
+  }
+  el.classList.toggle('fog-master', isMaster);
+  el.style.left = (f.x * baseMapW) + 'px';
+  el.style.top = (f.y * baseMapH) + 'px';
+  el.style.width = (f.w * baseMapW) + 'px';
+  el.style.height = (f.h * baseMapH) + 'px';
+}
+
+function renderFogPolyShape(f, svg, isMaster) {
+  let el = svg.querySelector(`polygon[data-fog-id="${f.id}"]`);
+  if (!el) {
+    el = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+    el.dataset.fogId = f.id;
+    el.setAttribute('class', 'fog-poly-shape');
+    el.style.pointerEvents = 'auto'; // a camada svg toda ignora clique — só a forma preenchida recebe
+    svg.appendChild(el);
+    el.addEventListener('pointerdown', async (e) => {
+      if (!isFogToolActive() || !isTableOwner()) return;
+      e.stopPropagation();
+      try { await db.collection('tables').doc(curTable.id).collection('fog').doc(f.id).delete(); }
+      catch (err) { console.error('Erro ao revelar névoa:', err); }
+    });
+  }
+  el.classList.toggle('fog-master', isMaster);
+  el.setAttribute('points', pointsToPathAttr(f.points));
 }
 
 function listenFog() {

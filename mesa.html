@@ -387,7 +387,7 @@ if ('serviceWorker' in navigator) {
     .tools-panel.retracted .tp-toggle-icon{ transform:rotate(180deg); writing-mode:horizontal-tb; }
   }
 
-  .board-wrap.tool-draw, .board-wrap.tool-fog, .board-wrap.tool-template{ cursor:crosshair; }
+  .board-wrap.tool-draw, .board-wrap.tool-fog, .board-wrap.tool-fogPoly, .board-wrap.tool-template{ cursor:crosshair; }
   .board-wrap.tool-ruler{ cursor:cell; }
   .board-wrap.tool-ping{ cursor:pointer; }
 
@@ -426,6 +426,17 @@ if ('serviceWorker' in navigator) {
   #drawSvgLayer{ z-index:2; }
   .fog-rect{ position:absolute; background:#0a0806; box-sizing:border-box; z-index:3; }
   .fog-rect.fog-master{ background:rgba(10,8,6,.55); border:1px dashed rgba(201,161,92,.5); }
+  /* Névoa em contorno livre (polígono): mesma camada visual dos retângulos
+     (opaca pros jogadores, semitransparente com borda tracejada dourada
+     pro Mestre), só que como forma SVG em vez de <div>. */
+  #fogPolySvgLayer{ position:absolute; top:0; left:0; z-index:3; }
+  .fog-poly-shape{ fill:#0a0806; cursor:pointer; }
+  .fog-poly-shape.fog-master{ fill:rgba(10,8,6,.55); stroke:rgba(201,161,92,.5); stroke-width:2; stroke-dasharray:6 4; }
+  /* Prévia ao vivo do contorno sendo desenhado (ainda não salvo) */
+  .fog-poly-live-shape{ fill:rgba(201,161,92,.18); }
+  .fog-poly-live-line{ fill:none; stroke:var(--gold); stroke-width:2; stroke-dasharray:6 4; }
+  .fog-poly-live-dot{ fill:var(--gold); }
+  .fog-poly-live-first{ fill:rgba(201,161,92,.35); stroke:var(--gold); stroke-width:2; }
   /* Áreas de efeito ficam por cima da névoa (pra sempre se ver a forma), mas
      por baixo dos tokens (pra não tampar quem está em cima dela). */
   #templateSvgLayer{ z-index:3.5; }

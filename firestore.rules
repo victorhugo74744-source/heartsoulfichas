@@ -169,10 +169,12 @@ service cloud.firestore {
         allow update: if false;
       }
 
-      // Retângulos de névoa de guerra (ferramenta 🌫). Só o Mestre dono
-      // desta mesa cobre/revela áreas; todos na mesa veem a névoa (o
-      // Mestre a vê semitransparente no próprio cliente, os jogadores —
-      // e um Mestre visitante — a veem totalmente opaca).
+      // Névoa de guerra (ferramentas 🌫 retângulo e 🖊️ contorno livre — dois
+      // formatos de documento na mesma coleção: {x,y,w,h} pro retângulo,
+      // {type:'poly', points:[...]} pro contorno). Só o Mestre dono desta
+      // mesa cobre/revela áreas; todos na mesa veem a névoa (o Mestre a vê
+      // semitransparente no próprio cliente, os jogadores — e um Mestre
+      // visitante — a veem totalmente opaca).
       match /fog/{fogId} {
         allow read: if isSignedIn();
         allow create, delete: if isTableMaster(tableId);

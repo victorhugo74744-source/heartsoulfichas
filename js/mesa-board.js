@@ -464,6 +464,7 @@ function refreshBoardForActiveScene() {
     if (templateUnsub) { templateUnsub(); templateUnsub = null; }
     liveDrawings = {}; liveFog = {}; liveTemplates = {};
     lastOwnDrawingId = null; // "desfazer último traço" não deve valer pra outra cena
+    if (typeof cancelFogPoly === 'function') cancelFogPoly(); // não deixa um polígono de névoa em andamento vazar pra outra cena
     selectedTokenId = null; handleDraggingTokenId = null;
     boardZoom = 1; boardPanX = 0; boardPanY = 0;
     if (newId) { listenDrawings(); listenFog(); listenTemplates(); }

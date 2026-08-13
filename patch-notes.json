@@ -1,5 +1,17 @@
 [
   {
+    "id": "2026-08-12-nevoa-contorno-livre-mesa",
+    "date": "2026-08-12",
+    "title": "Nova ferramenta de Névoa em contorno livre na Mesa",
+    "tags": ["Sistema"],
+    "changes": [
+      "Além da névoa em retângulo (arrastar), agora o Mestre tem a ferramenta \"🖊️ Névoa (contorno)\" (atalho N): clique ponto a ponto contornando a área desejada e a região entre os pontos marcados vira névoa assim que o contorno é fechado — útil para cobrir salas, corredores e áreas com formato irregular que um retângulo não cobre bem.",
+      "Pra fechar o contorno: clique perto do primeiro ponto (ele fica destacado assim que há 3 ou mais pontos marcados), dê um duplo clique, ou aperte Enter.",
+      "Backspace ou o botão direito do mouse desfaz o último ponto marcado sem cancelar o contorno inteiro; Esc cancela o contorno em andamento.",
+      "Clicar numa área já coberta revela ela normalmente, tanto em retângulo quanto em contorno livre, com qualquer uma das duas ferramentas de névoa ativa."
+    ]
+  },
+  {
     "id": "2026-08-07-filtro-tracos-funil",
     "date": "2026-08-07",
     "title": "Filtro de Traços atrás de um botão-funil + correção no acordeão",
