@@ -224,14 +224,9 @@ function renderRaceGrid() {
     });
   });
 }
-// Traços raciais vêm como uma única string "Nome: Descrição". Essa função
-// separa as duas partes pra podermos exibir o traço racial no mesmo
-// formato de cartão (trait-pick) usado pelos traços da etapa 7.
-function raceTraitNameDesc(str) {
-  const idx = str.indexOf(':');
-  if (idx === -1) return { name: str, desc: '' };
-  return { name: str.slice(0, idx).trim(), desc: str.slice(idx + 1).trim() };
-}
+// raceTraitNameDesc / formatTraitBody vêm de firebase-init.js (compartilhado
+// com view.js), pra separar "Nome: descrição" e quebrar a descrição em
+// sub-seções em vez de texto corrido — ver comentário lá.
 function renderRaceDetail() {
   const box = document.getElementById('raceDetail');
   if (!state.raceId) { box.innerHTML = ''; return; }
@@ -240,7 +235,16 @@ function renderRaceDetail() {
   box.innerHTML = `
     <div class="race-detail">
       ${race.flavor && race.flavor.length ? `<div class="race-flavor"><div class="sheet-section-title" style="margin-top:0;">Descrição</div>${race.flavor.map(p => `<p>${escapeHtml(p)}</p>`).join('')}</div>` : ''}
-      <div class="fixed-trait"><b>Traço Fixo:</b> ${escapeHtml((state.raceId === state.loadedRaceId && state.raceFixedTraitOverride) ? state.raceFixedTraitOverride : race.fixedTrait)}</div>
+      ${(() => {
+        const fixedRaw = (state.raceId === state.loadedRaceId && state.raceFixedTraitOverride) ? state.raceFixedTraitOverride : race.fixedTrait;
+        const { name: fixedName, desc: fixedBody } = raceTraitNameDesc(fixedRaw);
+        return `
+      <div class="sheet-section-title" style="margin-top:0;">Traço Fixo <span style="color:var(--seal-bright);">(obrigatório)</span></div>
+      <div class="fixed-trait">
+        <div class="trait-rich-name">${escapeHtml(fixedName)}</div>
+        ${formatTraitBody(fixedBody)}
+      </div>`;
+      })()}
       ${race.variantChoice ? `
         <div class="sheet-section-title">${escapeHtml(race.variantChoice.label)} <span style="color:var(--seal-bright);">(obrigatório)</span></div>
         ${race.variantChoice.hint ? `<p class="hint" style="margin:-4px 0 10px;">${escapeHtml(race.variantChoice.hint)}</p>` : ''}
@@ -266,7 +270,7 @@ function renderRaceDetail() {
               <span class="tname">${escapeHtml(name)}</span>
               <span class="tcost">Grátis</span>
             </div>
-            ${desc ? `<div class="tdesc">${escapeHtml(desc)}</div>` : ''}
+            ${desc ? `<div class="tdesc">${formatTraitBody(desc)}</div>` : ''}
           </div>`;
       }).join('')}
       <p class="hint" id="raceOptWarning" style="margin-top:10px;"></p>
@@ -283,7 +287,7 @@ function renderRaceDetail() {
                 <span class="tname">${escapeHtml(name)}</span>
                 <span class="tcost">Custo ${RACE_TRAIT_BUY_COST} Pts. Traço</span>
               </div>
-              ${desc ? `<div class="tdesc">${escapeHtml(desc)}</div>` : ''}
+              ${desc ? `<div class="tdesc">${formatTraitBody(desc)}</div>` : ''}
             </div>`;
         }).join('')}
         <p class="hint" id="raceTraitWarning" style="margin-top:6px;"></p>
@@ -361,13 +365,52 @@ function updateRaceVariantWarning() {
 }
 
 // ================= BACKGROUND =================
-function renderBackgroundSelect() {
+// Filtro por "status" (atributo) do antecedente: reaproveita o mesmo parser
+// de bônus de atributo usado pelos traços (parseAttrBonusesFromText), já
+// que o campo "atributos" dos antecedentes usa o mesmo formato de texto
+// livre ("+2 Intelecto, +2 Foco.").
+function populateBackgroundOptions(attrFilter) {
   const sel = document.getElementById('fBackground');
+  const prevValue = sel.value;
+  sel.innerHTML = '<option value="">Nenhum antecedente</option>';
   DATA.backgrounds.forEach(b => {
+    if (attrFilter && !Object.keys(parseAttrBonusesFromText(b.atributos)).includes(attrFilter)) return;
     const opt = document.createElement('option');
     opt.value = b.id; opt.textContent = `${b.icon || ''} ${b.name}`.trim();
     sel.appendChild(opt);
   });
+  if (Array.from(sel.options).some(o => o.value === prevValue)) {
+    sel.value = prevValue;
+    return;
+  }
+  sel.value = '';
+  // Antecedente selecionado ficou fora do filtro: limpa a seleção pra não
+  // deixar estado (perícias escolhidas etc.) preso a um antecedente que
+  // não aparece mais no select.
+  if (state.backgroundId) {
+    clearAllBackgroundSkillsFromList();
+    state.backgroundId = '';
+    state.backgroundSkills = [];
+    renderBackgroundDetail();
+    renderSkills();
+    updateSkillPoolDisplay();
+    renderAttrs();
+    renderResources();
+  }
+}
+function initBackgroundFilter() {
+  const filterEl = document.getElementById('backgroundFilterAttr');
+  if (!filterEl) return;
+  if (filterEl.options.length <= 1) {
+    ATTR_KEYS.forEach(([key, label]) => {
+      filterEl.insertAdjacentHTML('beforeend', `<option value="${key}">${label}</option>`);
+    });
+  }
+  filterEl.addEventListener('change', () => populateBackgroundOptions(filterEl.value));
+}
+function renderBackgroundSelect() {
+  const sel = document.getElementById('fBackground');
+  populateBackgroundOptions('');
   sel.addEventListener('change', () => {
     clearAllBackgroundSkillsFromList();
     state.backgroundId = sel.value;
@@ -378,6 +421,7 @@ function renderBackgroundSelect() {
     renderAttrs();
     renderResources();
   });
+  initBackgroundFilter();
 }
 function renderBackgroundDetail() {
   const box = document.getElementById('backgroundDetail');

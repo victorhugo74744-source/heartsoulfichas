@@ -359,8 +359,12 @@ function renderSheet(s, ownerProfile, canManage, sheetId, isMaster, activeTab) {
     ? s.skills.map(sk => `<div class="li"><b>${escapeHtml(sk.name)}</b> — +${sk.points}</div>`).join('')
     : '<p class="hint" style="margin:0;">Nenhuma perícia registrada.</p>';
 
-  const raceOptHtml = (s.raceOptionalTraits || []).map(t => `<div class="li">${escapeHtml(t)}</div>`).join('');
-  const raceBoughtHtml = (s.raceTraitsBought || []).map(t => `<div class="li">${escapeHtml(t)}</div>`).join('');
+  const raceTraitCardHtml = (t) => {
+    const { name, desc } = raceTraitNameDesc(t);
+    return `<div class="li"><b>${escapeHtml(name)}</b>${desc ? formatTraitBody(desc) : ''}</div>`;
+  };
+  const raceOptHtml = (s.raceOptionalTraits || []).map(raceTraitCardHtml).join('');
+  const raceBoughtHtml = (s.raceTraitsBought || []).map(raceTraitCardHtml).join('');
 
   const traitsHtml = (s.extraTraits || []).length
     ? s.extraTraits.map(t => `<div class="li"><b>${escapeHtml(t.name)}</b> ${t.cat.endsWith('_malign') ? '<span class="tag malign">Maligno</span>' : '<span class="tag benign">Benigno</span>'} — ${escapeHtml(t.desc)}</div>`).join('')
@@ -444,7 +448,10 @@ function renderSheet(s, ownerProfile, canManage, sheetId, isMaster, activeTab) {
     <div class="panel">
       <h2>Raça — ${escapeHtml(s.raceName)}</h2>
       <div class="sheet-section-title">Traço Fixo</div>
-      <p class="sheet-list">${escapeHtml(s.raceFixedTrait)}</p>
+      ${(() => {
+        const { name: fixedName, desc: fixedBody } = raceTraitNameDesc(s.raceFixedTrait);
+        return `<div class="sheet-list"><div class="li"><b>${escapeHtml(fixedName)}</b>${fixedBody ? formatTraitBody(fixedBody) : ''}</div></div>`;
+      })()}
       ${s.raceVariantTrait ? `<div class="sheet-section-title">Variação</div><p class="sheet-list">${escapeHtml(s.raceVariantTrait)}</p>` : ''}
       <div class="sheet-section-title">Traços Opcionais Escolhidos</div>
       <div class="sheet-list">${raceOptHtml}</div>

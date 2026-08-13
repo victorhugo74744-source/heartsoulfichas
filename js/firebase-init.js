@@ -29,6 +29,40 @@ function escapeHtml(str) {
     .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 }
 
+// Traços raciais (fixo, opcionais, comprados) vêm do JSON como uma única
+// string "Nome: descrição corrida". Separa o nome do resto.
+function raceTraitNameDesc(str) {
+  if (!str) return { name: '', desc: '' };
+  const idx = str.indexOf(':');
+  if (idx === -1) return { name: str, desc: '' };
+  return { name: str.slice(0, idx).trim(), desc: str.slice(idx + 1).trim() };
+}
+// Muitos traços de raça embutem várias sub-seções dentro do mesmo parágrafo
+// corrido (ex.: "Anatomia Artificial: ... Fonte de Energia: ... Vulnerabilidade: ...").
+// Essa função detecta esses sub-títulos (frase curta com inicial maiúscula,
+// terminada em ":", logo após um ". ") e quebra o texto em uma introdução +
+// lista de itens com o sub-título em negrito, em vez de um bloco só de texto.
+// Quando não há sub-título nenhum (traço simples, de uma frase só), devolve
+// o texto como um único parágrafo — sem inventar estrutura onde não existe.
+function formatTraitBody(body) {
+  if (!body) return '';
+  const labelRe = /\.\s+(\p{Lu}[^.:]{0,44}):\s+/gu;
+  const matches = [];
+  let m;
+  while ((m = labelRe.exec(body))) {
+    matches.push({ label: m[1].trim(), start: m.index, contentStart: m.index + m[0].length });
+  }
+  if (matches.length === 0) {
+    return `<p class="trait-rich-body">${escapeHtml(body)}</p>`;
+  }
+  const intro = body.slice(0, matches[0].start + 1).trim();
+  const items = matches.map((mm, i) => {
+    const end = i + 1 < matches.length ? matches[i + 1].start + 1 : body.length;
+    return { label: mm.label, text: body.slice(mm.contentStart, end).trim() };
+  });
+  return `${intro ? `<p class="trait-rich-body">${escapeHtml(intro)}</p>` : ''}<ul class="trait-rich-list">${items.map(it => `<li><b>${escapeHtml(it.label)}:</b> ${escapeHtml(it.text)}</li>`).join('')}</ul>`;
+}
+
 function fmtDate(ts) {
   if (!ts) return '';
   const d = ts.toDate ? ts.toDate() : new Date(ts);
