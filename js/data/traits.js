@@ -560,11 +560,6 @@ window.HEARTSOUL_TRAITS = {
      "desc": "Você está sempre em alerta, como um caçador. +1 em Percepção e +1 em Investigação."
     },
     {
-     "name": "Psicopata",
-     "cost": 2,
-     "desc": "Você não tem senso de empatia e consegue manipular os outros com frieza. +2 em testes de Enganação, Intimidação e Persuasão. Uma vez por cena, ao manipular alguém, você pode forçar o alvo a um teste de Vontade (CD 15). Se falhar, ele age como você sugerir por 1 rodada (não pode causar dano direto a si mesmo)."
-    },
-    {
      "name": "Mestre Analista de Combate",
      "cost": 1,
      "desc": "Você consegue analisar padrões com rapidez. Após 1 rodada enfrentando o mesmo inimigo, você ganha +1 Esquiva contra os ataques dele (não acumula)."
@@ -658,6 +653,11 @@ window.HEARTSOUL_TRAITS = {
      "name": "Hipertimesia",
      "cost": 2,
      "desc": "Você se lembra de absolutamente todos os fatos da sua vida, os bons e os terríveis. +2 Intelecto, +1 Foco. -1 Vontade. Além disso, role Vontade (CD 16) ao dormir; se falhar, tem pesadelos com memórias ruins e não recupera Estamina total no descanso."
+    },
+    {
+     "name": "Psicopata",
+     "cost": 2,
+     "desc": "Você não tem senso de empatia e consegue manipular os outros com frieza. +2 em testes de Enganação, Intimidação e Persuasão. Uma vez por cena, ao manipular alguém, você pode forçar o alvo a um teste de Vontade (CD 15). Se falhar, ele age como você sugerir por 1 rodada (não pode causar dano direto a si mesmo). Sua frieza é notada: -2 em testes sociais com quem percebe sua falta de empatia (a critério do mestre)."
     }
    ]
   },
@@ -688,11 +688,6 @@ window.HEARTSOUL_TRAITS = {
      "name": "Alma Gêmea",
      "cost": 2,
      "desc": "Você compartilha um vínculo místico com outro personagem (escolhido na criação, com acordo do jogador). Enquanto estiverem a até 10 metros um do outro, ambos recebem +1 em todas as rolagens. Uma vez por sessão, pode usar sua Ação de Suporte para permitir que o aliado vinculado role novamente um teste falho."
-    },
-    {
-     "name": "Filho da Noite",
-     "cost": 1,
-     "desc": "Você pertence às sombras. +2 em testes de Furtividade durante a noite ou em ambientes escuros. Visão no escuro até 12 metros. Sob luz solar intensa, -1 em testes físicos."
     },
     {
      "name": "Mestre de Armas",
@@ -780,11 +775,6 @@ window.HEARTSOUL_TRAITS = {
      "desc": "Você é um mestre do disfarce, capaz de se tornar outra pessoa. +2 em testes de Enganação e Atuação. Com 10 minutos de preparação, pode alterar sua aparência física (roupas, cabelo, postura, voz) sem magia. O efeito dura até ser removido voluntariamente ou até um descanso."
     },
     {
-     "name": "Sobrecarga",
-     "cost": 2,
-     "desc": "Seu corpo pode suportar uma quantidade absurda de energia por um curto período. Uma vez por combate, como ação livre, dobre seu deslocamento e adicione +2 em testes de Destreza e Força por 2 rodadas. Após o efeito, sofre -2 em todos os testes físicos por 2 rodadas (exaustão)."
-    },
-    {
      "name": "Andarilho da Névoa",
      "cost": 1,
      "desc": "Você e a névoa são velhos conhecidos. +1 Furtividade em ambientes com neblina ou fumaça. Uma vez por descanso curto, pode se transformar em névoa por 1 turno: imune a dano físico, não pode atacar, e passa por frestas."
@@ -823,11 +813,6 @@ window.HEARTSOUL_TRAITS = {
      "name": "Tocha Viva",
      "cost": 1,
      "desc": "Seu corpo emite um calor reconfortante que aquece aliados e repele o frio. Luz natural em um raio de 3 metros. Aliados nesse raio ignoram penalidades de frio ambiental leve. Resistência a dano de Calor: reduz 1 ponto de dano recebido."
-    },
-    {
-     "name": "Explosão Contida",
-     "cost": 2,
-     "desc": "Você pode liberar uma onda de calor devastadora quando encurralado, mas isso drena suas forças. Uma vez por combate, como Ação de Suporte, cause 2d4 de dano de Calor em um raio de 3 metros ao seu redor (aliados são imunes). Após usar, sofre -1 em testes físicos por 1 rodada."
     },
     {
      "name": "Pele de Brasa",
@@ -1163,6 +1148,21 @@ window.HEARTSOUL_TRAITS = {
      "name": "Fome das Profundezas",
      "cost": 3,
      "desc": "Você fez um pacto com algo que vive no fundo do mar. Ele lhe concede poder, mas cobra sacrifícios. +2 em testes de ataque com armas de água ou gelo. Uma vez por combate, você pode invocar um tentáculo espectral de água que ataca um inimigo a até 9 metros: 2d6 de dano e agarra o alvo (teste de Força CD 18 para escapar). No entanto, cada uso consome 5 PV seus (o tentáculo se alimenta de sua vitalidade). Se você usar este poder sob a lua cheia, o tentáculo pode se voltar contra você (teste de Vontade CD 20 ou você é agarrado)."
+    },
+    {
+     "name": "Filho da Noite",
+     "cost": 1,
+     "desc": "Você pertence às sombras. +2 em testes de Furtividade durante a noite ou em ambientes escuros. Visão no escuro até 12 metros. Sob luz solar intensa, -1 em testes físicos (penalidade passiva permanente)."
+    },
+    {
+     "name": "Sobrecarga",
+     "cost": 2,
+     "desc": "Seu corpo pode suportar uma quantidade absurda de energia por um curto período. Uma vez por combate, como ação livre, dobre seu deslocamento e adicione +2 em testes de Destreza e Força por 2 rodadas. Após o efeito, sofre -2 em todos os testes físicos por 2 rodadas (exaustão)."
+    },
+    {
+     "name": "Explosão Contida",
+     "cost": 2,
+     "desc": "Você pode liberar uma onda de calor devastadora quando encurralado, mas isso drena suas forças. Uma vez por combate, como Ação de Suporte, cause 2d4 de dano de Calor em um raio de 3 metros ao seu redor (aliados são imunes). Após usar, sofre -1 em testes físicos por 1 rodada."
     }
    ]
   }
