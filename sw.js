@@ -10,9 +10,13 @@
 // cai por um instante, e permite abrir o app (a tela de login, por
 // exemplo) mesmo sem internet.
 
-const CACHE_NAME = 'heartsoul-shell-v7'; // v7: nova página patch-notes.html (Novidades) e seu arquivo de
-// dados patch-notes.json entraram no app shell, mesmo esquema do livro de regras (HTML fixo + JSON
-// carregado à parte via fetch).
+const CACHE_NAME = 'heartsoul-shell-v8'; // v8: bump forçado — a ferramenta "Névoa (contorno)" (mesa.html/
+// mesa-tools.js) não aparecia porque o service worker antigo (v7) continuava servindo o app shell em
+// cache mesmo depois do deploy da feature. Bumpar o nome do cache é o que faz o navegador notar que o
+// sw.js mudou, instalar a nova versão e (no evento "activate") apagar o cache v7 antigo — daí o próximo
+// carregamento de cada arquivo (mesa.html, mesa-tools.js etc.) vai pra rede em vez do cache obsoleto.
+// v7 (anterior): nova página patch-notes.html (Novidades) e seu arquivo de dados patch-notes.json
+// entraram no app shell, mesmo esquema do livro de regras (HTML fixo + JSON carregado à parte via fetch).
 const APP_SHELL = [
   './',
   './index.html',
