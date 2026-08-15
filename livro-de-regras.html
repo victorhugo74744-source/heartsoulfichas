@@ -723,7 +723,10 @@ mark{ background:var(--seal); color:#fff; padding:0 1px; border-radius:2px; }
   // marcação) e só depois troca os pares de ** por <strong> — as únicas
   // tags que entram no HTML final são as que ela mesma insere.
   function mdBold(s){
-    return escapeHtml(s).replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+    // O .replace(/\*\*/g,'') final limpa qualquer ** que tenha sobrado sem
+    // par (ex.: texto cortado no meio pra virar prévia/resumo) — assim
+    // nunca aparecem asteriscos soltos na tela, só o negrito de verdade.
+    return escapeHtml(s).replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>').replace(/\*\*/g, '');
   }
 
   function chapterMeta(chapterId){
@@ -741,7 +744,7 @@ mark{ background:var(--seal); color:#fff; padding:0 1px; border-radius:2px; }
       return `<div class="chapter-card" data-nav="${c.id}">
         <div class="cc-num">${String(i+1).padStart(2,'0')} ${c.subsections ? '· '+c.subsections.length+' entradas' : ''}</div>
         <h3>${escapeHtml(c.title)}</h3>
-        <p>${escapeHtml(desc)}</p>
+        <p>${mdBold(desc)}</p>
       </div>`;
     }).join('');
 
@@ -916,7 +919,10 @@ mark{ background:var(--seal); color:#fff; padding:0 1px; border-radius:2px; }
     const end = Math.min(text.length, idx + len + 60);
     let snip = (start>0?'…':'') + text.slice(start,end) + (end<text.length?'…':'');
     const re = new RegExp('('+escapeRegex(text.slice(idx,idx+len))+')','i');
-    return escapeHtml(snip).replace(re, '<mark>$1</mark>');
+    const marked = escapeHtml(snip).replace(re, '<mark>$1</mark>');
+    // Mesma troca de **negrito** que o resto do livro usa — a prévia da
+    // busca não deve mostrar os asteriscos crus.
+    return marked.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>').replace(/\*\*/g, '');
   }
   function escapeRegex(s){ return s.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'); }
 

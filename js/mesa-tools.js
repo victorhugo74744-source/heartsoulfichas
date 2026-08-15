@@ -661,18 +661,25 @@ async function clearAllWalls() {
 // (👁 na lista de tokens) revela um polígono ao redor de si — até
 // tok.visionRadius casas de alcance —, bloqueado pelas paredes desenhadas
 // acima. Três camadas ficam visíveis ao mesmo tempo, como memória de
-// exploração: **não explorado** (preto opaco), **já visto mas fora de
-// visão agora** (escurecido, "lembrança") e **visível agora** (limpo). A
-// exploração acumulada fica salva por casa da grade (tables/{id}/
-// visionMemory/{sceneId}, campo "cells") — compartilhada entre todos na
-// mesa, nunca "esquece" uma área já vista. O Mestre sempre vê o mapa
-// inteiro (a camada de névoa aparece bem clara pra ele, só de referência).
-const FOG_UNSEEN_COLOR = '#0a0806';
+// exploração: **não explorado** (bruma escura, mas não um breu 100%
+// opaco), **já visto mas fora de visão agora** (escurecido, "lembrança")
+// e **visível agora** (limpo). A exploração acumulada fica salva por casa
+// da grade (tables/{id}/visionMemory/{sceneId}, campo "cells") —
+// compartilhada entre todos na mesa, nunca "esquece" uma área já vista. O
+// Mestre sempre vê o mapa inteiro (a camada de névoa aparece bem clara
+// pra ele, só de referência).
+const FOG_UNSEEN_COLOR = 'rgba(17,14,11,0.86)'; // alpha < 1 de propósito: não é um breu totalmente opaco, deixa entrever vagamente o mapa por baixo
 const FOG_EXPLORED_DIM_ALPHA = 0.55; // o quanto uma casa "lembrada" (fora de visão agora) ainda escurece o mapa
 const FOG_CIRCLE_SAMPLES = 180; // raios extras, espaçados igualmente, pra a borda do alcance ficar arredondada
 let visionRecomputeQueued = false;
 let pendingExploredCells = {};
 let exploredPersistTimer = null;
+// Polígonos de visão *atuais* (não a memória) de cada token com visão —
+// usados só pra decidir quais NPCs ficam visíveis agora. Ao contrário da
+// memória de exploração (que revela o terreno já visto), a posição de uma
+// criatura escondida na névoa nunca deve "vazar" pra quem não está vendo
+// ela neste exato momento.
+let currentVisionPolygons = [];
 
 function scheduleVisionRecompute() {
   if (visionRecomputeQueued) return;
@@ -823,6 +830,7 @@ function recomputeAndRenderVision() {
   // completo (visível agora) e alimenta a memória de exploração.
   const segments = wallSegmentsForVision();
   const newCells = {};
+  currentVisionPolygons = [];
   ctx.globalCompositeOperation = 'destination-out';
   ctx.fillStyle = 'rgba(0,0,0,1)';
   Object.values(liveTokens).forEach(t => {
@@ -832,6 +840,7 @@ function recomputeAndRenderVision() {
     const radius = (t.visionRadius || DEFAULT_VISION_RADIUS_CELLS) * cellPx;
     const poly = computeVisibilityPolygon(cx, cy, radius, segments);
     if (poly.length < 3) return;
+    currentVisionPolygons.push(poly);
     ctx.beginPath();
     ctx.moveTo(poly[0].x, poly[0].y);
     for (let i = 1; i < poly.length; i++) ctx.lineTo(poly[i].x, poly[i].y);
@@ -846,9 +855,37 @@ function recomputeAndRenderVision() {
   // visão geral do tabuleiro.
   canvas.style.opacity = isTableOwner() ? '0.4' : '1';
 
+  applyNpcFogVisibility();
+
   let hasNew = false;
   Object.keys(newCells).forEach(k => { if (!exploredCells[k]) { exploredCells[k] = true; hasNew = true; } });
   if (hasNew) scheduleExploredPersist(newCells);
+}
+
+// Um ponto (em px "naturais" do mapa) está visível *agora* se cai dentro
+// de algum polígono de visão atual — ao contrário da memória de
+// exploração, isso nunca fica "salvo": some assim que nenhum token com
+// visão mais enxergar aquele ponto.
+function isPointCurrentlyVisible(px, py) {
+  return currentVisionPolygons.some(poly => pointInPolygon(px, py, poly));
+}
+
+// NPCs/monstros escondidos na névoa não devem aparecer pros jogadores —
+// só a ficha dos próprios personagens fica sempre visível pra quem joga.
+// O Mestre continua vendo todo mundo, sempre. Isso é reaplicado a cada
+// recálculo de visão (token se move, parede muda, etc.).
+function applyNpcFogVisibility() {
+  const master = isTableOwner();
+  Object.values(liveTokens).forEach(t => {
+    if (!t.npc) return; // fichas de jogador nunca ficam escondidas dos jogadores
+    const el = document.querySelector(`.token[data-id="${t.id}"]`);
+    const auraEl = document.querySelector(`.token-aura[data-aura-id="${t.id}"]`);
+    if (!el && !auraEl) return;
+    const p = tokenVisionPos(t);
+    const visible = master || isPointCurrentlyVisible(p.x * baseMapW, p.y * baseMapH);
+    if (el) el.style.display = visible ? '' : 'none';
+    if (auraEl) auraEl.style.display = visible ? '' : 'none';
+  });
 }
 
 // Grava as casas recém-reveladas na memória compartilhada da mesa
