@@ -356,10 +356,15 @@ async function enterBoardAsSheet(sheetId) {
       y: existing.exists ? existing.data().y : snapAxisToGrid(0.5, baseMapH, boardCellPx),
       updatedAt: firebase.firestore.FieldValue.serverTimestamp()
     };
-    // Só define o HP inicial na primeira vez que este token é criado — se
-    // já existir (ex.: "Atualizar aparência"), o HP atual (já com dano ou
-    // cura acumulados na sessão) é preservado.
-    if (!existing.exists) tokenData.hp = hpFromSheetResources(sheet.resources);
+    // Só define o HP e a visão inicial na primeira vez que este token é
+    // criado — se já existir (ex.: "Atualizar aparência"), o HP e a visão
+    // já ajustados na sessão são preservados. Fichas de jogador nascem com
+    // visão ligada (revelam a névoa ao redor de si) — ver DEFAULT_VISION_RADIUS_CELLS.
+    if (!existing.exists) {
+      tokenData.hp = hpFromSheetResources(sheet.resources);
+      tokenData.visionOn = true;
+      tokenData.visionRadius = DEFAULT_VISION_RADIUS_CELLS;
+    }
     await ref.set(tokenData, { merge: true });
     // Registra esta mesa como "ativa" no perfil do jogador — é assim que
     // js/editor.js sabe, na próxima vez que a ficha for salva, para quais
@@ -397,6 +402,9 @@ async function addNpcToken() {
       ownerId: curUser.uid, name, image, npc: true, color: npcColor, sceneId: curTable.activeSceneId,
       x: snapAxisToGrid(0.5, baseMapW, boardCellPx), y: snapAxisToGrid(0.5, baseMapH, boardCellPx),
       hp: defaultTokenHp(),
+      // NPCs nascem sem visão (não revelam névoa) — o Mestre liga manualmente
+      // (👁 na lista de tokens) quando fizer sentido, ex.: um familiar/aliado.
+      visionOn: false, visionRadius: DEFAULT_VISION_RADIUS_CELLS,
       updatedAt: firebase.firestore.FieldValue.serverTimestamp()
     });
     npcColor = pickDefaultColor(name + Date.now()); // próximo NPC nasce com outra cor, pra distinguir na mesa
@@ -534,6 +542,7 @@ function renderAllTokens() {
   updateSelectionHandles();
   renderMyResourcesBox();
   renderMyInventoryBox();
+  scheduleVisionRecompute(); // token(s) podem ter se movido/mudado — recalcula a névoa revelada
 
   if (!isTableOwner()) {
     updateMyTokenUiState(!!liveTokens[curUser.uid]);
@@ -572,6 +581,12 @@ function renderTokenListPanel() {
             <button data-aura-delta="${t.id}" data-delta="-0.5" title="Diminuir aura">−</button>
             <input type="number" class="aura-radius-input" data-aura-input="${t.id}" value="${t.auraRadius || 2}" min="0.5" step="0.5" title="Raio da aura (em quadrados)">
             <button data-aura-delta="${t.id}" data-delta="0.5" title="Aumentar aura">+</button>
+          ` : ''}
+          <button data-vision-toggle="${t.id}" title="${tokenHasVision(t) ? 'Desligar visão (para de revelar a névoa)' : 'Ligar visão (revela a névoa ao redor, bloqueada por paredes)'}">${tokenHasVision(t) ? '👁' : '🙈'}</button>
+          ${tokenHasVision(t) ? `
+            <button data-vision-delta="${t.id}" data-delta="-1" title="Diminuir alcance de visão">−</button>
+            <input type="number" class="aura-radius-input" data-vision-input="${t.id}" value="${t.visionRadius || DEFAULT_VISION_RADIUS_CELLS}" min="1" step="1" title="Alcance de visão (em casas da grade)">
+            <button data-vision-delta="${t.id}" data-delta="1" title="Aumentar alcance de visão">+</button>
           ` : ''}
           <button data-rotate="${t.id}" data-delta="-15" title="Girar à esquerda">⟲</button>
           <button data-rotate="${t.id}" data-delta="15" title="Girar à direita">⟳</button>
@@ -625,6 +640,17 @@ function renderTokenListPanel() {
     inp.addEventListener('click', (e) => e.stopPropagation());
     inp.addEventListener('keydown', (e) => { if (e.key === 'Enter') inp.blur(); });
     inp.addEventListener('change', () => setTokenAuraRadius(inp.dataset.auraInput, parseFloat(inp.value)));
+  });
+  body.querySelectorAll('[data-vision-toggle]').forEach(b =>
+    b.addEventListener('click', () => toggleTokenVision(b.dataset.visionToggle))
+  );
+  body.querySelectorAll('[data-vision-delta]').forEach(b =>
+    b.addEventListener('click', () => adjustTokenVisionRadius(b.dataset.visionDelta, parseFloat(b.dataset.delta)))
+  );
+  body.querySelectorAll('[data-vision-input]').forEach(inp => {
+    inp.addEventListener('click', (e) => e.stopPropagation());
+    inp.addEventListener('keydown', (e) => { if (e.key === 'Enter') inp.blur(); });
+    inp.addEventListener('change', () => setTokenVisionRadius(inp.dataset.visionInput, parseFloat(inp.value)));
   });
   body.querySelectorAll('[data-rotate]').forEach(b =>
     b.addEventListener('click', () => rotateToken(b.dataset.rotate, parseFloat(b.dataset.delta)))
@@ -754,6 +780,31 @@ async function setTokenAuraRadius(tokenId, value) {
   try {
     await db.collection('tables').doc(curTable.id).collection('tokens').doc(tokenId).update({ auraRadius: r });
   } catch (err) { console.error('Erro ao definir raio da aura:', err); }
+}
+
+async function toggleTokenVision(tokenId) {
+  const tok = liveTokens[tokenId]; if (!tok) return;
+  try {
+    await db.collection('tables').doc(curTable.id).collection('tokens').doc(tokenId)
+      .update({ visionOn: !tokenHasVision(tok), visionRadius: tok.visionRadius || DEFAULT_VISION_RADIUS_CELLS });
+  } catch (err) { console.error('Erro ao alternar visão:', err); }
+}
+
+async function adjustTokenVisionRadius(tokenId, delta) {
+  const tok = liveTokens[tokenId]; if (!tok) return;
+  const r = Math.max(1, Math.round((tok.visionRadius || DEFAULT_VISION_RADIUS_CELLS) + delta));
+  try {
+    await db.collection('tables').doc(curTable.id).collection('tokens').doc(tokenId).update({ visionRadius: r });
+  } catch (err) { console.error('Erro ao ajustar alcance de visão:', err); }
+}
+
+async function setTokenVisionRadius(tokenId, value) {
+  const tok = liveTokens[tokenId]; if (!tok) return;
+  if (isNaN(value)) { renderTokenListPanel(); return; } // valor inválido: repinta com o valor salvo
+  const r = Math.max(1, Math.round(value));
+  try {
+    await db.collection('tables').doc(curTable.id).collection('tokens').doc(tokenId).update({ visionRadius: r });
+  } catch (err) { console.error('Erro ao definir alcance de visão:', err); }
 }
 
 async function rotateToken(tokenId, delta) {
@@ -1034,6 +1085,8 @@ function attachTokenDragHandlers(el, tokenId) {
       el._lastX = x; el._lastY = y;
       el._freePlace = ev.altKey; // segurar Alt/Option solta sem encaixar na grade
       broadcastLiveTokenPosition(tokenId, x, y); // outros jogadores veem o token deslizando, em tempo real
+      liveDragPositions[tokenId] = { x, y }; // a própria visão (névoa) acompanha o token suavemente, sem esperar o Firestore
+      scheduleVisionRecompute();
     };
 
     const up = async (ev) => {
@@ -1044,6 +1097,7 @@ function attachTokenDragHandlers(el, tokenId) {
       if (auraEl) auraEl.classList.remove('dragging');
       draggingTokenId = null;
       cancelLiveTokenPosition(tokenId); // a escrita final abaixo já cobre a posição; evita um envio atrasado sobrescrevê-la
+      delete liveDragPositions[tokenId]; // a partir daqui, a visão volta a seguir a posição confirmada no Firestore
 
       // Um clique simples (quase sem arrastar) seleciona/deseleciona o
       // token em vez de mover — é o que abre as alças de girar/redimensionar
@@ -1057,9 +1111,10 @@ function attachTokenDragHandlers(el, tokenId) {
         selectedTokenId = (selectedTokenId === tokenId) ? null : tokenId;
         renderTokenListPanel();
         updateSelectionHandles();
+        scheduleVisionRecompute();
         return;
       }
-      if (el._lastX === undefined) return;
+      if (el._lastX === undefined) { scheduleVisionRecompute(); return; }
 
       let finalX = el._lastX, finalY = el._lastY;
       const shouldSnap = snapToGrid && !el._freePlace;
@@ -1069,6 +1124,7 @@ function attachTokenDragHandlers(el, tokenId) {
         el.style.left = (finalX * localW) + 'px';
         el.style.top = (finalY * localH) + 'px';
       }
+      scheduleVisionRecompute(); // atualiza já com a posição encaixada, sem esperar o Firestore confirmar
 
       try {
         await db.collection('tables').doc(curTable.id).collection('tokens').doc(tokenId)

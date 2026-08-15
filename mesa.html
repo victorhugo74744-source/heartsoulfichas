@@ -387,7 +387,7 @@ if ('serviceWorker' in navigator) {
     .tools-panel.retracted .tp-toggle-icon{ transform:rotate(180deg); writing-mode:horizontal-tb; }
   }
 
-  .board-wrap.tool-draw, .board-wrap.tool-fog, .board-wrap.tool-fogPoly, .board-wrap.tool-template{ cursor:crosshair; }
+  .board-wrap.tool-draw, .board-wrap.tool-wall, .board-wrap.tool-template{ cursor:crosshair; }
   .board-wrap.tool-ruler{ cursor:cell; }
   .board-wrap.tool-ping{ cursor:pointer; }
 
@@ -442,6 +442,19 @@ if ('serviceWorker' in navigator) {
   #templateSvgLayer{ z-index:3.5; }
   .token{ z-index:4; }
   .token.dragging{ z-index:5; }
+
+  /* ===== Paredes (bloqueiam a visão dos tokens) — só o Mestre vê ===== */
+  #wallSvgLayer{ position:absolute; top:0; left:0; z-index:3; }
+  .wall-line-shape{ fill:none; stroke:rgba(90,190,230,.6); stroke-width:4; stroke-dasharray:3 6; stroke-linecap:round; cursor:pointer; }
+  .wall-line-live{ fill:none; stroke:var(--gold); stroke-width:2.5; stroke-dasharray:6 4; }
+  .wall-live-dot{ fill:var(--gold); }
+  .wall-live-first{ fill:rgba(201,161,92,.35); stroke:var(--gold); stroke-width:2; }
+
+  /* ===== Névoa de guerra automática (visão dinâmica dos tokens) =====
+     Fica acima do mapa/desenhos/tokens (pra esconder quem está fora da
+     visão de qualquer token), mas abaixo da marcação/alças/régua, que
+     continuam úteis mesmo sobre área não revelada. */
+  .fog-of-war-canvas{ position:absolute; top:0; left:0; z-index:4.8; pointer-events:none; }
 
   .ping-mark{
     position:absolute; width:34px; height:34px; margin-left:-17px; margin-top:-17px;

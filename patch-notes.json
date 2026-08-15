@@ -1,9 +1,38 @@
 [
   {
+    "id": "2026-08-14-visao-dinamica-paredes-mesa",
+    "date": "2026-08-14",
+    "title": "Visão dinâmica dos tokens na Mesa (névoa automática, estilo Roll20)",
+    "tags": [
+      "Sistema"
+    ],
+    "changes": [
+      "A névoa de guerra deixou de ser pintada manualmente pelo Mestre — agora ela é 100% automática, revelada pela visão de cada token: cada ficha ou NPC com visão ligada (👁 na lista de tokens) enxerga um raio configurável de casas ao redor de si, e é isso que abre buracos na névoa.",
+      "Nova ferramenta \"🧱 Parede\" (atalho W): o Mestre clica ponto a ponto contornando paredes, portas e obstáculos — a visão dos tokens passa a ser bloqueada por elas, projetando sombra, como as paredes de uma sala de verdade. Clique perto do primeiro ponto (ou 2 cliques, ou Enter) fecha o traço; botão direito/Backspace desfaz o último ponto; Esc cancela. Botão \"🧹 Limpar paredes\" (Shift+W) apaga todas de uma vez.",
+      "As paredes só aparecem para o Mestre (linha tracejada azulada) — jogadores nunca as veem diretamente, só sentem o efeito delas bloqueando a névoa.",
+      "A névoa agora tem memória: áreas já exploradas por algum token ficam escurecidas (em vez de desaparecer de novo) quando saem do alcance de visão no momento, e essa exploração é compartilhada entre todos na mesa — quem entra depois já vê o que o grupo revelou antes.",
+      "Fichas de jogador nascem com visão ligada por padrão; NPCs nascem sem visão (o Mestre liga manualmente quando fizer sentido, como um familiar ou animal de estimação). O alcance de cada token é ajustável (+/− ou digitando o valor) do lado do botão de olho na lista de tokens.",
+      "As antigas ferramentas de névoa manual (🌫 Névoa e 🖊️ Névoa em contorno) foram removidas, já que a névoa agora acompanha a visão dos tokens sozinha."
+    ]
+  },
+  {
+    "id": "2026-08-14-lore-cards-largura-total",
+    "date": "2026-08-14",
+    "title": "Cards do capítulo \"Lore do Mundo\" agora ocupam a largura toda",
+    "tags": [
+      "Correção"
+    ],
+    "changes": [
+      "Os cards de deuses/demônios e de reinos, no capítulo \"Lore do Mundo\" do livro de regras, estavam organizados em grade de várias colunas (efeito \"tabuleiro de xadrez\"). Agora eles ficam empilhados em coluna única, cada card ocupando a largura inteira disponível — mais fácil de ler, principalmente as descrições mais longas dos reinos."
+    ]
+  },
+  {
     "id": "2026-08-12-nevoa-contorno-livre-mesa",
     "date": "2026-08-12",
     "title": "Nova ferramenta de Névoa em contorno livre na Mesa",
-    "tags": ["Sistema"],
+    "tags": [
+      "Sistema"
+    ],
     "changes": [
       "Além da névoa em retângulo (arrastar), agora o Mestre tem a ferramenta \"🖊️ Névoa (contorno)\" (atalho N): clique ponto a ponto contornando a área desejada e a região entre os pontos marcados vira névoa assim que o contorno é fechado — útil para cobrir salas, corredores e áreas com formato irregular que um retângulo não cobre bem.",
       "Pra fechar o contorno: clique perto do primeiro ponto (ele fica destacado assim que há 3 ou mais pontos marcados), dê um duplo clique, ou aperte Enter.",
@@ -15,7 +44,10 @@
     "id": "2026-08-07-filtro-tracos-funil",
     "date": "2026-08-07",
     "title": "Filtro de Traços atrás de um botão-funil + correção no acordeão",
-    "tags": ["Sistema", "Correção"],
+    "tags": [
+      "Sistema",
+      "Correção"
+    ],
     "changes": [
       "Na etapa \"Traços Adicionais\" do editor de ficha, a barra de filtros (custo, atributo concedido, adicional em testes, elemento) agora fica escondida por padrão e só aparece ao clicar no botão-funil ao lado da busca — o botão fica destacado e mostra quantos filtros estão ativos, mesmo com o painel fechado.",
       "Corrigido: com uma busca ou filtro ativo, não era possível fechar manualmente uma categoria de traço que tinha resultado — ela reabria sozinha no clique seguinte. Agora o clique no título da categoria funciona normalmente também durante uma busca/filtro."
@@ -25,7 +57,9 @@
     "id": "2026-08-07-capacidade-carga-tracos-mesa",
     "date": "2026-08-07",
     "title": "Correção: Capacidade de Carga na mesa não somava bônus de traços",
-    "tags": ["Correção"],
+    "tags": [
+      "Correção"
+    ],
     "changes": [
       "A caixa \"Seu inventário\" na mesa (aba do jogador) calculava a Capacidade de Carga usando só a Constituição base + ajuste manual, ignorando bônus de Constituição vindos de traço racial, traço extra ou antecedente. Agora ela soma esses bônus, igual já acontecia no editor de ficha e em \"📜 Ver ficha\"."
     ]
@@ -34,7 +68,9 @@
     "id": "2026-08-06-busca-tracos-e-correcao-elemento",
     "date": "2026-08-06",
     "title": "Busca de traços melhorada + correção nos filtros de Água e Ácido",
-    "tags": ["Sistema"],
+    "tags": [
+      "Sistema"
+    ],
     "changes": [
       "A busca de traços (etapa \"Traços Adicionais\" do editor de ficha) agora também procura no texto do efeito, não só no nome — buscar \"vontade\", por exemplo, encontra qualquer traço que mexa com Vontade, mesmo que a palavra não esteja no nome dele.",
       "A busca também ignora acento: escrever \"eletrico\" ou \"agua\" sem acentuar já encontra \"Elétrico\"/\"Água\" normalmente.",
@@ -45,7 +81,9 @@
     "id": "2026-08-05-tracos-escuridao-raio-luz-vento-agua",
     "date": "2026-08-05",
     "title": "Traços elementais de Escuridão, Raio, Luz, Vento e Água",
-    "tags": ["Traços"],
+    "tags": [
+      "Traços"
+    ],
     "changes": [
       "1 novo Traço Físico: Reflexos de Tempestade.",
       "7 novos Traços Especiais de Escuridão: Abraço das Sombras, Visão do Abismo, Passo Sombrio e Guardião do Crepúsculo (benignos); Amaldiçoado pelas Sombras, Olhos que Apagam e Coração das Trevas (malignos).",
@@ -59,7 +97,9 @@
     "id": "2026-08-05-filtro-tracos-editor",
     "date": "2026-08-05",
     "title": "Filtro de Traços na Ficha",
-    "tags": ["Sistema"],
+    "tags": [
+      "Sistema"
+    ],
     "changes": [
       "Nova barra de filtros na etapa \"Traços Adicionais\" do editor de ficha, combinável com a busca por nome: custo do traço, atributo concedido, adicional em testes e elemento (Fogo, Gelo/Frio, Raio/Elétrico, Ácido, Veneno, Sombra/Trevas, Luz, Vento/Ar, Água).",
       "As categorias de traço com resultado abrem automaticamente enquanto algum filtro estiver ativo, e um contador mostra quantos traços correspondem aos filtros escolhidos.",
@@ -70,7 +110,9 @@
     "id": "2026-08-05-sistema-patch-notes",
     "date": "2026-08-05",
     "title": "Página de Patch Notes",
-    "tags": ["Sistema"],
+    "tags": [
+      "Sistema"
+    ],
     "changes": [
       "Nova página \"Novidades\" reunindo o histórico de mudanças do sistema Heartsoul, acessível pelo menu do topo.",
       "Um indicador aparece no menu sempre que houver novidades que você ainda não viu."
@@ -80,7 +122,9 @@
     "id": "2026-08-05-tracos-elementais",
     "date": "2026-08-05",
     "title": "Traços elementais de Fogo e Gelo, e mais traços de combate",
-    "tags": ["Traços"],
+    "tags": [
+      "Traços"
+    ],
     "changes": [
       "11 novos Traços Físicos: Mestre em Mobilidade Silenciosa, Veterano de Zona de Extermínio, Determinação de Aço, Memória de Combate, Corpo Intacto, Flexibilidade Extrema, Pulso Rápido, Resistência Tóxica, Quebra-Guarda, Resistência a Dor e Reflexos Felinos.",
       "13 novos Traços Mentais: Intimidador Nato, Instinto Assassino, Concentração de Ferro, Adaptável, Mentalidade de Predador, Psicopata, Mestre Analista de Combate, Concentração Venenosa, Imunidade ao Medo, Fúria Calculada, Adaptador de Status, Comando de Unidade e Perseguidor Incansável.",
@@ -92,7 +136,9 @@
     "id": "2026-08-05-tracos-combate-lideranca",
     "date": "2026-08-05",
     "title": "Novos traços de combate e liderança",
-    "tags": ["Traços"],
+    "tags": [
+      "Traços"
+    ],
     "changes": [
       "8 novos Traços Físicos: Sangue Grosso, Velocidade de Ataque, Fera da Resistência, Sobrevivente Nato, Arranque Relâmpago, Corrida Explosiva, Assassino Silencioso e Comando de Operações Especiais.",
       "6 novos Traços Mentais: Líder de Vanguarda, Estratégia de Encurralamento, Manipulador Psicológico, Coração de Ferro, Líder Imponente e Mestre em Disfarces."

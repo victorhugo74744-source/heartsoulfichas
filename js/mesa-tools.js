@@ -47,9 +47,8 @@ function renderToolToolbar() {
       <button type="button" id="undoDrawBtn" title="Desfazer o último traço — atalho: Ctrl/Cmd+Z"><span class="tool-label">↩️ Desfazer</span><kbd class="tool-key">Ctrl+Z</kbd></button>
       <button type="button" id="clearDrawBtn" title="Apagar todos os desenhos desta cena — dica: com a ferramenta de desenho ativa, clique num traço pra apagar só ele — atalho: X"><span class="tool-label">🧹 Limpar desenhos</span><kbd class="tool-key">X</kbd></button>
       <div class="tt-sep"></div>
-      <button type="button" data-tool="fog" title="Cobrir/revelar em retângulo: arraste pra cobrir uma área (clique numa área coberta para revelar) — atalho: F"><span class="tool-label">🌫 Névoa</span><kbd class="tool-key">F</kbd></button>
-      <button type="button" data-tool="fogPoly" title="Cobrir/revelar em área livre: clique ponto a ponto contornando a área e clique no ponto inicial (ou dê 2 cliques) para fechar e preencher o contorno — clique numa área coberta para revelar, botão direito desfaz o último ponto, Esc cancela o contorno atual — atalho: N"><span class="tool-label">🖊️ Névoa (contorno)</span><kbd class="tool-key">N</kbd></button>
-      <button type="button" id="clearFogBtn" title="Revelar o mapa inteiro — atalho: Shift+F"><span class="tool-label">☀️ Revelar tudo</span><kbd class="tool-key">⇧F</kbd></button>
+      <button type="button" data-tool="wall" title="Desenhar paredes que bloqueiam a visão dos tokens: clique ponto a ponto contornando o obstáculo e clique no ponto inicial (ou dê 2 cliques / Enter) para terminar — a névoa de guerra é revelada automaticamente pela visão de cada token (👁 na lista de tokens), bloqueada por estas paredes; botão direito (ou Backspace) desfaz o último ponto, Esc cancela o traço atual — atalho: W"><span class="tool-label">🧱 Parede</span><kbd class="tool-key">W</kbd></button>
+      <button type="button" id="clearWallsBtn" title="Apagar todas as paredes desta cena — atalho: Shift+W"><span class="tool-label">🧹 Limpar paredes</span><kbd class="tool-key">⇧W</kbd></button>
     ` : ''}`;
 
   bar.querySelectorAll('[data-tool]').forEach(b => b.addEventListener('click', () => {
@@ -68,8 +67,8 @@ function renderToolToolbar() {
   if (clearDrawBtn) clearDrawBtn.addEventListener('click', clearAllDrawings);
   const undoDrawBtn = document.getElementById('undoDrawBtn');
   if (undoDrawBtn) undoDrawBtn.addEventListener('click', undoLastDrawing);
-  const clearFogBtn = document.getElementById('clearFogBtn');
-  if (clearFogBtn) clearFogBtn.addEventListener('click', clearAllFog);
+  const clearWallsBtn = document.getElementById('clearWallsBtn');
+  if (clearWallsBtn) clearWallsBtn.addEventListener('click', clearAllWalls);
   const clearTemplatesBtn = document.getElementById('clearTemplatesBtn');
   if (clearTemplatesBtn) clearTemplatesBtn.addEventListener('click', clearMyOrAllTemplates);
   const snapBtn = document.getElementById('snapToggleBtn');
@@ -108,16 +107,16 @@ function updateToolToolbarActive() {
   if (snapBtn) snapBtn.classList.toggle('tool-active', snapToGrid);
   const wrap = document.getElementById('boardWrap');
   if (wrap) {
-    wrap.classList.remove('tool-draw', 'tool-fog', 'tool-fogPoly', 'tool-ruler', 'tool-ping', 'tool-template');
+    wrap.classList.remove('tool-draw', 'tool-wall', 'tool-ruler', 'tool-ping', 'tool-template');
     if (boardTool !== 'pan') wrap.classList.add('tool-' + boardTool);
   }
 }
 
 function setBoardTool(tool) {
-  // Trocar de ferramenta no meio de um contorno de névoa cancela o contorno
-  // em andamento (senão os pontos marcados ficariam soltos, sem nunca
-  // virar névoa nem sumir da tela).
-  if (boardTool === 'fogPoly' && tool !== 'fogPoly' && typeof cancelFogPoly === 'function') cancelFogPoly();
+  // Trocar de ferramenta no meio de um traço de parede cancela o traço em
+  // andamento (senão os pontos marcados ficariam soltos, sem nunca virar
+  // parede nem sumir da tela).
+  if (boardTool === 'wall' && tool !== 'wall' && typeof cancelWallChain === 'function') cancelWallChain();
   boardTool = tool;
   updateToolToolbarActive();
 }
@@ -147,13 +146,13 @@ function handleBoardKeydown(e) {
   if (e.altKey) return; // Alt é usado por outras ferramentas (medir/soltar livre)
   const isMaster = isTableOwner();
   const key = e.key.toLowerCase();
-  if (boardTool === 'fogPoly' && isMaster) {
-    if (key === 'enter' && fogPolyPoints.length >= 3) { e.preventDefault(); finishFogPoly(); return; }
-    if (key === 'backspace' && fogPolyPoints.length) { e.preventDefault(); fogPolyPoints.pop(); renderFogPolyPreview(); return; }
+  if (boardTool === 'wall' && isMaster) {
+    if (key === 'enter' && wallPoints.length >= 2) { e.preventDefault(); finishWallChain(false); return; }
+    if (key === 'backspace' && wallPoints.length) { e.preventDefault(); wallPoints.pop(); renderWallPreview(); return; }
   }
   switch (key) {
     case 'escape':
-      if (boardTool === 'fogPoly' && fogPolyPoints.length) cancelFogPoly(); // primeiro Esc só limpa o contorno em andamento
+      if (boardTool === 'wall' && wallPoints.length) cancelWallChain(); // primeiro Esc só limpa o traço em andamento
       else setBoardTool('pan');
       break;
     case 'v': setBoardTool('pan'); break;
@@ -165,8 +164,7 @@ function handleBoardKeydown(e) {
     case 'c': clearMyOrAllTemplates(); break;
     case 'g': toggleSnapToGrid(); break;
     case 'd': if (isMaster) setBoardTool('draw'); break;
-    case 'f': if (isMaster) { if (e.shiftKey) clearAllFog(); else setBoardTool('fog'); } break;
-    case 'n': if (isMaster) setBoardTool('fogPoly'); break;
+    case 'w': if (isMaster) { if (e.shiftKey) clearAllWalls(); else setBoardTool('wall'); } break;
     case 'x': if (isMaster) clearAllDrawings(); break;
     default: return;
   }
@@ -475,115 +473,66 @@ async function clearAllDrawings() {
 }
 
 // ------------------------------------------------------------- NÉVOA --
-// Duas formas de cobrir o mapa com névoa de guerra:
-// - Retângulo (ferramenta "fog"): o Mestre arrasta de um canto ao outro.
-// - Contorno livre (ferramenta "fogPoly"): o Mestre clica ponto a ponto ao
-//   redor da área desejada; ao fechar o contorno (clicando de volta perto
-//   do primeiro ponto, dando 2 cliques, apertando Enter ou clicando no
-//   botão "Fechar contorno"), a região delimitada pelos pontos vira névoa —
-//   útil pra cobrir salas, corredores ou áreas com formato irregular que
-//   um retângulo não cobre bem.
-// Em ambos os casos, clicar numa área já coberta a revela (ela some).
-// Jogadores veem a névoa totalmente opaca; o Mestre a vê semitransparente,
-// pra saber o que está escondendo sem perder a visão geral do mapa.
-let fogPointerId = null, fogStartPoint = null;
-let fogPolyPoints = [], fogPolyHoverPoint = null;
+// A névoa (fog) antiga, pintada manualmente pelo Mestre, foi substituída
+// pela visão dinâmica dos tokens (ver "VISÃO DINÂMICA" mais abaixo): a
+// névoa agora é 100% automática, calculada a partir de onde cada token
+// com visão está e do que as paredes (ferramenta 🧱) bloqueiam — ninguém
+// mais pinta/revela manualmente. Estas funções ficam só de referência —
+// liveFog/renderFog/listenFog continuam existindo (chamadas em
+// renderBoardBackground) por segurança/compatibilidade com mesas antigas,
+// mas na prática não há mais botão nem atalho que crie névoa manual.
+function renderFog() { /* substituída pela visão dinâmica automática — ver renderFogOfWar() */ }
+function listenFog() { /* idem — a névoa não é mais lida/escrita manualmente */ }
 
-// Com qualquer uma das duas ferramentas de névoa ativas, clicar numa área
-// já coberta revela ela — não só com a ferramenta que a criou.
-function isFogToolActive() {
-  return boardTool === 'fog' || boardTool === 'fogPoly';
-}
+// -------------------------------------------------------------- PAREDES --
+// Ferramenta do Mestre (🧱 Parede) para desenhar as paredes que bloqueiam
+// a linha de visão dos tokens — é isso que dá forma à névoa de guerra
+// automática (ver "VISÃO DINÂMICA" logo abaixo). Clique ponto a ponto ao
+// redor do obstáculo (paredes de uma sala, um corredor etc.); termina o
+// traço com Enter, dois cliques, o botão "Fechar contorno" ou clicando de
+// volta perto do primeiro ponto (isso também fecha o contorno, útil pra
+// contornar uma sala inteira). Botão direito (ou Backspace) desfaz o
+// último ponto; Esc cancela o traço em andamento. As paredes só aparecem
+// para o Mestre (contorno tracejado azulado) — jogadores nunca as veem
+// diretamente, só sentem o efeito delas bloqueando a névoa.
+let wallPointerId = null;
+let wallPoints = [], wallHoverPoint = null;
 
-function attachFogHandlers(wrap) {
-  // -- Retângulo: clicar e arrastar --
+function attachWallHandlers(wrap) {
   wrap.addEventListener('pointerdown', (e) => {
-    if (boardTool !== 'fog' || !isTableOwner()) return;
-    if (e.target.closest('.fog-rect') || e.target.closest('.fog-poly-shape')) return; // clique numa área existente: ver handler próprio dela
-    fogPointerId = e.pointerId;
-    fogStartPoint = boardPointFromEvent(e);
-    wrap.setPointerCapture(e.pointerId);
-    e.preventDefault();
-  });
-  wrap.addEventListener('pointermove', (e) => {
-    if (fogPointerId !== e.pointerId || !fogStartPoint) return;
-    renderLiveFogPreview(fogStartPoint, boardPointFromEvent(e));
-  });
-  const endFog = async (e) => {
-    if (fogPointerId !== e.pointerId) return;
-    fogPointerId = null;
-    const start = fogStartPoint; fogStartPoint = null;
-    removeLiveFogPreview();
-    if (!start) return;
-    const end = boardPointFromEvent(e);
-    const x = Math.min(start.x, end.x), y = Math.min(start.y, end.y);
-    const w = Math.abs(end.x - start.x), h = Math.abs(end.y - start.y);
-    if (w < 0.01 || h < 0.01) return; // clique sem arrastar: ignora (evita névoa minúscula sem querer)
-    if (!curTable.activeSceneId) return;
-    try {
-      await db.collection('tables').doc(curTable.id).collection('fog').add({ x, y, w, h, sceneId: curTable.activeSceneId });
-    } catch (err) { console.error('Erro ao salvar névoa:', err); }
-  };
-  wrap.addEventListener('pointerup', endFog);
-  wrap.addEventListener('pointercancel', endFog);
-
-  // -- Contorno livre: clique a clique, marcando os pontos da borda --
-  wrap.addEventListener('pointerdown', (e) => {
-    if (boardTool !== 'fogPoly' || !isTableOwner()) return;
-    if (e.target.closest('.fog-rect') || e.target.closest('.fog-poly-shape')) return; // clique numa área existente: revela, não marca ponto
+    if (boardTool !== 'wall' || !isTableOwner()) return;
+    if (e.target.closest('.wall-line-shape')) return; // clique numa parede existente: apaga (ver renderWalls), não marca ponto
     if (e.button === 2) return; // botão direito: ver "contextmenu" (desfaz o último ponto)
     e.preventDefault();
     const pt = boardPointFromEvent(e);
-    // Clicar perto do ponto inicial (com pelo menos 3 já marcados) fecha o contorno.
-    if (fogPolyPoints.length >= 3 && isNearFogPolyStart(pt)) { finishFogPoly(); return; }
-    fogPolyPoints.push(pt);
-    renderFogPolyPreview();
+    if (wallPoints.length >= 3 && isNearWallStart(pt)) { finishWallChain(true); return; }
+    wallPoints.push(pt);
+    renderWallPreview();
   });
   wrap.addEventListener('pointermove', (e) => {
-    if (boardTool !== 'fogPoly' || !fogPolyPoints.length) return;
-    fogPolyHoverPoint = boardPointFromEvent(e);
-    renderFogPolyPreview();
+    if (boardTool !== 'wall' || !wallPoints.length) return;
+    wallHoverPoint = boardPointFromEvent(e);
+    renderWallPreview();
   });
   wrap.addEventListener('dblclick', (e) => {
-    if (boardTool !== 'fogPoly' || !fogPolyPoints.length) return;
+    if (boardTool !== 'wall' || wallPoints.length < 2) return;
     e.preventDefault();
-    finishFogPoly();
+    finishWallChain(false);
   });
   wrap.addEventListener('contextmenu', (e) => {
-    if (boardTool !== 'fogPoly') return;
+    if (boardTool !== 'wall') return;
     e.preventDefault();
-    if (fogPolyPoints.length) { fogPolyPoints.pop(); renderFogPolyPreview(); }
+    if (wallPoints.length) { wallPoints.pop(); renderWallPreview(); }
   });
 }
 
-function renderLiveFogPreview(a, b) {
-  const surface = document.getElementById('boardSurface');
-  let el = surface.querySelector('#liveFogPreview');
-  if (!el) {
-    el = document.createElement('div');
-    el.id = 'liveFogPreview';
-    el.className = 'fog-rect fog-master';
-    surface.appendChild(el);
-  }
-  const x = Math.min(a.x, b.x) * baseMapW, y = Math.min(a.y, b.y) * baseMapH;
-  const w = Math.abs(b.x - a.x) * baseMapW, h = Math.abs(b.y - a.y) * baseMapH;
-  el.style.left = x + 'px'; el.style.top = y + 'px'; el.style.width = w + 'px'; el.style.height = h + 'px';
-}
-
-function removeLiveFogPreview() {
-  const el = document.getElementById('liveFogPreview');
-  if (el) el.remove();
-}
-
-// Camada SVG compartilhada onde vivem os polígonos de névoa já salvos e a
-// prévia do contorno em andamento — mesmo padrão de drawSvgLayer() (a
-// viewBox usa as mesmas unidades de baseMapW/baseMapH, então os pontos
-// normalizados 0..1 dos fogs viram coordenadas diretas, sem conversão).
-function fogPolySvgLayer() {
-  let svg = document.getElementById('fogPolySvgLayer');
+// Camada SVG compartilhada das paredes já salvas + a prévia do traço em
+// andamento — mesmo padrão de drawSvgLayer()/fogPolySvgLayer().
+function wallSvgLayer() {
+  let svg = document.getElementById('wallSvgLayer');
   if (!svg) {
     svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-    svg.id = 'fogPolySvgLayer';
+    svg.id = 'wallSvgLayer';
     svg.style.position = 'absolute'; svg.style.top = '0'; svg.style.left = '0';
     svg.style.pointerEvents = 'none';
     document.getElementById('boardSurface').appendChild(svg);
@@ -593,156 +542,346 @@ function fogPolySvgLayer() {
   return svg;
 }
 
-// Raio (em px de mapa) considerado "perto o bastante do primeiro ponto"
-// pra fechar o contorno com um clique — acompanha o tamanho da grade pra
-// funcionar bem tanto em mapas com casas grandes quanto pequenas.
-function isNearFogPolyStart(pt) {
-  const first = fogPolyPoints[0];
+function isNearWallStart(pt) {
+  const first = wallPoints[0];
   const dx = (pt.x - first.x) * baseMapW, dy = (pt.y - first.y) * baseMapH;
   return Math.hypot(dx, dy) < Math.max(14, boardCellPx * 0.25);
 }
 
-// Prévia ao vivo do contorno: linha ligando os pontos já marcados até o
-// cursor, preenchimento provisório (não salvo ainda) e uma bolinha maior
-// no primeiro ponto, indicando onde clicar pra fechar a área.
-function renderFogPolyPreview() {
-  const svg = fogPolySvgLayer();
-  if (!fogPolyPoints.length) { removeFogPolyPreview(); return; }
-  let g = svg.querySelector('#liveFogPolyPreview');
+function renderWallPreview() {
+  const svg = wallSvgLayer();
+  if (!wallPoints.length) { removeWallPreview(); return; }
+  let g = svg.querySelector('#liveWallPreview');
   if (!g) {
     g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-    g.id = 'liveFogPolyPreview';
-    g.innerHTML = '<polygon class="fog-poly-live-shape"></polygon><polyline class="fog-poly-live-line"></polyline>';
+    g.id = 'liveWallPreview';
+    g.innerHTML = '<polyline class="wall-line-live"></polyline>';
     svg.appendChild(g);
   }
-  const linePts = fogPolyHoverPoint ? [...fogPolyPoints, fogPolyHoverPoint] : fogPolyPoints;
-  const attr = pointsToPathAttr(linePts);
-  g.querySelector('.fog-poly-live-line').setAttribute('points', attr);
-  g.querySelector('.fog-poly-live-shape').setAttribute('points', attr);
-  g.querySelectorAll('.fog-poly-live-dot, .fog-poly-live-first').forEach(el => el.remove());
-  fogPolyPoints.forEach((p, i) => {
+  const linePts = wallHoverPoint ? [...wallPoints, wallHoverPoint] : wallPoints;
+  g.querySelector('.wall-line-live').setAttribute('points', pointsToPathAttr(linePts));
+  g.querySelectorAll('.wall-live-dot, .wall-live-first').forEach(el => el.remove());
+  wallPoints.forEach((p, i) => {
     const c = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
     c.setAttribute('cx', p.x * baseMapW); c.setAttribute('cy', p.y * baseMapH);
-    const isFirst = i === 0 && fogPolyPoints.length >= 3;
+    const isFirst = i === 0 && wallPoints.length >= 3;
     c.setAttribute('r', isFirst ? 8 : 4);
-    c.setAttribute('class', isFirst ? 'fog-poly-live-first' : 'fog-poly-live-dot');
+    c.setAttribute('class', isFirst ? 'wall-live-first' : 'wall-live-dot');
     g.appendChild(c);
   });
 }
 
-function removeFogPolyPreview() {
-  const g = document.querySelector('#fogPolySvgLayer #liveFogPolyPreview');
+function removeWallPreview() {
+  const g = document.querySelector('#wallSvgLayer #liveWallPreview');
   if (g) g.remove();
 }
 
-// Fecha o contorno atual e salva a névoa em formato de polígono. Pede ao
-// menos 3 pontos (senão não delimita área nenhuma).
-async function finishFogPoly() {
-  const pts = fogPolyPoints;
-  fogPolyPoints = []; fogPolyHoverPoint = null;
-  removeFogPolyPreview();
-  if (pts.length < 3 || !curTable.activeSceneId) return;
+// Fecha o traço atual e salva a parede (uma cadeia de segmentos — "closed"
+// marca se o último ponto deve se ligar de volta ao primeiro, fechando um
+// contorno completo, útil pra cercar uma sala inteira de uma vez).
+async function finishWallChain(closed) {
+  const pts = wallPoints;
+  wallPoints = []; wallHoverPoint = null;
+  removeWallPreview();
+  if (pts.length < 2 || !curTable.activeSceneId) return;
   try {
-    await db.collection('tables').doc(curTable.id).collection('fog').add({
-      type: 'poly',
+    await db.collection('tables').doc(curTable.id).collection('walls').add({
       points: pts.map(p => ({ x: p.x, y: p.y })),
+      closed: !!closed,
       sceneId: curTable.activeSceneId
     });
-  } catch (err) { console.error('Erro ao salvar névoa (contorno):', err); }
+  } catch (err) { console.error('Erro ao salvar parede:', err); }
 }
 
-// Descarta o contorno em andamento sem salvar nada (Esc, ou troca de
+// Descarta o traço em andamento sem salvar nada (Esc, ou troca de
 // ferramenta/cena no meio do desenho).
-function cancelFogPoly() {
-  fogPolyPoints = []; fogPolyHoverPoint = null;
-  removeFogPolyPreview();
+function cancelWallChain() {
+  wallPoints = []; wallHoverPoint = null;
+  removeWallPreview();
 }
 
-function renderFog() {
-  const surface = document.getElementById('boardSurface');
-  if (!surface) return;
-  surface.querySelectorAll('.fog-rect[data-fog-id]').forEach(el => {
-    if (!liveFog[el.dataset.fogId]) el.remove();
-  });
-  const svg = fogPolySvgLayer();
-  svg.querySelectorAll('polygon[data-fog-id]').forEach(el => {
-    if (!liveFog[el.dataset.fogId]) el.remove();
-  });
+function renderWalls() {
+  const svg = wallSvgLayer();
   const isMaster = isTableOwner();
-  Object.values(liveFog).forEach(f => {
-    // Névoas antigas (salvas antes desta função existir) não têm "type" e
-    // continuam sendo retângulos — só as novas, marcadas type:'poly' com
-    // pontos suficientes, usam o caminho de polígono.
-    if (f.type === 'poly' && Array.isArray(f.points) && f.points.length >= 3) {
-      renderFogPolyShape(f, svg, isMaster);
-    } else {
-      renderFogRectShape(f, surface, isMaster);
+  // Jogadores nunca veem as paredes em si — só o efeito delas bloqueando a
+  // névoa (ver renderFogOfWar) — então a camada inteira fica escondida
+  // pra eles, e nem seguimos criando/atualizando os elementos à toa.
+  svg.style.display = isMaster ? '' : 'none';
+  if (!isMaster) return;
+  svg.querySelectorAll('polyline[data-wall-id]').forEach(el => {
+    if (!liveWalls[el.dataset.wallId]) el.remove();
+  });
+  Object.values(liveWalls).forEach(w => {
+    let el = svg.querySelector(`polyline[data-wall-id="${w.id}"]`);
+    if (!el) {
+      el = document.createElementNS('http://www.w3.org/2000/svg', 'polyline');
+      el.dataset.wallId = w.id;
+      el.setAttribute('class', 'wall-line-shape');
+      el.style.pointerEvents = 'auto'; // a camada toda ignora clique — só a linha da parede recebe
+      svg.appendChild(el);
+      el.addEventListener('pointerdown', async (e) => {
+        if (boardTool !== 'wall' || !isTableOwner()) return;
+        e.stopPropagation();
+        try { await db.collection('tables').doc(curTable.id).collection('walls').doc(w.id).delete(); }
+        catch (err) { console.error('Erro ao apagar parede:', err); }
+      });
     }
+    const pts = w.points || [];
+    const drawPts = (w.closed && pts.length >= 3) ? [...pts, pts[0]] : pts;
+    el.setAttribute('points', pointsToPathAttr(drawPts));
   });
 }
 
-function renderFogRectShape(f, surface, isMaster) {
-  let el = surface.querySelector(`.fog-rect[data-fog-id="${f.id}"]`);
-  if (!el) {
-    el = document.createElement('div');
-    el.dataset.fogId = f.id;
-    el.className = 'fog-rect';
-    surface.appendChild(el);
-    el.addEventListener('pointerdown', async (e) => {
-      if (!isFogToolActive() || !isTableOwner()) return;
-      e.stopPropagation();
-      try { await db.collection('tables').doc(curTable.id).collection('fog').doc(f.id).delete(); }
-      catch (err) { console.error('Erro ao revelar névoa:', err); }
-    });
-  }
-  el.classList.toggle('fog-master', isMaster);
-  el.style.left = (f.x * baseMapW) + 'px';
-  el.style.top = (f.y * baseMapH) + 'px';
-  el.style.width = (f.w * baseMapW) + 'px';
-  el.style.height = (f.h * baseMapH) + 'px';
-}
-
-function renderFogPolyShape(f, svg, isMaster) {
-  let el = svg.querySelector(`polygon[data-fog-id="${f.id}"]`);
-  if (!el) {
-    el = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
-    el.dataset.fogId = f.id;
-    el.setAttribute('class', 'fog-poly-shape');
-    el.style.pointerEvents = 'auto'; // a camada svg toda ignora clique — só a forma preenchida recebe
-    svg.appendChild(el);
-    el.addEventListener('pointerdown', async (e) => {
-      if (!isFogToolActive() || !isTableOwner()) return;
-      e.stopPropagation();
-      try { await db.collection('tables').doc(curTable.id).collection('fog').doc(f.id).delete(); }
-      catch (err) { console.error('Erro ao revelar névoa:', err); }
-    });
-  }
-  el.classList.toggle('fog-master', isMaster);
-  el.setAttribute('points', pointsToPathAttr(f.points));
-}
-
-function listenFog() {
+function listenWalls() {
   if (!curTable.activeSceneId) return;
-  fogUnsub = db.collection('tables').doc(curTable.id).collection('fog')
+  wallsUnsub = db.collection('tables').doc(curTable.id).collection('walls')
     .where('sceneId', '==', curTable.activeSceneId)
     .onSnapshot(snap => {
-      liveFog = {};
-      snap.forEach(d => { liveFog[d.id] = { id: d.id, ...d.data() }; });
-      renderFog();
-    }, err => console.error('Erro ao sincronizar névoa:', err));
+      liveWalls = {};
+      snap.forEach(d => { liveWalls[d.id] = { id: d.id, ...d.data() }; });
+      renderWalls();
+      scheduleVisionRecompute();
+    }, err => console.error('Erro ao sincronizar paredes:', err));
 }
 
-async function clearAllFog() {
+async function clearAllWalls() {
   if (!curTable.activeSceneId) return;
-  if (!confirm('Revelar o mapa inteiro desta cena (remover toda a névoa)?')) return;
+  if (!confirm('Apagar todas as paredes desta cena?')) return;
   try {
-    const snap = await db.collection('tables').doc(curTable.id).collection('fog')
+    const snap = await db.collection('tables').doc(curTable.id).collection('walls')
       .where('sceneId', '==', curTable.activeSceneId).get();
     const batch = db.batch();
     snap.forEach(d => batch.delete(d.ref));
     await batch.commit();
-  } catch (err) { alert('Erro ao revelar tudo: ' + err.message); }
+  } catch (err) { alert('Erro ao limpar paredes: ' + err.message); }
 }
+
+// ------------------------------------------------- VISÃO DINÂMICA (névoa) --
+// Névoa de guerra automática, estilo Roll20: cada token com visão ligada
+// (👁 na lista de tokens) revela um polígono ao redor de si — até
+// tok.visionRadius casas de alcance —, bloqueado pelas paredes desenhadas
+// acima. Três camadas ficam visíveis ao mesmo tempo, como memória de
+// exploração: **não explorado** (preto opaco), **já visto mas fora de
+// visão agora** (escurecido, "lembrança") e **visível agora** (limpo). A
+// exploração acumulada fica salva por casa da grade (tables/{id}/
+// visionMemory/{sceneId}, campo "cells") — compartilhada entre todos na
+// mesa, nunca "esquece" uma área já vista. O Mestre sempre vê o mapa
+// inteiro (a camada de névoa aparece bem clara pra ele, só de referência).
+const FOG_UNSEEN_COLOR = '#0a0806';
+const FOG_EXPLORED_DIM_ALPHA = 0.55; // o quanto uma casa "lembrada" (fora de visão agora) ainda escurece o mapa
+const FOG_CIRCLE_SAMPLES = 180; // raios extras, espaçados igualmente, pra a borda do alcance ficar arredondada
+let visionRecomputeQueued = false;
+let pendingExploredCells = {};
+let exploredPersistTimer = null;
+
+function scheduleVisionRecompute() {
+  if (visionRecomputeQueued) return;
+  visionRecomputeQueued = true;
+  requestAnimationFrame(() => { visionRecomputeQueued = false; recomputeAndRenderVision(); });
+}
+
+function fogOfWarCanvas() {
+  let canvas = document.getElementById('fogOfWarCanvas');
+  if (!canvas) {
+    canvas = document.createElement('canvas');
+    canvas.id = 'fogOfWarCanvas';
+    canvas.className = 'fog-of-war-canvas';
+    document.getElementById('boardSurface').appendChild(canvas);
+  }
+  return canvas;
+}
+
+// Devolve todos os segmentos de parede (já em px "naturais" do mapa,
+// mesmo espaço de baseMapW/baseMapH), prontos pro cálculo de visibilidade.
+function wallSegmentsForVision() {
+  const segs = [];
+  Object.values(liveWalls).forEach(w => {
+    const pts = w.points || [];
+    for (let i = 0; i < pts.length - 1; i++) {
+      segs.push({
+        x1: pts[i].x * baseMapW, y1: pts[i].y * baseMapH,
+        x2: pts[i + 1].x * baseMapW, y2: pts[i + 1].y * baseMapH
+      });
+    }
+    if (w.closed && pts.length >= 3) {
+      const a = pts[pts.length - 1], b = pts[0];
+      segs.push({ x1: a.x * baseMapW, y1: a.y * baseMapH, x2: b.x * baseMapW, y2: b.y * baseMapH });
+    }
+  });
+  return segs;
+}
+
+// Interseção de um raio (origem px,py, direção unitária dx,dy) com um
+// segmento (ax,ay)-(bx,by). Devolve a distância "t" ao longo do raio até o
+// ponto de interseção, ou null se não houver (paralelos ou fora do
+// segmento/atrás da origem).
+function rayHitsSegment(px, py, dx, dy, ax, ay, bx, by) {
+  const sdx = bx - ax, sdy = by - ay;
+  const denom = dx * sdy - dy * sdx;
+  if (Math.abs(denom) < 1e-9) return null;
+  const t = ((ax - px) * sdy - (ay - py) * sdx) / denom;
+  const u = ((ax - px) * dy - (ay - py) * dx) / denom;
+  if (t >= 0 && u >= 0 && u <= 1) return t;
+  return null;
+}
+
+// Polígono de visibilidade (estilo "2D visibility"/shadowcasting) a partir
+// do centro (cx,cy), limitado ao alcance "radius" (px) e bloqueado pelos
+// segmentos de parede — cantos de parede projetam sombra "dura", e onde não
+// há obstrução nenhuma a borda vira o próprio círculo do alcance (graças às
+// amostras uniformes somadas aos ângulos exatos dos cantos das paredes).
+function computeVisibilityPolygon(cx, cy, radius, segments) {
+  const angles = [];
+  for (let i = 0; i < FOG_CIRCLE_SAMPLES; i++) angles.push((i / FOG_CIRCLE_SAMPLES) * Math.PI * 2);
+  const EPS = 0.00002;
+  segments.forEach(s => {
+    const a1 = Math.atan2(s.y1 - cy, s.x1 - cx);
+    const a2 = Math.atan2(s.y2 - cy, s.x2 - cx);
+    angles.push(a1 - EPS, a1, a1 + EPS, a2 - EPS, a2, a2 + EPS);
+  });
+  angles.sort((a, b) => a - b);
+
+  const pts = [];
+  for (const angle of angles) {
+    const dx = Math.cos(angle), dy = Math.sin(angle);
+    let minT = radius;
+    for (const s of segments) {
+      const t = rayHitsSegment(cx, cy, dx, dy, s.x1, s.y1, s.x2, s.y2);
+      if (t !== null && t < minT) minT = t;
+    }
+    pts.push({ x: cx + dx * minT, y: cy + dy * minT });
+  }
+  return pts;
+}
+
+function pointInPolygon(px, py, poly) {
+  let inside = false;
+  for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+    const xi = poly[i].x, yi = poly[i].y, xj = poly[j].x, yj = poly[j].y;
+    const intersect = ((yi > py) !== (yj > py)) && (px < (xj - xi) * (py - yi) / (yj - yi) + xi);
+    if (intersect) inside = !inside;
+  }
+  return inside;
+}
+
+// Marca (em "out") as casas da grade cujo centro cai dentro do polígono de
+// visão — só testa as casas dentro do quadrado que envolve o alcance, pra
+// não varrer o mapa inteiro a cada token.
+function collectExploredCells(poly, cx, cy, radius, out) {
+  const cellPx = boardCellPx || DEFAULT_CELL_PX;
+  const maxCol = Math.max(0, Math.ceil(baseMapW / cellPx) - 1);
+  const maxRow = Math.max(0, Math.ceil(baseMapH / cellPx) - 1);
+  const colMin = Math.max(0, Math.floor((cx - radius) / cellPx));
+  const colMax = Math.min(maxCol, Math.ceil((cx + radius) / cellPx));
+  const rowMin = Math.max(0, Math.floor((cy - radius) / cellPx));
+  const rowMax = Math.min(maxRow, Math.ceil((cy + radius) / cellPx));
+  for (let r = rowMin; r <= rowMax; r++) {
+    for (let c = colMin; c <= colMax; c++) {
+      const key = c + ',' + r;
+      if (out[key] || exploredCells[key]) continue;
+      const px = (c + 0.5) * cellPx, py = (r + 0.5) * cellPx;
+      if (pointInPolygon(px, py, poly)) out[key] = true;
+    }
+  }
+}
+
+// Posição "visual atual" de um token — usa a posição de arrasto ao vivo
+// (se houver) em vez da última posição confirmada no Firestore, pra a
+// visão acompanhar o token suavemente enquanto ele ainda está sendo
+// arrastado (tanto pelo próprio jogador quanto por outra pessoa vista via
+// broadcastLiveTokenPosition).
+function tokenVisionPos(t) {
+  const live = liveDragPositions[t.id];
+  return live || { x: t.x, y: t.y };
+}
+
+function recomputeAndRenderVision() {
+  if (!curTable || !curTable.activeSceneId || !baseMapW || !baseMapH) return;
+  const canvas = fogOfWarCanvas();
+  if (canvas.width !== baseMapW) canvas.width = baseMapW;
+  if (canvas.height !== baseMapH) canvas.height = baseMapH;
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, baseMapW, baseMapH);
+
+  // Base: tudo "não explorado" (opaco).
+  ctx.globalCompositeOperation = 'source-over';
+  ctx.fillStyle = FOG_UNSEEN_COLOR;
+  ctx.fillRect(0, 0, baseMapW, baseMapH);
+
+  // Casas já exploradas (memória): escurece um pouco menos que o "nunca visto".
+  const cellPx = boardCellPx || DEFAULT_CELL_PX;
+  ctx.globalCompositeOperation = 'destination-out';
+  ctx.fillStyle = `rgba(0,0,0,${FOG_EXPLORED_DIM_ALPHA})`;
+  Object.keys(exploredCells).forEach(key => {
+    if (!exploredCells[key]) return;
+    const parts = key.split(',');
+    const c = Number(parts[0]), r = Number(parts[1]);
+    ctx.fillRect(c * cellPx - 0.5, r * cellPx - 0.5, cellPx + 1, cellPx + 1); // +1px de folga evita frestas entre casas
+  });
+
+  // Tokens com visão: cada polígono de visibilidade limpa a névoa por
+  // completo (visível agora) e alimenta a memória de exploração.
+  const segments = wallSegmentsForVision();
+  const newCells = {};
+  ctx.globalCompositeOperation = 'destination-out';
+  ctx.fillStyle = 'rgba(0,0,0,1)';
+  Object.values(liveTokens).forEach(t => {
+    if (!isTokenInActiveScene(t) || !tokenHasVision(t)) return;
+    const p = tokenVisionPos(t);
+    const cx = p.x * baseMapW, cy = p.y * baseMapH;
+    const radius = (t.visionRadius || DEFAULT_VISION_RADIUS_CELLS) * cellPx;
+    const poly = computeVisibilityPolygon(cx, cy, radius, segments);
+    if (poly.length < 3) return;
+    ctx.beginPath();
+    ctx.moveTo(poly[0].x, poly[0].y);
+    for (let i = 1; i < poly.length; i++) ctx.lineTo(poly[i].x, poly[i].y);
+    ctx.closePath();
+    ctx.fill();
+    collectExploredCells(poly, cx, cy, radius, newCells);
+  });
+  ctx.globalCompositeOperation = 'source-over';
+
+  // O Mestre vê o mapa inteiro sempre — a névoa fica só como referência
+  // bem clara, pra saber o que os jogadores ainda não viram sem perder a
+  // visão geral do tabuleiro.
+  canvas.style.opacity = isTableOwner() ? '0.4' : '1';
+
+  let hasNew = false;
+  Object.keys(newCells).forEach(k => { if (!exploredCells[k]) { exploredCells[k] = true; hasNew = true; } });
+  if (hasNew) scheduleExploredPersist(newCells);
+}
+
+// Grava as casas recém-reveladas na memória compartilhada da mesa
+// (tables/{id}/visionMemory/{sceneId}), agrupando várias descobertas numa
+// única escrita (throttle) pra não sobrecarregar o Firestore durante um
+// arrasto ou quando várias casas somem da névoa de uma vez.
+function scheduleExploredPersist(newCells) {
+  Object.assign(pendingExploredCells, newCells);
+  if (exploredPersistTimer) return;
+  exploredPersistTimer = setTimeout(flushExploredPersist, 700);
+}
+
+function flushExploredPersist() {
+  exploredPersistTimer = null;
+  const keys = Object.keys(pendingExploredCells);
+  pendingExploredCells = {};
+  if (!keys.length || !curTable || !curTable.activeSceneId) return;
+  const update = {};
+  keys.forEach(k => { update['cells.' + k] = true; });
+  db.collection('tables').doc(curTable.id).collection('visionMemory').doc(curTable.activeSceneId)
+    .set(update, { merge: true })
+    .catch(err => console.error('Erro ao salvar memória de visão:', err));
+}
+
+function listenVisionMemory() {
+  if (!curTable.activeSceneId) return;
+  visionMemUnsub = db.collection('tables').doc(curTable.id).collection('visionMemory').doc(curTable.activeSceneId)
+    .onSnapshot(doc => {
+      exploredCells = (doc.exists && doc.data().cells) || {};
+      scheduleVisionRecompute();
+    }, err => console.error('Erro ao sincronizar memória de visão:', err));
+}
+
 
 // -------------------------------------------------------------- MARCAR --
 // "Ping": qualquer jogador presente pode marcar um ponto do mapa para
@@ -1169,7 +1308,7 @@ function attachBoardInteractionHandlers() {
 
   attachRulerHandlers(wrap);
   attachDrawHandlers(wrap);
-  attachFogHandlers(wrap);
+  attachWallHandlers(wrap);
   attachPingHandlers(wrap);
   attachTemplateHandlers(wrap);
 }

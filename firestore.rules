@@ -181,6 +181,30 @@ service cloud.firestore {
         allow update: if false;
       }
 
+      // Paredes (ferramenta 🧱) que bloqueiam a visão dos tokens — dão
+      // forma à névoa de guerra automática. Só o Mestre dono desta mesa
+      // desenha/apaga; todos na mesa leem (mesmo que só o Mestre chegue a
+      // renderizar as linhas — o cálculo de visão roda no cliente de
+      // todo mundo, então todos precisam poder ler os segmentos).
+      match /walls/{wallId} {
+        allow read: if isSignedIn();
+        allow create, delete: if isTableMaster(tableId);
+        allow update: if false;
+      }
+
+      // Memória de exploração da névoa dinâmica (um doc por cena, campo
+      // "cells" acumulando as casas da grade já reveladas por algum token
+      // com visão). Qualquer pessoa presente na mesa pode contribuir com
+      // novas casas exploradas (é o próprio cálculo de visão, rodando no
+      // cliente de cada jogador, que grava aqui) — nunca "esquece" uma
+      // área, só soma; por isso não há necessidade de restringir a
+      // escrita ao Mestre. Só o Mestre remove (ao excluir a cena).
+      match /visionMemory/{sceneId} {
+        allow read: if isSignedIn();
+        allow create, update: if isSignedIn();
+        allow delete: if isTableMaster(tableId);
+      }
+
       // Marcações temporárias de "ping" no mapa (ferramenta 📍). Qualquer
       // jogador presente pode marcar um ponto; cada um só apaga a própria
       // marcação (o próprio cliente que criou a apaga sozinho após alguns

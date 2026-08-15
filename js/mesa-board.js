@@ -48,13 +48,33 @@ let lastRenderedSceneId = undefined; // não confundir com null (= "sem cena nen
 // 'pan' é a ferramenta padrão (arrastar move o mapa / roda-mouse-pinça dá
 // zoom, como já era). As outras ferramentas tomam conta do pointerdown no
 // board-wrap enquanto ativas; ver attachBoardInteractionHandlers.
-let boardTool = 'pan'; // 'pan' | 'ruler' | 'draw' | 'fog' | 'ping' | 'template'
+let boardTool = 'pan'; // 'pan' | 'ruler' | 'draw' | 'wall' | 'ping' | 'template'
 // Owlbear Rodeo não usa uma paleta fixa de cores prontas — só a roda
 // cromática. drawColor nasce igual à cor do Mestre na mesa (myColor) e só
 // muda se ele escolher outra na própria roda (ver openTable/renderToolToolbar).
 let drawColor = '#e0473f';
 let drawUnsub = null, fogUnsub = null, pingUnsub = null, templateUnsub = null;
+let wallsUnsub = null, visionMemUnsub = null;
 let liveDrawings = {}, liveFog = {}, livePings = {}, liveTemplates = {};
+let liveWalls = {}, exploredCells = {};
+// Posições "ao vivo" de tokens sendo arrastados agora mesmo (por qualquer
+// cliente, inclusive o próprio) — usadas pelo motor de visão dinâmica pra
+// recalcular a névoa revelada em tempo real durante o arrasto, sem esperar
+// o Firestore confirmar a posição final. Ver broadcastLiveTokenPosition (o
+// próprio arrasto) e o "move" do drag handler em attachTokenDragHandlers.
+let liveDragPositions = {};
+
+// ---- Visão dinâmica dos tokens (névoa de guerra estilo Roll20) -----------
+// Cada token com visão revela a névoa ao redor de si (alcance em casas da
+// grade, tok.visionRadius), bloqueada por paredes desenhadas pelo Mestre
+// (ferramenta 🧱 Parede) — ver o motor de cálculo/renderização em
+// mesa-tools.js. Fichas de jogador nascem com visão ligada; NPCs nascem
+// sem (o Mestre liga manualmente quando fizer sentido, ex.: um familiar).
+const DEFAULT_VISION_RADIUS_CELLS = 12;
+function tokenHasVision(t) {
+  if (!t) return false;
+  return t.npc ? t.visionOn === true : t.visionOn !== false;
+}
 // ---- Áreas de efeito (templates de magia/ataque: círculo, cone, linha) ----
 // Igual à régua/marcação: qualquer jogador presente pode desenhar uma área
 // (não só o Mestre), já que é o próprio jogador quem conjura a magia. Fica
@@ -462,12 +482,15 @@ function refreshBoardForActiveScene() {
     if (drawUnsub) { drawUnsub(); drawUnsub = null; }
     if (fogUnsub) { fogUnsub(); fogUnsub = null; }
     if (templateUnsub) { templateUnsub(); templateUnsub = null; }
-    liveDrawings = {}; liveFog = {}; liveTemplates = {};
+    if (wallsUnsub) { wallsUnsub(); wallsUnsub = null; }
+    if (visionMemUnsub) { visionMemUnsub(); visionMemUnsub = null; }
+    liveDrawings = {}; liveFog = {}; liveTemplates = {}; liveWalls = {}; exploredCells = {};
     lastOwnDrawingId = null; // "desfazer último traço" não deve valer pra outra cena
     if (typeof cancelFogPoly === 'function') cancelFogPoly(); // não deixa um polígono de névoa em andamento vazar pra outra cena
+    if (typeof cancelWallChain === 'function') cancelWallChain(); // idem, pra um traço de parede em andamento
     selectedTokenId = null; handleDraggingTokenId = null;
     boardZoom = 1; boardPanX = 0; boardPanY = 0;
-    if (newId) { listenDrawings(); listenFog(); listenTemplates(); }
+    if (newId) { listenDrawings(); listenFog(); listenTemplates(); listenWalls(); listenVisionMemory(); }
   }
   renderBoardBackground();
   renderScenePanel();
@@ -570,13 +593,16 @@ async function deleteScene(sceneId) {
   if (!confirm(`Excluir a cena "${(scene && scene.name) || ''}"? Os desenhos e a névoa dela também serão apagados. Isso não pode ser desfeito.`)) return;
   try {
     const tableRef = db.collection('tables').doc(curTable.id);
-    const [drawSnap, fogSnap] = await Promise.all([
+    const [drawSnap, fogSnap, wallsSnap] = await Promise.all([
       tableRef.collection('drawings').where('sceneId', '==', sceneId).get(),
-      tableRef.collection('fog').where('sceneId', '==', sceneId).get()
+      tableRef.collection('fog').where('sceneId', '==', sceneId).get(),
+      tableRef.collection('walls').where('sceneId', '==', sceneId).get()
     ]);
     const batch = db.batch();
     drawSnap.forEach(d => batch.delete(d.ref));
     fogSnap.forEach(d => batch.delete(d.ref));
+    wallsSnap.forEach(d => batch.delete(d.ref));
+    batch.delete(tableRef.collection('visionMemory').doc(sceneId));
     batch.delete(tableRef.collection('scenes').doc(sceneId));
     if (curTable.activeSceneId === sceneId) {
       const fallback = curScenes.find(s => s.id !== sceneId);
@@ -643,13 +669,15 @@ function closeTable() {
   if (fogUnsub) { fogUnsub(); fogUnsub = null; }
   if (pingUnsub) { pingUnsub(); pingUnsub = null; }
   if (templateUnsub) { templateUnsub(); templateUnsub = null; }
+  if (wallsUnsub) { wallsUnsub(); wallsUnsub = null; }
+  if (visionMemUnsub) { visionMemUnsub(); visionMemUnsub = null; }
   if (presenceUnsub) { presenceUnsub(); presenceUnsub = null; }
   if (initiativeUnsub) { initiativeUnsub(); initiativeUnsub = null; }
   if (chatUnsub) { chatUnsub(); chatUnsub = null; }
   stopPresenceHeartbeat();
   hideChatUi();
   chatMessagesCache = [];
-  liveDrawings = {}; liveFog = {}; livePings = {};
+  liveDrawings = {}; liveFog = {}; livePings = {}; liveWalls = {}; exploredCells = {}; liveDragPositions = {};
   liveInitiative = {}; activeInitiativeId = null;
   selectedTokenId = null; handleDraggingTokenId = null;
   curScenes = []; lastRenderedSceneId = undefined;
@@ -792,6 +820,8 @@ function renderBoardBackground() {
   renderFog();
   renderPings();
   renderTemplates();
+  renderWalls();
+  scheduleVisionRecompute();
 }
 
 // Desenha (ou remove) a grade "fantasma" de fundo quando ainda não há mapa
