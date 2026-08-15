@@ -360,6 +360,8 @@ a{ color:inherit; }
 }
 
 /* ===== Lore do Mundo — Panteão & Reinos ===== */
+strong{ color:var(--ink); font-weight:700; }
+.ante-quote strong, .kingdom-section p strong, .deity-card-body p strong{ color:var(--gold-dim); }
 .lore-continent-head{
   display:flex; align-items:baseline; gap:10px; flex-wrap:wrap;
   font-family:'Cinzel', serif; color:var(--gold); font-size:24px; margin:52px 0 6px;
@@ -625,14 +627,14 @@ mark{ background:var(--seal); color:#fff; padding:0 1px; border-radius:2px; }
         html += `<h4 class="mini-heading">${escapeHtml(heading[1].trim())}</h4>`;
       } else if(m){
         const [, name, , cost, rest] = m;
-        html += `<div class="entry cost"><span class="entry-name">${escapeHtml(name.trim())}</span><span class="entry-cost">${escapeHtml(cost.trim())}</span><div class="entry-body">${escapeHtml(rest.trim())}</div></div>`;
+        html += `<div class="entry cost"><span class="entry-name">${escapeHtml(name.trim())}</span><span class="entry-cost">${escapeHtml(cost.trim())}</span><div class="entry-body">${mdBold(rest.trim())}</div></div>`;
       } else if(paraIsLabel(p)){
-        html += `<p class="label-line">${escapeHtml(p)}</p>`;
+        html += `<p class="label-line">${mdBold(p)}</p>`;
       } else if(n){
         const [, name, rest] = n;
-        html += `<div class="entry"><span class="entry-name">${escapeHtml(name.trim())}</span><div class="entry-body">${escapeHtml(rest.trim())}</div></div>`;
+        html += `<div class="entry"><span class="entry-name">${escapeHtml(name.trim())}</span><div class="entry-body">${mdBold(rest.trim())}</div></div>`;
       } else {
-        html += `<p>${escapeHtml(p)}</p>`;
+        html += `<p>${mdBold(p)}</p>`;
       }
     });
     return html;
@@ -649,8 +651,8 @@ mark{ background:var(--seal); color:#fff; padding:0 1px; border-radius:2px; }
     const skillsHtml = (s.skills||[]).map(sk => `<span class="ante-skill-chip">${escapeHtml(sk)}</span>`).join('');
     return `<div class="ante-card" id="sub-${s.id}">
       <div class="ante-head"><span class="ante-icon">${escapeHtml(s.icon||'📜')}</span><h3>${escapeHtml(s.title)}</h3></div>
-      <p class="ante-desc">${escapeHtml(s.desc||'')}</p>
-      ${s.quote ? `<p class="ante-quote">“${escapeHtml(s.quote)}”</p>` : ''}
+      <p class="ante-desc">${mdBold(s.desc||'')}</p>
+      ${s.quote ? `<p class="ante-quote">“${mdBold(s.quote)}”</p>` : ''}
       <div class="ante-meta">${metaHtml}</div>
       <div class="ante-skills-label">Perícias disponíveis</div>
       <div class="ante-skills">${skillsHtml}</div>
@@ -668,13 +670,13 @@ mark{ background:var(--seal); color:#fff; padding:0 1px; border-radius:2px; }
         </div>
         <span class="deity-caret">▾</span>
       </div>
-      <div class="deity-card-body"><div><p>${escapeHtml(d.desc)}</p></div></div>
+      <div class="deity-card-body"><div><p>${mdBold(d.desc)}</p></div></div>
     </div>`;
   }
 
   function renderKingdomCard(k){
     const sectionsHtml = k.sections.map(s =>
-      `<div class="kingdom-section"><div class="ks-label">${escapeHtml(s.label)}</div>${s.paragraphs.map(p => `<p>${escapeHtml(p)}</p>`).join('')}</div>`
+      `<div class="kingdom-section"><div class="ks-label">${escapeHtml(s.label)}</div>${s.paragraphs.map(p => `<p>${mdBold(p)}</p>`).join('')}</div>`
     ).join('');
     return `<div class="kingdom-card" data-accordion id="sub-${k.id}">
       <div class="kingdom-card-head" data-toggle>
@@ -712,6 +714,16 @@ mark{ background:var(--seal); color:#fff; padding:0 1px; border-radius:2px; }
 
   function escapeHtml(s){
     return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  // Como o texto dos livros (regras.json) às vezes usa **negrito** no estilo
+  // Markdown pra destacar um nome ou termo dentro de um parágrafo corrido
+  // (ex.: "o Rei da Montanha, **Thorin Barba-de-Bronze**, é..."), esta
+  // função escapa o HTML primeiro (nada do texto original consegue injetar
+  // marcação) e só depois troca os pares de ** por <strong> — as únicas
+  // tags que entram no HTML final são as que ela mesma insere.
+  function mdBold(s){
+    return escapeHtml(s).replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
   }
 
   function chapterMeta(chapterId){
