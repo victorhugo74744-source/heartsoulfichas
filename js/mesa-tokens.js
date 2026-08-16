@@ -450,11 +450,11 @@ function renderAllTokens() {
   // Remove tokens que não existem mais (ou que pertencem a outra cena).
   surface.querySelectorAll('.token').forEach(el => {
     const t = liveTokens[el.dataset.id];
-    if (!t || !isTokenInActiveScene(t)) el.remove();
+    if (!t || !isTokenInActiveScene(t)) { el.remove(); delete tokenElCache[el.dataset.id]; }
   });
   surface.querySelectorAll('.token-aura').forEach(el => {
     const t = liveTokens[el.dataset.auraId];
-    if (!t || !isTokenInActiveScene(t)) el.remove();
+    if (!t || !isTokenInActiveScene(t)) { el.remove(); delete tokenAuraElCache[el.dataset.auraId]; }
   });
 
   // O board-surface agora sempre fica no tamanho "natural" (sem zoom) — quem
@@ -480,6 +480,7 @@ function renderAllTokens() {
       surface.appendChild(el);
       attachTokenDragHandlers(el, tok.id);
     }
+    tokenElCache[tok.id] = el;
     el.classList.toggle('mine', tok.ownerId === curUser.uid);
     el.classList.toggle('active-turn', !!activeInitiativeId && tok.id === activeInitiativeId);
     el.style.width = tokenPx + 'px';
@@ -508,6 +509,7 @@ function renderAllTokens() {
         auraEl.dataset.auraId = tok.id;
         surface.appendChild(auraEl);
       }
+      tokenAuraElCache[tok.id] = auraEl;
       const auraColor = tok.color || '#c9a15c';
       auraEl.style.width = auraPx + 'px';
       auraEl.style.height = auraPx + 'px';
@@ -519,6 +521,7 @@ function renderAllTokens() {
       auraEl.style.border = `1px solid ${hexToRgba(auraColor, 0.55)}`;
     } else if (auraEl) {
       auraEl.remove();
+      delete tokenAuraElCache[tok.id];
     }
 
     // Só refaz o HTML interno (imagem/nome/HP) quando algo além da posição
@@ -544,6 +547,11 @@ function renderAllTokens() {
   updateSelectionHandles();
   renderMyResourcesBox();
   renderMyInventoryBox();
+  // A lista de tokens (ou algum campo deles, como visão/alcance/HP) pode
+  // ter mudado — mais seguro forçar recálculo completo aqui em vez de
+  // tentar adivinhar se foi só posição (o caminho "dirty-rect" rápido é
+  // só pra o arrasto contínuo, tratado fora de renderAllTokens).
+  visionFullRedrawNeeded = true;
   scheduleVisionRecompute(); // token(s) podem ter se movido/mudado — recalcula a névoa revelada
 
   if (!isTableOwner()) {
@@ -1099,9 +1107,7 @@ function attachTokenDragHandlers(el, tokenId) {
     const surface = document.getElementById('boardSurface');
     // localW/localH: tamanho natural do surface (sem zoom) — é nesse espaço
     // que left/top do token são interpretados, já que o zoom é só visual
-    // (aplicado via transform no elemento pai). rect (em getBoundingClientRect,
-    // recalculado a cada movimento) já reflete o zoom/pan atuais na tela, e
-    // serve só pra converter a posição do ponteiro em fração 0..1 do mapa.
+    // (aplicado via transform no elemento pai).
     const localW = surface.offsetWidth || baseMapW;
     const localH = surface.offsetHeight || baseMapH;
 
@@ -1114,10 +1120,25 @@ function attachTokenDragHandlers(el, tokenId) {
     const auraEl = surface.querySelector(`.token-aura[data-aura-id="${tokenId}"]`);
     if (auraEl) auraEl.classList.add('dragging');
 
-    const move = (ev) => {
-      const rect = surface.getBoundingClientRect();
-      let x = (ev.clientX - rect.left) / rect.width;
-      let y = (ev.clientY - rect.top) / rect.height;
+    // O ponteiro pode disparar 'pointermove' bem mais rápido que a taxa de
+    // repintura da tela (mouse/caneta de alta taxa de amostragem) — em vez
+    // de escrever no DOM (e ler getBoundingClientRect, que força um
+    // recálculo de layout) a cada evento bruto, guarda só a posição mais
+    // recente e aplica no máximo uma vez por frame via requestAnimationFrame.
+    // O retângulo do tabuleiro também só é medido uma vez, no início do
+    // arrasto — arrastar um token não pode acontecer ao mesmo tempo que um
+    // pan/zoom do mapa (o pointerdown abaixo já bloqueia isso com
+    // stopPropagation), então ele não muda durante o arrasto.
+    const dragRect = surface.getBoundingClientRect();
+    let pendingMoveEv = null;
+    let moveRafId = null;
+
+    const applyMove = () => {
+      moveRafId = null;
+      const ev = pendingMoveEv;
+      if (!ev) return;
+      let x = (ev.clientX - dragRect.left) / dragRect.width;
+      let y = (ev.clientY - dragRect.top) / dragRect.height;
       x = Math.min(1, Math.max(0, x));
       y = Math.min(1, Math.max(0, y));
       el.style.left = (x * localW) + 'px';
@@ -1133,10 +1154,18 @@ function attachTokenDragHandlers(el, tokenId) {
       scheduleVisionRecompute();
     };
 
+    const move = (ev) => {
+      pendingMoveEv = ev;
+      if (moveRafId == null) moveRafId = requestAnimationFrame(applyMove);
+    };
+
     const up = async (ev) => {
       el.removeEventListener('pointermove', move);
       el.removeEventListener('pointerup', up);
       el.removeEventListener('pointercancel', up);
+      // Garante que a posição do último evento ainda não aplicado (preso
+      // esperando o próximo frame) não se perca ao soltar o token.
+      if (moveRafId != null) { cancelAnimationFrame(moveRafId); moveRafId = null; applyMove(); }
       el.classList.remove('dragging');
       if (auraEl) auraEl.classList.remove('dragging');
       draggingTokenId = null;
@@ -1282,10 +1311,10 @@ function attachHandleDragHandlers(wrap) {
     handleDraggingTokenId = tokenId;
     rotateHandle.setPointerCapture(e.pointerId);
     const surface = document.getElementById('boardSurface');
+    const rect = surface.getBoundingClientRect(); // medido uma vez só — não muda durante o giro
     let liveRot = tok.rot || 0;
 
     const move = (ev) => {
-      const rect = surface.getBoundingClientRect();
       const cx = rect.left + tok.x * rect.width;
       const cy = rect.top + tok.y * rect.height;
       let angle = Math.atan2(ev.clientX - cx, -(ev.clientY - cy)) * 180 / Math.PI;
@@ -1333,9 +1362,7 @@ function attachHandleDragHandlers(wrap) {
     let liveScale = scale0;
 
     const move = (ev) => {
-      const rect = surface.getBoundingClientRect();
-      const cx = rect.left + tok.x * rect.width;
-      const cy = rect.top + tok.y * rect.height;
+      const cx = cx0, cy = cy0;
       const dist = Math.hypot(ev.clientX - cx, ev.clientY - cy);
       let scale = scale0 * (dist / dist0);
       scale = Math.max(0.5, Math.round(scale * 20) / 20);

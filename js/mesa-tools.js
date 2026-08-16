@@ -646,6 +646,7 @@ function listenWalls() {
     .onSnapshot(snap => {
       liveWalls = {};
       snap.forEach(d => { liveWalls[d.id] = { id: d.id, ...d.data() }; });
+      invalidateCollisionSegmentsCache();
       renderWalls();
       scheduleVisionRecompute();
     }, err => console.error('Erro ao sincronizar paredes:', err));
@@ -754,7 +755,7 @@ function renderDoors() {
   const svg = doorSvgLayer();
   const isMaster = isTableOwner();
   svg.querySelectorAll('[data-door-id]').forEach(el => {
-    if (!liveDoors[el.dataset.doorId]) el.remove();
+    if (!liveDoors[el.dataset.doorId]) { el.remove(); delete doorMarkElCache[el.dataset.doorId]; }
   });
   Object.values(liveDoors).forEach(d => {
     let line = svg.querySelector(`line[data-door-id="${d.id}"]`);
@@ -788,6 +789,7 @@ function renderDoors() {
         } catch (err) { console.error('Erro ao abrir/fechar porta:', err); }
       });
     }
+    doorMarkElCache[d.id] = mark;
     const mx = (d.x1 + d.x2) / 2 * baseMapW, my = (d.y1 + d.y2) / 2 * baseMapH;
     mark.setAttribute('transform', `translate(${mx},${my})`);
     mark.classList.toggle('door-open', !!d.open);
@@ -806,6 +808,7 @@ function listenDoors() {
     .onSnapshot(snap => {
       liveDoors = {};
       snap.forEach(d => { liveDoors[d.id] = { id: d.id, ...d.data() }; });
+      invalidateCollisionSegmentsCache(); // abrir/fechar porta também muda o que bloqueia a visão
       renderDoors();
       scheduleVisionRecompute();
     }, err => console.error('Erro ao sincronizar portas:', err));
@@ -843,17 +846,59 @@ async function clearAllDoors() {
 const FOG_UNSEEN_COLOR = 'rgba(17,14,11,0.86)'; // alpha < 1 de propósito: não é um breu totalmente opaco, deixa entrever vagamente o mapa por baixo
 const FOG_EXPLORED_DIM_ALPHA = 0.55; // o quanto uma casa "lembrada" (fora de visão agora) ainda escurece o mapa
 const FOG_CIRCLE_SAMPLES = 180; // raios extras, espaçados igualmente, pra a borda do alcance ficar arredondada
+// Acima desta quantidade de tokens com visão simultânea na cena, o número
+// de raios por token começa a cair (até o piso FOG_MIN_CIRCLE_SAMPLES) —
+// o custo do cálculo de visibilidade escala com raios × paredes × tokens,
+// então numa cena cheia de criaturas isso evita que o recálculo (rodando
+// a cada frame de arrasto) fique pesado. Com poucos tokens, continua
+// usando a amostragem cheia — a borda do alcance não perde suavidade.
+const FOG_MANY_TOKENS_THRESHOLD = 6;
+const FOG_MIN_CIRCLE_SAMPLES = 90;
+function adaptiveFogSamples(visionTokenCount) {
+  if (visionTokenCount <= FOG_MANY_TOKENS_THRESHOLD) return FOG_CIRCLE_SAMPLES;
+  // Cai linearmente até o piso conforme mais tokens se somam (12+ já usa o piso).
+  const extra = visionTokenCount - FOG_MANY_TOKENS_THRESHOLD;
+  const t = Math.min(1, extra / 6);
+  return Math.round(FOG_CIRCLE_SAMPLES - (FOG_CIRCLE_SAMPLES - FOG_MIN_CIRCLE_SAMPLES) * t);
+}
 const FOG_EDGE_SOFTNESS = 0.82; // fração do raio a partir de onde a visão começa a esmaecer até o alcance máximo (1 = sem suavização)
 const DEG2RAD = Math.PI / 180;
 let visionRecomputeQueued = false;
 let pendingExploredCells = {};
 let exploredPersistTimer = null;
+// Estado do frame anterior de cada token com visão (posição/alcance/cone
+// em px "naturais" + o polígono já calculado) — permite reaproveitar o
+// polígono de um token que não se mexeu desde o último recálculo, em vez
+// de recalcular o shadowcasting dele de novo a cada frame de arrasto de
+// OUTRO token. Ver dirty-rect em recomputeAndRenderVision.
+let lastVisionTokenState = {};
+// Quando true, o próximo recálculo repinta o canvas inteiro e recalcula o
+// polígono de TODOS os tokens (em vez de só da região que mudou) — usado
+// sempre que algo além de "um token se moveu" pode ter mudado (paredes,
+// portas, memória de exploração sincronizada em bloco, lista de tokens,
+// tamanho do canvas). É o caminho seguro/completo; o caminho rápido
+// (dirty-rect) só roda quando exatamente os tokens que se moveram mudaram
+// e nada mais.
+let visionFullRedrawNeeded = true;
 // Polígonos de visão *atuais* (não a memória) de cada token com visão —
 // usados só pra decidir quais NPCs ficam visíveis agora. Ao contrário da
 // memória de exploração (que revela o terreno já visto), a posição de uma
 // criatura escondida na névoa nunca deve "vazar" pra quem não está vendo
 // ela neste exato momento.
 let currentVisionPolygons = [];
+
+// Acima desta dimensão (px "naturais", o maior lado do mapa), a névoa é
+// desenhada num canvas com resolução reduzida e esticada por CSS até o
+// tamanho real do mapa — o resultado é visualmente idêntico (a névoa já é
+// uma camada suave, com bordas em gradiente) mas o custo de cada
+// clearRect/fillRect/gradiente cai com o quadrado da escala, o que evita
+// que mapas grandes fiquem lentos a cada recálculo (a cada frame de
+// arrasto de token, por exemplo).
+const FOG_MAX_RENDER_EDGE = 1400;
+function fogRenderScale() {
+  const longEdge = Math.max(baseMapW, baseMapH);
+  return longEdge > FOG_MAX_RENDER_EDGE ? FOG_MAX_RENDER_EDGE / longEdge : 1;
+}
 
 function scheduleVisionRecompute() {
   if (visionRecomputeQueued) return;
@@ -892,27 +937,94 @@ function wallSegmentsForVision() {
   return segs;
 }
 
+// Cache dos segmentos de colisão (paredes + portas fechadas): antes, esses
+// arrays eram reconstruídos do zero a cada recálculo de visão (ou seja, a
+// cada frame durante o arrasto de um token) — com muitas paredes numa cena
+// grande isso pesava sem necessidade, já que paredes/portas só mudam
+// quando o Mestre desenha/apaga algo ou abre/fecha uma porta. Agora o
+// resultado fica em cache e só é reconstruído quando invalidateCollisionSegmentsCache()
+// é chamada (nos listeners de paredes/portas e na troca de cena).
+let cachedCollisionSegments = null;
+// Índice espacial (grade uniforme) dos mesmos segmentos, construído junto
+// com o cache acima — em cenas com muitas paredes espalhadas pelo mapa,
+// isso evita que segmentsNearCircle precise varrer TODOS os segmentos pra
+// cada token a cada frame: só olha os "baldes" da grade que cruzam o
+// quadrado do alcance do token. Com poucas paredes o ganho é pequeno (a
+// grade vira 1-2 baldes), mas não piora nada nesse caso.
+let cachedCollisionGrid = null;
+const WALL_GRID_CELL = 320; // px "naturais" por balde da grade — sem relação com a grade visual do mapa
+function invalidateCollisionSegmentsCache() { cachedCollisionSegments = null; cachedCollisionGrid = null; visionFullRedrawNeeded = true; }
+
+function buildSegmentsGrid(segments) {
+  const grid = new Map();
+  segments.forEach(s => {
+    const minX = Math.min(s.x1, s.x2), maxX = Math.max(s.x1, s.x2);
+    const minY = Math.min(s.y1, s.y2), maxY = Math.max(s.y1, s.y2);
+    const c0 = Math.floor(minX / WALL_GRID_CELL), c1 = Math.floor(maxX / WALL_GRID_CELL);
+    const r0 = Math.floor(minY / WALL_GRID_CELL), r1 = Math.floor(maxY / WALL_GRID_CELL);
+    for (let r = r0; r <= r1; r++) {
+      for (let c = c0; c <= c1; c++) {
+        const key = c + ',' + r;
+        let bucket = grid.get(key);
+        if (!bucket) { bucket = []; grid.set(key, bucket); }
+        bucket.push(s);
+      }
+    }
+  });
+  return grid;
+}
+
+// Cache do elemento <g> (ícone 🚪) de cada porta, por id — mesma ideia do
+// tokenElCache: evita um svg.querySelector a cada porta a cada frame de
+// recálculo de visão (updateDoorVisibility roda em todo recompute).
+// Mantido em dia por renderDoors, que é quem cria/remove esses elementos.
+let doorMarkElCache = {};
+
 // Paredes + portas fechadas — tudo que bloqueia a visão agora mesmo (uma
 // porta aberta simplesmente não entra na lista, como se não existisse).
 function collisionSegmentsForVision() {
+  if (cachedCollisionSegments) return cachedCollisionSegments;
   const segs = wallSegmentsForVision();
   Object.values(liveDoors).forEach(d => {
     if (d.open) return;
     segs.push({ x1: d.x1 * baseMapW, y1: d.y1 * baseMapH, x2: d.x2 * baseMapW, y2: d.y2 * baseMapH });
   });
+  cachedCollisionSegments = segs;
   return segs;
 }
 
-// Filtra só os segmentos cujo retângulo envolvente cruza o quadrado do
+// Constrói (ou devolve do cache) o índice espacial dos segmentos atuais —
+// sempre em sincronia com collisionSegmentsForVision, já que os dois só
+// são invalidados juntos.
+function collisionSegmentsGrid() {
+  if (!cachedCollisionGrid) cachedCollisionGrid = buildSegmentsGrid(collisionSegmentsForVision());
+  return cachedCollisionGrid;
+}
+
+// Devolve só os segmentos cujo retângulo envolvente cruza o quadrado do
 // alcance de um token — evita testar paredes/portas distantes a cada um
 // dos ~180 raios, o que pesa muito em mapas grandes com muitos obstáculos.
-function segmentsNearCircle(segments, cx, cy, radius) {
-  const minX = cx - radius, maxX = cx + radius, minY = cy - radius, maxY = cy + radius;
-  return segments.filter(s => {
-    const sMinX = Math.min(s.x1, s.x2), sMaxX = Math.max(s.x1, s.x2);
-    const sMinY = Math.min(s.y1, s.y2), sMaxY = Math.max(s.y1, s.y2);
-    return sMaxX >= minX && sMinX <= maxX && sMaxY >= minY && sMinY <= maxY;
-  });
+// Consulta apenas os baldes da grade espacial que o quadrado do alcance
+// cobre, em vez de varrer a lista inteira de segmentos.
+function segmentsNearCircle(grid, cx, cy, radius) {
+  const minCol = Math.floor((cx - radius) / WALL_GRID_CELL);
+  const maxCol = Math.floor((cx + radius) / WALL_GRID_CELL);
+  const minRow = Math.floor((cy - radius) / WALL_GRID_CELL);
+  const maxRow = Math.floor((cy + radius) / WALL_GRID_CELL);
+  const seen = new Set();
+  const out = [];
+  for (let r = minRow; r <= maxRow; r++) {
+    for (let c = minCol; c <= maxCol; c++) {
+      const bucket = grid.get(c + ',' + r);
+      if (!bucket) continue;
+      for (const s of bucket) {
+        if (seen.has(s)) continue;
+        seen.add(s);
+        out.push(s);
+      }
+    }
+  }
+  return out;
 }
 
 // Interseção de um raio (origem px,py, direção unitária dx,dy) com um
@@ -941,14 +1053,15 @@ function rayHitsSegment(px, py, dx, dy, ax, ay, bx, by) {
 // Os ângulos das amostras e dos cantos são calculados *relativos* ao centro
 // do cone (em vez de absolutos) só pra não quebrar perto de ±180°, quando
 // um token está virado pra "trás" (ex.: olhando para a esquerda).
-function computeVisibilityPolygon(cx, cy, radius, segments, coneCenterAngle, coneHalfAngle) {
+function computeVisibilityPolygon(cx, cy, radius, segments, coneCenterAngle, coneHalfAngle, sampleCount) {
+  const samples = sampleCount || FOG_CIRCLE_SAMPLES;
   const isCone = coneCenterAngle != null && coneHalfAngle != null;
   const angles = [];
   if (isCone) {
-    const steps = Math.max(10, Math.round(FOG_CIRCLE_SAMPLES * (coneHalfAngle * 2) / (Math.PI * 2)));
+    const steps = Math.max(10, Math.round(samples * (coneHalfAngle * 2) / (Math.PI * 2)));
     for (let i = 0; i <= steps; i++) angles.push(-coneHalfAngle + (coneHalfAngle * 2) * (i / steps));
   } else {
-    for (let i = 0; i < FOG_CIRCLE_SAMPLES; i++) angles.push((i / FOG_CIRCLE_SAMPLES) * Math.PI * 2);
+    for (let i = 0; i < samples; i++) angles.push((i / samples) * Math.PI * 2);
   }
   const EPS = 0.00002;
   segments.forEach(s => {
@@ -1024,72 +1137,178 @@ function tokenVisionPos(t) {
 function recomputeAndRenderVision() {
   if (!curTable || !curTable.activeSceneId || !baseMapW || !baseMapH) return;
   const canvas = fogOfWarCanvas();
-  if (canvas.width !== baseMapW) canvas.width = baseMapW;
-  if (canvas.height !== baseMapH) canvas.height = baseMapH;
+  const scale = fogRenderScale();
+  const rw = Math.max(1, Math.round(baseMapW * scale));
+  const rh = Math.max(1, Math.round(baseMapH * scale));
+  const sizeChanged = canvas.width !== rw || canvas.height !== rh;
+  if (sizeChanged) { canvas.width = rw; canvas.height = rh; } // isso também limpa o canvas (fica transparente)
+  // O canvas continua ocupando o mesmo espaço "natural" do mapa (o
+  // navegador estica a bitmap de resolução menor até esse tamanho) — só a
+  // resolução interna de desenho muda.
+  canvas.style.width = baseMapW + 'px';
+  canvas.style.height = baseMapH + 'px';
   const ctx = canvas.getContext('2d');
-  ctx.clearRect(0, 0, baseMapW, baseMapH);
+  // Daqui pra baixo, todo o desenho continua em coordenadas "naturais"
+  // (0..baseMapW, 0..baseMapH) como sempre — este transform é quem projeta
+  // isso na resolução (possivelmente reduzida) do canvas.
+  ctx.setTransform(scale, 0, 0, scale, 0, 0);
 
-  // Base: tudo "não explorado" (opaco).
-  ctx.globalCompositeOperation = 'source-over';
-  ctx.fillStyle = FOG_UNSEEN_COLOR;
-  ctx.fillRect(0, 0, baseMapW, baseMapH);
-
-  // Casas já exploradas (memória): escurece um pouco menos que o "nunca visto".
   const cellPx = boardCellPx || DEFAULT_CELL_PX;
-  ctx.globalCompositeOperation = 'destination-out';
-  ctx.fillStyle = `rgba(0,0,0,${FOG_EXPLORED_DIM_ALPHA})`;
-  Object.keys(exploredCells).forEach(key => {
-    if (!exploredCells[key]) return;
-    const parts = key.split(',');
-    const c = Number(parts[0]), r = Number(parts[1]);
-    ctx.fillRect(c * cellPx - 0.5, r * cellPx - 0.5, cellPx + 1, cellPx + 1); // +1px de folga evita frestas entre casas
-  });
-
-  // Tokens com visão: cada polígono de visibilidade limpa a névoa (visível
-  // agora) e alimenta a memória de exploração. A visão em si já é 100% do
-  // alcance (a exploração e o bloqueio de NPCs não mudam), mas a *pintura*
-  // suaviza numa borda em gradiente perto do limite do alcance — só o corte
-  // por parede/porta continua nítido, como convém.
-  const segments = collisionSegmentsForVision();
-  const newCells = {};
-  currentVisionPolygons = [];
-  ctx.globalCompositeOperation = 'destination-out';
+  const segmentsGrid = collisionSegmentsGrid();
   const isMasterView = isTableOwner();
-  Object.values(liveTokens).forEach(t => {
-    if (!isTokenInActiveScene(t) || !tokenHasVision(t)) return;
+  const visionTokens = Object.values(liveTokens).filter(t => isTokenInActiveScene(t) && tokenHasVision(t));
+  const samples = adaptiveFogSamples(visionTokens.length);
+
+  // forceAll: quando true, TODO token tem o polígono recalculado e a
+  // região "suja" vira o mapa inteiro (o canvas pode estar em branco por
+  // ter acabado de mudar de tamanho, ou paredes/portas/memória podem ter
+  // mudado em qualquer lugar do mapa) — é o caminho seguro de sempre.
+  // Quando false, só os tokens que de fato se moveram desde o frame
+  // anterior são recalculados, e só a região que eles tocam (posição
+  // antiga + nova) é repintada; os demais tokens reaproveitam o polígono
+  // já calculado no frame anterior. É esse caminho rápido que faz o
+  // arrasto contínuo de um token não pesar sobre os outros que ficaram
+  // parados.
+  const forceAll = visionFullRedrawNeeded || sizeChanged;
+
+  const EPS_POS = 0.02; // px "naturais" — abaixo disso não vale a pena repintar
+  const changed = new Set();
+  const nextState = {};
+  let dMinX = Infinity, dMinY = Infinity, dMaxX = -Infinity, dMaxY = -Infinity;
+  const growDirty = (cx, cy, radius) => {
+    dMinX = Math.min(dMinX, cx - radius); dMaxX = Math.max(dMaxX, cx + radius);
+    dMinY = Math.min(dMinY, cy - radius); dMaxY = Math.max(dMaxY, cy + radius);
+  };
+
+  visionTokens.forEach(t => {
     const p = tokenVisionPos(t);
     const cx = p.x * baseMapW, cy = p.y * baseMapH;
     const radius = (t.visionRadius || DEFAULT_VISION_RADIUS_CELLS) * cellPx;
-    const localSegments = segmentsNearCircle(segments, cx, cy, radius); // só os obstáculos perto o suficiente pra importar
     const isCone = t.visionMode === 'cone';
     const rot = liveDragRotations[t.id] != null ? liveDragRotations[t.id] : (t.rot || 0);
     const coneCenter = isCone ? (rot - 90) * DEG2RAD : null; // rot=0 aponta "pra cima" (mesma convenção da alça de girar)
     const coneHalf = isCone ? Math.min(179.5, (t.visionConeDeg || DEFAULT_VISION_CONE_DEG) / 2) * DEG2RAD : null;
-    const poly = computeVisibilityPolygon(cx, cy, radius, localSegments, coneCenter, coneHalf);
-    if (poly.length < (isCone ? 2 : 3)) return;
-    currentVisionPolygons.push(poly);
-    const grad = ctx.createRadialGradient(cx, cy, radius * FOG_EDGE_SOFTNESS, cx, cy, radius);
-    grad.addColorStop(0, 'rgba(0,0,0,1)');
-    grad.addColorStop(1, 'rgba(0,0,0,0)');
-    ctx.fillStyle = grad;
-    ctx.beginPath();
-    ctx.moveTo(poly[0].x, poly[0].y);
-    for (let i = 1; i < poly.length; i++) ctx.lineTo(poly[i].x, poly[i].y);
-    ctx.closePath();
-    ctx.fill();
-    // Contorno bem sutil do cone, só pro Mestre — ajuda a lembrar pra onde
-    // cada token está "olhando" sem precisar abrir a ficha dele.
-    if (isCone && isMasterView) {
-      ctx.save();
-      ctx.globalCompositeOperation = 'source-over';
-      ctx.strokeStyle = 'rgba(201,161,92,.35)';
-      ctx.lineWidth = 1.5;
-      ctx.stroke();
-      ctx.restore();
+
+    const prev = lastVisionTokenState[t.id];
+    const moved = forceAll || !prev || Math.abs(prev.cx - cx) > EPS_POS || Math.abs(prev.cy - cy) > EPS_POS ||
+      prev.radius !== radius || prev.coneCenter !== coneCenter || prev.coneHalf !== coneHalf || prev.samples !== samples;
+
+    nextState[t.id] = { cx, cy, radius, isCone, coneCenter, coneHalf, samples, poly: prev ? prev.poly : null };
+
+    if (moved) {
+      changed.add(t.id);
+      if (prev) growDirty(prev.cx, prev.cy, prev.radius);
+      growDirty(cx, cy, radius);
     }
-    collectExploredCells(poly, cx, cy, radius, newCells);
   });
-  ctx.globalCompositeOperation = 'source-over';
+  // Tokens que sumiram da visão desde o frame anterior (removidos, visão
+  // desligada, saíram da cena) também sujam a região onde estavam.
+  Object.keys(lastVisionTokenState).forEach(id => {
+    if (nextState[id]) return;
+    const prev = lastVisionTokenState[id];
+    growDirty(prev.cx, prev.cy, prev.radius);
+  });
+
+  if (!forceAll && changed.size === 0 && dMinX === Infinity) {
+    // Nada mudou de fato desde o último frame — não há nada pra repintar.
+    // (currentVisionPolygons e exploredCells já refletem o estado atual.)
+    return;
+  }
+
+  let dx, dy, dxMax, dyMax;
+  if (forceAll) {
+    dx = 0; dy = 0; dxMax = baseMapW; dyMax = baseMapH;
+  } else {
+    dx = Math.max(0, Math.floor(dMinX)); dy = Math.max(0, Math.floor(dMinY));
+    dxMax = Math.min(baseMapW, Math.ceil(dMaxX)); dyMax = Math.min(baseMapH, Math.ceil(dMaxY));
+  }
+  const dw = Math.max(0, dxMax - dx), dh = Math.max(0, dyMax - dy);
+
+  if (dw > 0 && dh > 0) {
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(dx, dy, dw, dh);
+    ctx.clip();
+
+    // Base: tudo "não explorado" (opaco), só dentro da região suja.
+    ctx.clearRect(dx, dy, dw, dh);
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.fillStyle = FOG_UNSEEN_COLOR;
+    ctx.fillRect(dx, dy, dw, dh);
+
+    // Casas já exploradas (memória) dentro da região suja: escurece um
+    // pouco menos que o "nunca visto". Só varre as casas da grade que
+    // caem no retângulo, em vez de todas as casas exploradas do mapa.
+    ctx.globalCompositeOperation = 'destination-out';
+    ctx.fillStyle = `rgba(0,0,0,${FOG_EXPLORED_DIM_ALPHA})`;
+    const colMin = Math.max(0, Math.floor(dx / cellPx)), colMax = Math.ceil(dxMax / cellPx);
+    const rowMin = Math.max(0, Math.floor(dy / cellPx)), rowMax = Math.ceil(dyMax / cellPx);
+    for (let r = rowMin; r <= rowMax; r++) {
+      for (let c = colMin; c <= colMax; c++) {
+        const key = c + ',' + r;
+        if (!exploredCells[key]) continue;
+        ctx.fillRect(c * cellPx - 0.5, r * cellPx - 0.5, cellPx + 1, cellPx + 1); // +1px de folga evita frestas entre casas
+      }
+    }
+
+    // Tokens com visão: cada polígono de visibilidade limpa a névoa
+    // (visível agora) e alimenta a memória de exploração. Só os tokens
+    // marcados como "mudaram" têm o shadowcasting recalculado; os outros
+    // reaproveitam o polígono do frame anterior (ele continua correto,
+    // já que nada que o afeta mudou).
+    const newCells = {};
+    currentVisionPolygons = [];
+    ctx.globalCompositeOperation = 'destination-out';
+    visionTokens.forEach(t => {
+      const st = nextState[t.id];
+      const isChanged = changed.has(t.id);
+      if (!isChanged) {
+        // Token parado cujo alcance nem toca a região suja: o desenho dele
+        // já está correto no canvas de frames anteriores — só reaproveita
+        // o polígono (pra NPCs/portas continuarem cientes dele) sem gastar
+        // gradiente/fill à toa.
+        const touches = st.cx + st.radius >= dx && st.cx - st.radius <= dxMax && st.cy + st.radius >= dy && st.cy - st.radius <= dyMax;
+        if (!touches) {
+          if (st.poly && st.poly.length >= (st.isCone ? 2 : 3)) currentVisionPolygons.push(st.poly);
+          return;
+        }
+      }
+      let poly = st.poly;
+      if (isChanged) {
+        const localSegments = segmentsNearCircle(segmentsGrid, st.cx, st.cy, st.radius); // só os obstáculos perto o suficiente pra importar
+        poly = computeVisibilityPolygon(st.cx, st.cy, st.radius, localSegments, st.coneCenter, st.coneHalf, samples);
+        st.poly = poly;
+        if (poly.length >= (st.isCone ? 2 : 3)) collectExploredCells(poly, st.cx, st.cy, st.radius, newCells);
+      }
+      if (!poly || poly.length < (st.isCone ? 2 : 3)) return;
+      currentVisionPolygons.push(poly);
+      const grad = ctx.createRadialGradient(st.cx, st.cy, st.radius * FOG_EDGE_SOFTNESS, st.cx, st.cy, st.radius);
+      grad.addColorStop(0, 'rgba(0,0,0,1)');
+      grad.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.moveTo(poly[0].x, poly[0].y);
+      for (let i = 1; i < poly.length; i++) ctx.lineTo(poly[i].x, poly[i].y);
+      ctx.closePath();
+      ctx.fill();
+      // Contorno bem sutil do cone, só pro Mestre — ajuda a lembrar pra
+      // onde cada token está "olhando" sem precisar abrir a ficha dele.
+      if (st.isCone && isMasterView) {
+        ctx.save();
+        ctx.globalCompositeOperation = 'source-over';
+        ctx.strokeStyle = 'rgba(201,161,92,.35)';
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+        ctx.restore();
+      }
+    });
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.restore(); // remove o recorte (clip) da região suja
+
+    let hasNew = false;
+    Object.keys(newCells).forEach(k => { if (!exploredCells[k]) { exploredCells[k] = true; hasNew = true; } });
+    if (hasNew) scheduleExploredPersist(newCells);
+  }
 
   // O Mestre vê o mapa inteiro sempre — a névoa fica só como referência
   // bem clara, pra saber o que os jogadores ainda não viram sem perder a
@@ -1099,9 +1318,8 @@ function recomputeAndRenderVision() {
   applyNpcFogVisibility();
   updateDoorVisibility();
 
-  let hasNew = false;
-  Object.keys(newCells).forEach(k => { if (!exploredCells[k]) { exploredCells[k] = true; hasNew = true; } });
-  if (hasNew) scheduleExploredPersist(newCells);
+  lastVisionTokenState = nextState;
+  visionFullRedrawNeeded = false;
 }
 
 // Um ponto (em px "naturais" do mapa) está visível *agora* se cai dentro
@@ -1117,12 +1335,11 @@ function isPointCurrentlyVisible(px, py) {
 // existência da porta seria um spoiler vazando através da névoa ainda não
 // revelada. O Mestre sempre vê todas, prontas para conferir/depurar a cena.
 function updateDoorVisibility() {
-  const svg = document.getElementById('doorSvgLayer');
-  if (!svg || !Object.keys(liveDoors).length) return;
+  if (!Object.keys(liveDoors).length) return;
   const master = isTableOwner();
   const cellPx = boardCellPx || DEFAULT_CELL_PX;
   Object.values(liveDoors).forEach(d => {
-    const mark = svg.querySelector(`g[data-door-id="${d.id}"]`);
+    const mark = doorMarkElCache[d.id];
     if (!mark) return;
     if (master) { mark.style.display = ''; return; }
     const mx = (d.x1 + d.x2) / 2 * baseMapW, my = (d.y1 + d.y2) / 2 * baseMapH;
@@ -1140,8 +1357,8 @@ function applyNpcFogVisibility() {
   const master = isTableOwner();
   Object.values(liveTokens).forEach(t => {
     if (!t.npc) return; // fichas de jogador nunca ficam escondidas dos jogadores
-    const el = document.querySelector(`.token[data-id="${t.id}"]`);
-    const auraEl = document.querySelector(`.token-aura[data-aura-id="${t.id}"]`);
+    const el = tokenElCache[t.id];
+    const auraEl = tokenAuraElCache[t.id];
     if (!el && !auraEl) return;
     const p = tokenVisionPos(t);
     const visible = master || isPointCurrentlyVisible(p.x * baseMapW, p.y * baseMapH);
@@ -1177,6 +1394,7 @@ function listenVisionMemory() {
   visionMemUnsub = db.collection('tables').doc(curTable.id).collection('visionMemory').doc(curTable.activeSceneId)
     .onSnapshot(doc => {
       exploredCells = (doc.exists && doc.data().cells) || {};
+      visionFullRedrawNeeded = true; // memória sincronizada em bloco: qualquer casa do mapa pode ter mudado
       scheduleVisionRecompute();
     }, err => console.error('Erro ao sincronizar memória de visão:', err));
 }

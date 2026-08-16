@@ -68,6 +68,13 @@ let liveDragPositions = {};
 // sendo arrastada, o cone acompanha em tempo real em vez de esperar o
 // Firestore confirmar o novo ângulo.
 let liveDragRotations = {};
+// Cache do elemento DOM (.token / .token-aura) de cada token, por id —
+// evita um document.querySelector (busca no documento inteiro) a cada
+// token a cada recálculo de visão (applyNpcFogVisibility roda em todo
+// frame de arrasto). Mantido em dia por renderAllTokens, que é quem
+// cria/remove esses elementos.
+let tokenElCache = {};
+let tokenAuraElCache = {};
 
 // ---- Visão dinâmica dos tokens (névoa de guerra estilo Roll20) -----------
 // Cada token com visão revela a névoa ao redor de si (alcance em casas da
@@ -496,6 +503,8 @@ function refreshBoardForActiveScene() {
     if (doorsUnsub) { doorsUnsub(); doorsUnsub = null; }
     if (visionMemUnsub) { visionMemUnsub(); visionMemUnsub = null; }
     liveDrawings = {}; liveFog = {}; liveTemplates = {}; liveWalls = {}; liveDoors = {}; exploredCells = {};
+    if (typeof invalidateCollisionSegmentsCache === 'function') invalidateCollisionSegmentsCache(); // paredes/portas da cena anterior não valem mais
+    if (typeof lastVisionTokenState !== 'undefined') { lastVisionTokenState = {}; visionFullRedrawNeeded = true; } // polígonos da cena anterior não valem mais
     lastOwnDrawingId = null; // "desfazer último traço" não deve valer pra outra cena
     if (typeof cancelFogPoly === 'function') cancelFogPoly(); // não deixa um polígono de névoa em andamento vazar pra outra cena
     if (typeof cancelWallChain === 'function') cancelWallChain(); // idem, pra um traço de parede em andamento
@@ -691,6 +700,8 @@ function closeTable() {
   hideChatUi();
   chatMessagesCache = [];
   liveDrawings = {}; liveFog = {}; livePings = {}; liveWalls = {}; liveDoors = {}; exploredCells = {};
+  if (typeof invalidateCollisionSegmentsCache === 'function') invalidateCollisionSegmentsCache();
+  if (typeof lastVisionTokenState !== 'undefined') { lastVisionTokenState = {}; visionFullRedrawNeeded = true; }
   liveDragPositions = {}; liveDragRotations = {};
   liveInitiative = {}; activeInitiativeId = null;
   selectedTokenId = null; handleDraggingTokenId = null;
