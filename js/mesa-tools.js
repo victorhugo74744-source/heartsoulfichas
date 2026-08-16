@@ -24,8 +24,6 @@ function boardPointFromEvent(ev) {
 
 function renderToolToolbar() {
   const bar = document.getElementById('toolToolbar');
-  const fogBar = document.getElementById('fogToolToolbar');
-  const fogLabel = document.getElementById('fogToolbarLabel');
   if (!bar) return;
   const isMaster = isTableOwner();
   bar.innerHTML = `
@@ -48,15 +46,7 @@ function renderToolToolbar() {
       <button type="button" class="color-swatch" id="drawWheelBtn" style="background:${drawColor};" title="Cor do desenho (roda cromática)"></button>
       <button type="button" id="undoDrawBtn" title="Desfazer o último traço — atalho: Ctrl/Cmd+Z"><span class="tool-label">↩️ Desfazer</span><kbd class="tool-key">Ctrl+Z</kbd></button>
       <button type="button" id="clearDrawBtn" title="Apagar todos os desenhos desta cena — dica: com a ferramenta de desenho ativa, clique num traço pra apagar só ele — atalho: X"><span class="tool-label">🧹 Limpar desenhos</span><kbd class="tool-key">X</kbd></button>
-    ` : ''}`;
-
-  // Ferramentas de névoa/paredes (só Mestre) ganharam fileira própria, com
-  // rótulo acima — antes ficavam no fim da barra principal, que foi
-  // acumulando tantos botões ao longo do tempo (régua, áreas, desenho...)
-  // que no celular (fileira rolável na horizontal) elas praticamente
-  // nunca eram vistas/achadas sem rolar bastante pro lado.
-  if (fogBar) {
-    fogBar.innerHTML = isMaster ? `
+      <div class="tt-sep"></div>
       <button type="button" data-tool="wall" title="Desenhar paredes que bloqueiam a visão dos tokens: clique ponto a ponto contornando o obstáculo e clique no ponto inicial (ou dê 2 cliques / Enter) para terminar — a névoa de guerra é revelada automaticamente pela visão de cada token (👁 na lista de tokens), bloqueada por estas paredes; botão direito (ou Backspace) desfaz o último ponto, Esc cancela o traço atual; com a ferramenta ativa (e nenhum traço em andamento), arraste um ponto já existente de uma parede salva para reposicioná-lo — atalho: W"><span class="tool-label">🧱 Parede</span><kbd class="tool-key">W</kbd></button>
       <button type="button" data-tool="room" title="Contornar um retângulo/sala inteira com paredes de uma vez: arraste de um canto ao outro e solte — nasce como um contorno fechado, sem precisar clicar ponto a ponto — atalho: B"><span class="tool-label">▭ Sala</span><kbd class="tool-key">B</kbd></button>
       <button type="button" id="clearWallsBtn" title="Apagar todas as paredes desta cena — atalho: Shift+W"><span class="tool-label">🧹 Limpar paredes</span><kbd class="tool-key">⇧W</kbd></button>
@@ -70,17 +60,12 @@ function renderToolToolbar() {
       <button type="button" id="resetExploredBtn" title="Resetar a memória de exploração desta cena: a névoa volta a cobrir tudo que já foi visto até agora — as paredes e o mapa em si não são afetados">
         <span class="tool-label">🌫 Resetar memória</span>
       </button>
-    ` : '';
-    if (fogLabel) fogLabel.classList.toggle('hidden', !isMaster);
-  }
+    ` : ''}`;
 
-  [bar, fogBar].forEach(b => {
-    if (!b) return;
-    b.querySelectorAll('[data-tool]').forEach(btn => btn.addEventListener('click', () => {
-      if (btn.dataset.shape) templateShape = btn.dataset.shape; // botões de área também escolhem o formato
-      setBoardTool(btn.dataset.tool);
-    }));
-  });
+  bar.querySelectorAll('[data-tool]').forEach(btn => btn.addEventListener('click', () => {
+    if (btn.dataset.shape) templateShape = btn.dataset.shape; // botões de área também escolhem o formato
+    setBoardTool(btn.dataset.tool);
+  }));
   const drawWheelBtn = document.getElementById('drawWheelBtn');
   if (drawWheelBtn) drawWheelBtn.addEventListener('click', () => {
     openColorWheel(drawWheelBtn, drawColor, (hex) => {
@@ -130,16 +115,12 @@ function toggleSnapToGrid() {
 
 function updateToolToolbarActive() {
   const bar = document.getElementById('toolToolbar');
-  const fogBar = document.getElementById('fogToolToolbar');
   if (!bar) return;
-  [bar, fogBar].forEach(el => {
-    if (!el) return;
-    el.querySelectorAll('[data-tool]').forEach(b => {
-      // Os três botões de área compartilham data-tool="template" — só o que
-      // bate também com o formato escolhido (templateShape) fica realçado.
-      const active = b.dataset.tool === boardTool && (!b.dataset.shape || b.dataset.shape === templateShape);
-      b.classList.toggle('tool-active', active);
-    });
+  bar.querySelectorAll('[data-tool]').forEach(b => {
+    // Os três botões de área compartilham data-tool="template" — só o que
+    // bate também com o formato escolhido (templateShape) fica realçado.
+    const active = b.dataset.tool === boardTool && (!b.dataset.shape || b.dataset.shape === templateShape);
+    b.classList.toggle('tool-active', active);
   });
   const snapBtn = document.getElementById('snapToggleBtn');
   if (snapBtn) snapBtn.classList.toggle('tool-active', snapToGrid);
@@ -1431,6 +1412,40 @@ function rayHitsSegment(px, py, dx, dy, ax, ay, bx, by) {
   const u = ((ax - px) * dy - (ay - py) * dx) / denom;
   if (t >= 0 && u >= 0 && u <= 1) return t;
   return null;
+}
+
+// -------------------------------------------------- COLISÃO DE MOVIMENTO --
+// Paredes e portas fechadas também bloqueiam o próprio movimento dos
+// tokens, não só a visão — usa os mesmos segmentos já calculados pra névoa
+// (collisionSegmentsForVision engloba paredes + portas fechadas; uma porta
+// aberta simplesmente não entra na lista, então tokens passam livremente).
+// Teste clássico de interseção de dois segmentos finitos (não de reta
+// infinita, como rayHitsSegment acima).
+function segmentsIntersect(p0x, p0y, p1x, p1y, p2x, p2y, p3x, p3y) {
+  const s1x = p1x - p0x, s1y = p1y - p0y;
+  const s2x = p3x - p2x, s2y = p3y - p2y;
+  const denom = (-s2x * s1y + s1x * s2y);
+  if (Math.abs(denom) < 1e-9) return false; // paralelos (ou o mesmo segmento) — trata como sem colisão
+  const s = (-s1y * (p0x - p2x) + s1x * (p0y - p2y)) / denom;
+  const t = (s2x * (p0y - p2y) - s2y * (p0x - p2x)) / denom;
+  return s >= 0 && s <= 1 && t >= 0 && t <= 1;
+}
+
+// Recebe origem/destino em coordenadas normalizadas (0..1, mesmo espaço de
+// token.x/token.y) e devolve true se o trajeto reto entre os dois pontos
+// cruza alguma parede ou porta fechada — usado durante o arrasto de um
+// token pra travar o movimento bem na parede, em vez de deixar atravessar.
+function movementBlockedByWalls(fromXNorm, fromYNorm, toXNorm, toYNorm) {
+  const x1 = fromXNorm * baseMapW, y1 = fromYNorm * baseMapH;
+  const x2 = toXNorm * baseMapW, y2 = toYNorm * baseMapH;
+  const grid = collisionSegmentsGrid();
+  const cx = (x1 + x2) / 2, cy = (y1 + y2) / 2;
+  const radius = Math.hypot(x2 - x1, y2 - y1) / 2 + 8; // pequena margem
+  const segs = segmentsNearCircle(grid, cx, cy, radius);
+  for (const s of segs) {
+    if (segmentsIntersect(x1, y1, x2, y2, s.x1, s.y1, s.x2, s.y2)) return true;
+  }
+  return false;
 }
 
 // Polígono de visibilidade (estilo "2D visibility"/shadowcasting) a partir

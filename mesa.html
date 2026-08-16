@@ -220,6 +220,7 @@ if ('serviceWorker' in navigator) {
   .token-row{
     display:flex; align-items:center; justify-content:space-between; gap:8px;
     font-size:13.5px; color:var(--ink-dim); padding:5px 0; border-bottom:1px solid var(--hairline-soft);
+    cursor:pointer; /* clique na linha abre/fecha os botões de ação (tr-tools) */
   }
   .token-row:last-child{ border-bottom:none; }
   .token-row.token-row-elsewhere{ opacity:.6; }
@@ -555,6 +556,7 @@ if ('serviceWorker' in navigator) {
     font-size:11px; padding:2px 6px; border-radius:4px;
   }
   .token-row .tr-tools button:hover{ border-color:var(--gold-dim); color:var(--gold); }
+  .token-row .tr-tools button.cursor-follow-on{ color:var(--gold); border-color:var(--gold); background:rgba(201,161,92,.12); }
   .token-row .tr-tools input.aura-radius-input{
     width:38px; background:none; border:1px solid var(--hairline-soft); color:var(--ink-mute);
     font-size:11px; padding:2px 3px; border-radius:4px; text-align:center;
@@ -1006,8 +1008,6 @@ if ('serviceWorker' in navigator) {
           <span class="tp-toggle-label">Ferramentas</span>
         </button>
         <div class="tool-toolbar" id="toolToolbar"></div>
-        <div class="tool-toolbar-label hidden" id="fogToolbarLabel">🌫 Névoa e paredes</div>
-        <div class="tool-toolbar" id="fogToolToolbar"></div>
       </div>
 
       <div class="board-wrap" id="boardWrap">

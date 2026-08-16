@@ -423,6 +423,7 @@ async function addNpcToken() {
 // -------------------------------------------------------------- TOKENS --
 let liveTokens = {}; // id -> data (cache local do último snapshot)
 let hpEditExpanded = new Set(); // ids de token com o mini-editor de HP aberto na lista
+let tokenToolsExpanded = new Set(); // ids de token com os botões de ação abertos na lista (clicou em cima)
 
 // Fichas de jogador acompanham o grupo em qualquer cena; já NPCs/monstros
 // avulsos (token.npc === true) só aparecem na cena em que foram criados —
@@ -561,9 +562,11 @@ function renderAllTokens() {
 
 function renderTokenListPanel() {
   const body = document.getElementById('tokenListBody');
-  const tokens = Object.values(liveTokens);
-  if (tokens.length === 0) { body.innerHTML = `<span class="tc-meta">Nenhum token ainda.</span>`; return; }
   const canManage = isTableOwner();
+  // Jogadores não veem NPCs/monstros na lista de fichas da mesa — só o Mestre
+  // controla e enxerga os NPCs; jogadores só veem as fichas de personagem.
+  const tokens = Object.values(liveTokens).filter(t => canManage || !t.npc);
+  if (tokens.length === 0) { body.innerHTML = `<span class="tc-meta">Nenhum token ainda.</span>`; return; }
   body.innerHTML = tokens.map(t => {
     // Cada jogador gira/redimensiona o próprio token; o Mestre pode mexer em qualquer um.
     const canEdit = canManage || t.ownerId === curUser.uid;
@@ -572,10 +575,11 @@ function renderTokenListPanel() {
     const sumCur = BODY_PARTS_TABLE.reduce((a, [k]) => a + ((hp[k] && hp[k].cur) || 0), 0);
     const sumMax = BODY_PARTS_TABLE.reduce((a, [k]) => a + ((hp[k] && hp[k].max) || 0), 0);
     const expanded = hpEditExpanded.has(t.id);
+    const toolsOpen = tokenToolsExpanded.has(t.id);
     return `
-    <div class="token-row ${elsewhere ? 'token-row-elsewhere' : ''}">
+    <div class="token-row ${elsewhere ? 'token-row-elsewhere' : ''}" data-token-row="${t.id}">
       <span class="${t.sheetId ? 'tr-name' : ''}" ${t.sheetId ? `data-view-sheet="${t.sheetId}"` : ''}>${escapeHtml(t.name || 'Token')}${elsewhere ? ' <span class="tc-meta">(outra cena)</span>' : ''}</span>
-      <div class="tr-tools">
+      <div class="tr-tools ${toolsOpen ? '' : 'hidden'}">
         ${sumMax ? `<span class="tr-hp-summary" title="HP total (soma das partes)">❤ ${sumCur}/${sumMax}</span>` : ''}
         ${canEdit && !elsewhere ? `<button data-hp-toggle="${t.id}" title="Ver/editar HP por parte">${expanded ? '❤︎ fechar' : '❤ HP'}</button>` : ''}
         ${elsewhere && canManage ? `<button data-bring-scene="${t.id}" title="Trazer este NPC para a cena atual">📥 trazer</button>` : ''}
@@ -609,6 +613,7 @@ function renderTokenListPanel() {
           ` : ''}
           <button data-rotate="${t.id}" data-delta="-15" title="Girar à esquerda">⟲</button>
           <button data-rotate="${t.id}" data-delta="15" title="Girar à direita">⟳</button>
+          <button data-cursor-follow="${t.id}" class="${cursorFollowTokenIds.has(t.id) ? 'cursor-follow-on' : ''}" title="${cursorFollowTokenIds.has(t.id) ? 'Desligar: o token para de girar sozinho' : 'Ligar: o token gira sozinho apontando para onde o cursor estiver sobre o mapa'}">🧭 ${cursorFollowTokenIds.has(t.id) ? 'Seguindo cursor' : 'Seguir cursor'}</button>
           <button data-scale="${t.id}" data-delta="-0.25" title="Diminuir">−</button>
           <button data-scale="${t.id}" data-delta="0.25" title="Aumentar">+</button>
           <button data-tofront="${t.id}" title="Trazer para frente (fica por cima dos outros tokens)">⬆︎</button>
@@ -690,6 +695,9 @@ function renderTokenListPanel() {
   body.querySelectorAll('[data-rotate]').forEach(b =>
     b.addEventListener('click', () => rotateToken(b.dataset.rotate, parseFloat(b.dataset.delta)))
   );
+  body.querySelectorAll('[data-cursor-follow]').forEach(b =>
+    b.addEventListener('click', () => toggleTokenCursorFollow(b.dataset.cursorFollow))
+  );
   body.querySelectorAll('[data-scale]').forEach(b =>
     b.addEventListener('click', () => scaleToken(b.dataset.scale, parseFloat(b.dataset.delta)))
   );
@@ -716,6 +724,17 @@ function renderTokenListPanel() {
   body.querySelectorAll('[data-hp-toggle]').forEach(b => b.addEventListener('click', () => {
     const id = b.dataset.hpToggle;
     if (hpEditExpanded.has(id)) hpEditExpanded.delete(id); else hpEditExpanded.add(id);
+    renderTokenListPanel();
+  }));
+  // Os botões de ação (girar, HP, cor, visão etc.) ficam escondidos até o
+  // jogador clicar em cima da ficha na lista — evita uma lista poluída de
+  // botões quando há várias fichas na mesa. Clicar de novo esconde. Clicar
+  // em algo que já tem ação própria (nome, botão, campo) não deve também
+  // abrir/fechar as ferramentas — só o "corpo" da linha.
+  body.querySelectorAll('[data-token-row]').forEach(row => row.addEventListener('click', (e) => {
+    if (e.target.closest('.tr-name, button, input, select')) return;
+    const id = row.dataset.tokenRow;
+    if (tokenToolsExpanded.has(id)) tokenToolsExpanded.delete(id); else tokenToolsExpanded.add(id);
     renderTokenListPanel();
   }));
   body.querySelectorAll('[data-hp-cur]').forEach(inp => {
@@ -886,6 +905,95 @@ async function rotateToken(tokenId, delta) {
   try {
     await db.collection('tables').doc(curTable.id).collection('tokens').doc(tokenId).update({ rot });
   } catch (err) { console.error('Erro ao girar token:', err); }
+}
+
+// -------------------------------------------------- GIRAR SEGUINDO O CURSOR --
+// Modo opcional, desligado por padrão e por token: enquanto ligado, o token
+// aponta sozinho pra onde o mouse/dedo estiver sobre o mapa, sem precisar
+// arrastar a alça de girar toda hora — útil pra mirar rápido antes de um
+// ataque, por ex. É um estado só desta aba/sessão (não fica salvo no
+// token nem sincronizado com outros jogadores) — cada um liga só nos
+// próprios tokens (o Mestre, em qualquer um), e recarregar a página desliga
+// de novo. Pode ser desligado a qualquer momento clicando de novo no botão.
+let cursorFollowTokenIds = new Set();
+
+function toggleTokenCursorFollow(tokenId) {
+  if (cursorFollowTokenIds.has(tokenId)) cursorFollowTokenIds.delete(tokenId);
+  else cursorFollowTokenIds.add(tokenId);
+  renderTokenListPanel();
+}
+
+// Mesma ideia de throttle do broadcastLiveTokenPosition (ver mais abaixo):
+// o cursor pode gerar dezenas de eventos por segundo, mas o Firestore não
+// precisa de mais que ~11 escritas/seg pra parecer fluido (a transição CSS
+// de rotate cobre o resto).
+const LIVE_ROT_INTERVAL_MS = 90;
+let liveRotLastSent = {}; // tokenId -> timestamp (ms) do último envio
+let liveRotPending = {};  // tokenId -> ângulo mais recente ainda não enviado
+let liveRotTimer = {};    // tokenId -> setTimeout agendado pra mandar o "pending"
+
+function broadcastLiveTokenRotation(tokenId, rot) {
+  liveRotPending[tokenId] = rot;
+  const now = performance.now();
+  const last = liveRotLastSent[tokenId] || 0;
+  if (now - last >= LIVE_ROT_INTERVAL_MS) {
+    flushLiveTokenRotation(tokenId);
+  } else if (!liveRotTimer[tokenId]) {
+    liveRotTimer[tokenId] = setTimeout(() => flushLiveTokenRotation(tokenId), LIVE_ROT_INTERVAL_MS - (now - last));
+  }
+}
+
+function flushLiveTokenRotation(tokenId) {
+  if (liveRotTimer[tokenId]) { clearTimeout(liveRotTimer[tokenId]); liveRotTimer[tokenId] = null; }
+  const rot = liveRotPending[tokenId];
+  if (rot == null) return;
+  liveRotPending[tokenId] = null;
+  liveRotLastSent[tokenId] = performance.now();
+  db.collection('tables').doc(curTable.id).collection('tokens').doc(tokenId)
+    .update({ rot })
+    .catch(err => console.warn('Erro ao transmitir giro ao vivo do token:', err));
+}
+
+// Chamado a cada movimento do ponteiro sobre o tabuleiro (ver
+// initCursorFollowTracking, ligado uma vez em mesa-init.js) — gira, em
+// tempo real, todo token com o modo "seguir cursor" ligado.
+function handleCursorFollowPointerMove(ev) {
+  if (cursorFollowTokenIds.size === 0) return;
+  const surface = document.getElementById('boardSurface');
+  if (!surface) return;
+  const rect = surface.getBoundingClientRect();
+  const canManage = isTableOwner();
+  cursorFollowTokenIds.forEach(tokenId => {
+    // Se o token estiver sendo arrastado (posição) ou com a alça de
+    // girar/redimensionar em uso, o modo automático fica pausado pra não
+    // brigar com esse outro gesto.
+    if (tokenId === draggingTokenId || tokenId === handleDraggingTokenId) return;
+    const tok = liveTokens[tokenId];
+    if (!tok) { cursorFollowTokenIds.delete(tokenId); return; } // token removido: desliga sozinho
+    const canEdit = canManage || tok.ownerId === curUser.uid;
+    if (!canEdit) { cursorFollowTokenIds.delete(tokenId); return; } // perdeu permissão: desliga sozinho
+    const cx = rect.left + tok.x * rect.width;
+    const cy = rect.top + tok.y * rect.height;
+    let angle = Math.atan2(ev.clientX - cx, -(ev.clientY - cy)) * 180 / Math.PI;
+    if (angle < 0) angle += 360;
+    applyLiveTokenVisual(tokenId, { rot: angle });
+    if (selectedTokenId === tokenId) updateSelectionHandles({ rot: angle });
+    if (tok.visionMode === 'cone') {
+      liveDragRotations[tokenId] = angle;
+      scheduleVisionRecompute();
+    }
+    broadcastLiveTokenRotation(tokenId, angle);
+  });
+}
+
+// Liga o acompanhamento do cursor — chamado uma só vez, no carregamento da
+// página (ver mesa-init.js). O #boardWrap continua sendo o mesmo elemento
+// entre trocas de cena/mapa, então um único listener já cobre a mesa
+// inteira, sem precisar religar a cada renderBoardBackground.
+function initCursorFollowTracking() {
+  const wrap = document.getElementById('boardWrap');
+  if (!wrap) return;
+  wrap.addEventListener('pointermove', handleCursorFollowPointerMove);
 }
 
 async function scaleToken(tokenId, delta) {
@@ -1153,6 +1261,10 @@ function attachTokenDragHandlers(el, tokenId) {
     const dragRect = surface.getBoundingClientRect();
     let pendingMoveEv = null;
     let moveRafId = null;
+    // Última posição válida (sem cruzar nenhuma parede/porta fechada) —
+    // serve de âncora pra testar colisão a cada frame do arrasto (ver
+    // movementBlockedByWalls, em mesa-tools.js).
+    let lastValidX = tok.x, lastValidY = tok.y;
 
     const applyMove = () => {
       moveRafId = null;
@@ -1162,6 +1274,15 @@ function attachTokenDragHandlers(el, tokenId) {
       let y = (ev.clientY - dragRect.top) / dragRect.height;
       x = Math.min(1, Math.max(0, x));
       y = Math.min(1, Math.max(0, y));
+      // Paredes e portas fechadas travam o movimento bem em cima delas, sem
+      // deixar atravessar — segurando Alt/Option (mesmo atalho que já solta
+      // o token sem encaixar na grade) o token ignora a colisão, caso
+      // precise passar por cima mesmo assim.
+      if (!ev.altKey && typeof movementBlockedByWalls === 'function'
+          && movementBlockedByWalls(lastValidX, lastValidY, x, y)) {
+        return;
+      }
+      lastValidX = x; lastValidY = y;
       el.style.left = (x * localW) + 'px';
       el.style.top = (y * localH) + 'px';
       if (auraEl) {
@@ -1215,6 +1336,14 @@ function attachTokenDragHandlers(el, tokenId) {
       if (shouldSnap) {
         finalX = snapAxisToGrid(finalX, localW, boardCellPx);
         finalY = snapAxisToGrid(finalY, localH, boardCellPx);
+        // O encaixe na grade pode "puxar" o token pra dentro de uma parede
+        // que estava logo ali do lado (a posição bruta, sem encaixe, já era
+        // válida — só o arredondamento pro centro da célula que passou do
+        // ponto) — nesse caso, mantém a posição bruta em vez do encaixe.
+        if (!el._freePlace && typeof movementBlockedByWalls === 'function'
+            && movementBlockedByWalls(lastValidX, lastValidY, finalX, finalY)) {
+          finalX = lastValidX; finalY = lastValidY;
+        }
         el.style.left = (finalX * localW) + 'px';
         el.style.top = (finalY * localH) + 'px';
       }

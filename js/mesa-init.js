@@ -28,6 +28,10 @@ guardPage(null, (user, profile) => {
   document.getElementById('zoomFitBtn').addEventListener('click', fitBoardToScreen);
   document.getElementById('fullscreenBtn').addEventListener('click', toggleFullscreenBoard);
 
+  // Girar token seguindo o cursor (modo opcional, ligado por token na lista
+  // de fichas — ver toggleTokenCursorFollow em mesa-tokens.js).
+  initCursorFollowTracking();
+
   // Ver ficha (modal)
   document.getElementById('sheetModalClose').addEventListener('click', closeSheetModal);
   document.getElementById('sheetModalOverlay').addEventListener('click', (e) => {
