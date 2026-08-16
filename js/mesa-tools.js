@@ -49,6 +49,8 @@ function renderToolToolbar() {
       <div class="tt-sep"></div>
       <button type="button" data-tool="wall" title="Desenhar paredes que bloqueiam a visão dos tokens: clique ponto a ponto contornando o obstáculo e clique no ponto inicial (ou dê 2 cliques / Enter) para terminar — a névoa de guerra é revelada automaticamente pela visão de cada token (👁 na lista de tokens), bloqueada por estas paredes; botão direito (ou Backspace) desfaz o último ponto, Esc cancela o traço atual — atalho: W"><span class="tool-label">🧱 Parede</span><kbd class="tool-key">W</kbd></button>
       <button type="button" id="clearWallsBtn" title="Apagar todas as paredes desta cena — atalho: Shift+W"><span class="tool-label">🧹 Limpar paredes</span><kbd class="tool-key">⇧W</kbd></button>
+      <button type="button" data-tool="door" title="Colocar uma porta: arraste de um lado ao outro do vão — porta nasce fechada (bloqueia a visão igual a uma parede); qualquer pessoa na mesa clica no ícone 🚪 no mapa para abrir/fechar, revelando a névoa do outro lado; com esta ferramenta ativa, clicar numa porta já existente a apaga — atalho: O"><span class="tool-label">🚪 Porta</span><kbd class="tool-key">O</kbd></button>
+      <button type="button" id="clearDoorsBtn" title="Apagar todas as portas desta cena — atalho: Shift+O"><span class="tool-label">🧹 Limpar portas</span><kbd class="tool-key">⇧O</kbd></button>
     ` : ''}`;
 
   bar.querySelectorAll('[data-tool]').forEach(b => b.addEventListener('click', () => {
@@ -69,6 +71,8 @@ function renderToolToolbar() {
   if (undoDrawBtn) undoDrawBtn.addEventListener('click', undoLastDrawing);
   const clearWallsBtn = document.getElementById('clearWallsBtn');
   if (clearWallsBtn) clearWallsBtn.addEventListener('click', clearAllWalls);
+  const clearDoorsBtn = document.getElementById('clearDoorsBtn');
+  if (clearDoorsBtn) clearDoorsBtn.addEventListener('click', clearAllDoors);
   const clearTemplatesBtn = document.getElementById('clearTemplatesBtn');
   if (clearTemplatesBtn) clearTemplatesBtn.addEventListener('click', clearMyOrAllTemplates);
   const snapBtn = document.getElementById('snapToggleBtn');
@@ -107,7 +111,7 @@ function updateToolToolbarActive() {
   if (snapBtn) snapBtn.classList.toggle('tool-active', snapToGrid);
   const wrap = document.getElementById('boardWrap');
   if (wrap) {
-    wrap.classList.remove('tool-draw', 'tool-wall', 'tool-ruler', 'tool-ping', 'tool-template');
+    wrap.classList.remove('tool-draw', 'tool-wall', 'tool-door', 'tool-ruler', 'tool-ping', 'tool-template');
     if (boardTool !== 'pan') wrap.classList.add('tool-' + boardTool);
   }
 }
@@ -117,6 +121,7 @@ function setBoardTool(tool) {
   // andamento (senão os pontos marcados ficariam soltos, sem nunca virar
   // parede nem sumir da tela).
   if (boardTool === 'wall' && tool !== 'wall' && typeof cancelWallChain === 'function') cancelWallChain();
+  if (boardTool === 'door' && tool !== 'door' && typeof cancelDoorDraft === 'function') cancelDoorDraft();
   boardTool = tool;
   updateToolToolbarActive();
 }
@@ -153,6 +158,7 @@ function handleBoardKeydown(e) {
   switch (key) {
     case 'escape':
       if (boardTool === 'wall' && wallPoints.length) cancelWallChain(); // primeiro Esc só limpa o traço em andamento
+      else if (boardTool === 'door' && doorStartPt) cancelDoorDraft();
       else setBoardTool('pan');
       break;
     case 'v': setBoardTool('pan'); break;
@@ -165,6 +171,7 @@ function handleBoardKeydown(e) {
     case 'g': toggleSnapToGrid(); break;
     case 'd': if (isMaster) setBoardTool('draw'); break;
     case 'w': if (isMaster) { if (e.shiftKey) clearAllWalls(); else setBoardTool('wall'); } break;
+    case 'o': if (isMaster) { if (e.shiftKey) clearAllDoors(); else setBoardTool('door'); } break;
     case 'x': if (isMaster) clearAllDrawings(); break;
     default: return;
   }
@@ -656,6 +663,166 @@ async function clearAllWalls() {
   } catch (err) { alert('Erro ao limpar paredes: ' + err.message); }
 }
 
+// ---------------------------------------------------------------- PORTAS --
+// Uma porta é um segmento único (não uma cadeia como a parede) que bloqueia
+// a visão só enquanto está fechada (door.open === false) — abrir/fechar é
+// uma ação de jogo, disponível pra qualquer pessoa na mesa, não só o
+// Mestre. Só o Mestre cria (arrastando de um lado ao outro do vão) e apaga
+// (clicando numa porta existente com a ferramenta 🚪 ativa). Ao contrário
+// da parede, o ícone da porta aparece pra todo mundo (pra dar pra abrir/
+// fechar); só o traço da porta em si (a "linha" que ela ocupa) fica
+// escondido dos jogadores, mesma regra da parede.
+let doorPointerId = null;
+let doorStartPt = null;
+
+function attachDoorHandlers(wrap) {
+  wrap.addEventListener('pointerdown', (e) => {
+    if (boardTool !== 'door' || !isTableOwner()) return;
+    if (e.target.closest('.door-mark')) return; // clique num ícone existente: ver renderDoors (apaga ou abre/fecha)
+    if (e.button === 2) return;
+    e.preventDefault();
+    doorPointerId = e.pointerId;
+    doorStartPt = boardPointFromEvent(e);
+    wrap.setPointerCapture(e.pointerId);
+    renderDoorPreview(doorStartPt, doorStartPt);
+  });
+  wrap.addEventListener('pointermove', (e) => {
+    if (boardTool !== 'door' || doorPointerId !== e.pointerId || !doorStartPt) return;
+    renderDoorPreview(doorStartPt, boardPointFromEvent(e));
+  });
+  const endDoor = async (e) => {
+    if (doorPointerId !== e.pointerId) return;
+    doorPointerId = null;
+    const start = doorStartPt; doorStartPt = null;
+    removeDoorPreview();
+    if (!start || !curTable.activeSceneId) return;
+    const end = boardPointFromEvent(e);
+    const dx = (end.x - start.x) * baseMapW, dy = (end.y - start.y) * baseMapH;
+    if (Math.hypot(dx, dy) < 6) return; // clique sem arrastar: ignora (evita porta minúscula sem querer)
+    try {
+      await db.collection('tables').doc(curTable.id).collection('doors').add({
+        x1: start.x, y1: start.y, x2: end.x, y2: end.y,
+        open: false, sceneId: curTable.activeSceneId
+      });
+    } catch (err) { console.error('Erro ao salvar porta:', err); }
+  };
+  wrap.addEventListener('pointerup', endDoor);
+  wrap.addEventListener('pointercancel', endDoor);
+}
+
+function cancelDoorDraft() {
+  doorPointerId = null; doorStartPt = null;
+  removeDoorPreview();
+}
+
+function doorSvgLayer() {
+  let svg = document.getElementById('doorSvgLayer');
+  if (!svg) {
+    svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.id = 'doorSvgLayer';
+    svg.style.position = 'absolute'; svg.style.top = '0'; svg.style.left = '0';
+    svg.style.pointerEvents = 'none';
+    document.getElementById('boardSurface').appendChild(svg);
+  }
+  svg.setAttribute('width', baseMapW); svg.setAttribute('height', baseMapH);
+  svg.setAttribute('viewBox', `0 0 ${baseMapW} ${baseMapH}`);
+  return svg;
+}
+
+function renderDoorPreview(a, b) {
+  const svg = doorSvgLayer();
+  let line = svg.querySelector('#liveDoorPreview');
+  if (!line) {
+    line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    line.id = 'liveDoorPreview';
+    line.setAttribute('class', 'door-line-live');
+    svg.appendChild(line);
+  }
+  line.setAttribute('x1', a.x * baseMapW); line.setAttribute('y1', a.y * baseMapH);
+  line.setAttribute('x2', b.x * baseMapW); line.setAttribute('y2', b.y * baseMapH);
+}
+
+function removeDoorPreview() {
+  const line = document.querySelector('#doorSvgLayer #liveDoorPreview');
+  if (line) line.remove();
+}
+
+// Ícone clicável no meio da porta — visível pra todo mundo (ao contrário do
+// traço da parede/porta em si, que só o Mestre vê). Clique normal abre/
+// fecha; clique com a ferramenta 🚪 ativa (só o Mestre) apaga a porta.
+function renderDoors() {
+  const svg = doorSvgLayer();
+  const isMaster = isTableOwner();
+  svg.querySelectorAll('[data-door-id]').forEach(el => {
+    if (!liveDoors[el.dataset.doorId]) el.remove();
+  });
+  Object.values(liveDoors).forEach(d => {
+    let line = svg.querySelector(`line[data-door-id="${d.id}"]`);
+    if (!line) {
+      line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+      line.dataset.doorId = d.id;
+      line.setAttribute('class', 'door-line-shape');
+      svg.appendChild(line);
+    }
+    line.setAttribute('x1', d.x1 * baseMapW); line.setAttribute('y1', d.y1 * baseMapH);
+    line.setAttribute('x2', d.x2 * baseMapW); line.setAttribute('y2', d.y2 * baseMapH);
+    line.style.display = isMaster ? '' : 'none'; // só o Mestre vê o traço em si — todos veem o ícone abaixo
+
+    let mark = svg.querySelector(`g[data-door-id="${d.id}"]`);
+    if (!mark) {
+      mark = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+      mark.dataset.doorId = d.id;
+      mark.setAttribute('class', 'door-mark');
+      mark.style.pointerEvents = 'auto';
+      mark.innerHTML = '<circle class="door-mark-bg" r="11"></circle><text class="door-mark-icon" text-anchor="middle" dominant-baseline="central"></text>';
+      svg.appendChild(mark);
+      mark.addEventListener('pointerdown', async (e) => {
+        e.stopPropagation();
+        if (boardTool === 'door' && isTableOwner()) {
+          try { await db.collection('tables').doc(curTable.id).collection('doors').doc(d.id).delete(); }
+          catch (err) { console.error('Erro ao apagar porta:', err); }
+          return;
+        }
+        try {
+          await db.collection('tables').doc(curTable.id).collection('doors').doc(d.id).update({ open: !liveDoors[d.id].open });
+        } catch (err) { console.error('Erro ao abrir/fechar porta:', err); }
+      });
+    }
+    const mx = (d.x1 + d.x2) / 2 * baseMapW, my = (d.y1 + d.y2) / 2 * baseMapH;
+    mark.setAttribute('transform', `translate(${mx},${my})`);
+    mark.classList.toggle('door-open', !!d.open);
+    mark.querySelector('.door-mark-icon').textContent = d.open ? '🔓' : '🚪';
+    mark.querySelector('title')?.remove();
+    const title = document.createElementNS('http://www.w3.org/2000/svg', 'title');
+    title.textContent = d.open ? 'Porta aberta — clique para fechar' : 'Porta fechada — clique para abrir';
+    mark.appendChild(title);
+  });
+}
+
+function listenDoors() {
+  if (!curTable.activeSceneId) return;
+  doorsUnsub = db.collection('tables').doc(curTable.id).collection('doors')
+    .where('sceneId', '==', curTable.activeSceneId)
+    .onSnapshot(snap => {
+      liveDoors = {};
+      snap.forEach(d => { liveDoors[d.id] = { id: d.id, ...d.data() }; });
+      renderDoors();
+      scheduleVisionRecompute();
+    }, err => console.error('Erro ao sincronizar portas:', err));
+}
+
+async function clearAllDoors() {
+  if (!curTable.activeSceneId) return;
+  if (!confirm('Apagar todas as portas desta cena?')) return;
+  try {
+    const snap = await db.collection('tables').doc(curTable.id).collection('doors')
+      .where('sceneId', '==', curTable.activeSceneId).get();
+    const batch = db.batch();
+    snap.forEach(d => batch.delete(d.ref));
+    await batch.commit();
+  } catch (err) { alert('Erro ao limpar portas: ' + err.message); }
+}
+
 // ------------------------------------------------- VISÃO DINÂMICA (névoa) --
 // Névoa de guerra automática, estilo Roll20: cada token com visão ligada
 // (👁 na lista de tokens) revela um polígono ao redor de si — até
@@ -668,9 +835,16 @@ async function clearAllWalls() {
 // compartilhada entre todos na mesa, nunca "esquece" uma área já vista. O
 // Mestre sempre vê o mapa inteiro (a camada de névoa aparece bem clara
 // pra ele, só de referência).
+// Portas (🚪) entram no cálculo como paredes que bloqueiam só enquanto
+// fechadas; tokens podem enxergar em cone (na direção que estão virados,
+// tok.rot) em vez de 360°; e a borda externa do alcance agora suaviza em
+// gradiente (FOG_EDGE_SOFTNESS) em vez de cortar em linha dura — só as
+// bordas por causa de parede/porta continuam com corte nítido.
 const FOG_UNSEEN_COLOR = 'rgba(17,14,11,0.86)'; // alpha < 1 de propósito: não é um breu totalmente opaco, deixa entrever vagamente o mapa por baixo
 const FOG_EXPLORED_DIM_ALPHA = 0.55; // o quanto uma casa "lembrada" (fora de visão agora) ainda escurece o mapa
 const FOG_CIRCLE_SAMPLES = 180; // raios extras, espaçados igualmente, pra a borda do alcance ficar arredondada
+const FOG_EDGE_SOFTNESS = 0.82; // fração do raio a partir de onde a visão começa a esmaecer até o alcance máximo (1 = sem suavização)
+const DEG2RAD = Math.PI / 180;
 let visionRecomputeQueued = false;
 let pendingExploredCells = {};
 let exploredPersistTimer = null;
@@ -718,6 +892,29 @@ function wallSegmentsForVision() {
   return segs;
 }
 
+// Paredes + portas fechadas — tudo que bloqueia a visão agora mesmo (uma
+// porta aberta simplesmente não entra na lista, como se não existisse).
+function collisionSegmentsForVision() {
+  const segs = wallSegmentsForVision();
+  Object.values(liveDoors).forEach(d => {
+    if (d.open) return;
+    segs.push({ x1: d.x1 * baseMapW, y1: d.y1 * baseMapH, x2: d.x2 * baseMapW, y2: d.y2 * baseMapH });
+  });
+  return segs;
+}
+
+// Filtra só os segmentos cujo retângulo envolvente cruza o quadrado do
+// alcance de um token — evita testar paredes/portas distantes a cada um
+// dos ~180 raios, o que pesa muito em mapas grandes com muitos obstáculos.
+function segmentsNearCircle(segments, cx, cy, radius) {
+  const minX = cx - radius, maxX = cx + radius, minY = cy - radius, maxY = cy + radius;
+  return segments.filter(s => {
+    const sMinX = Math.min(s.x1, s.x2), sMaxX = Math.max(s.x1, s.x2);
+    const sMinY = Math.min(s.y1, s.y2), sMaxY = Math.max(s.y1, s.y2);
+    return sMaxX >= minX && sMinX <= maxX && sMaxY >= minY && sMinY <= maxY;
+  });
+}
+
 // Interseção de um raio (origem px,py, direção unitária dx,dy) com um
 // segmento (ax,ay)-(bx,by). Devolve a distância "t" ao longo do raio até o
 // ponto de interseção, ou null se não houver (paralelos ou fora do
@@ -734,22 +931,44 @@ function rayHitsSegment(px, py, dx, dy, ax, ay, bx, by) {
 
 // Polígono de visibilidade (estilo "2D visibility"/shadowcasting) a partir
 // do centro (cx,cy), limitado ao alcance "radius" (px) e bloqueado pelos
-// segmentos de parede — cantos de parede projetam sombra "dura", e onde não
-// há obstrução nenhuma a borda vira o próprio círculo do alcance (graças às
+// segmentos de parede/porta — cantos projetam sombra "dura", e onde não há
+// obstrução nenhuma a borda vira o próprio círculo do alcance (graças às
 // amostras uniformes somadas aos ângulos exatos dos cantos das paredes).
-function computeVisibilityPolygon(cx, cy, radius, segments) {
+//
+// coneCenterAngle/coneHalfAngle (radianos, opcionais): quando os dois são
+// passados, a visão vira um cone/leque nessa direção em vez de 360° —
+// usado por tokens com visionMode === 'cone' (ver recomputeAndRenderVision).
+// Os ângulos das amostras e dos cantos são calculados *relativos* ao centro
+// do cone (em vez de absolutos) só pra não quebrar perto de ±180°, quando
+// um token está virado pra "trás" (ex.: olhando para a esquerda).
+function computeVisibilityPolygon(cx, cy, radius, segments, coneCenterAngle, coneHalfAngle) {
+  const isCone = coneCenterAngle != null && coneHalfAngle != null;
   const angles = [];
-  for (let i = 0; i < FOG_CIRCLE_SAMPLES; i++) angles.push((i / FOG_CIRCLE_SAMPLES) * Math.PI * 2);
+  if (isCone) {
+    const steps = Math.max(10, Math.round(FOG_CIRCLE_SAMPLES * (coneHalfAngle * 2) / (Math.PI * 2)));
+    for (let i = 0; i <= steps; i++) angles.push(-coneHalfAngle + (coneHalfAngle * 2) * (i / steps));
+  } else {
+    for (let i = 0; i < FOG_CIRCLE_SAMPLES; i++) angles.push((i / FOG_CIRCLE_SAMPLES) * Math.PI * 2);
+  }
   const EPS = 0.00002;
   segments.forEach(s => {
-    const a1 = Math.atan2(s.y1 - cy, s.x1 - cx);
-    const a2 = Math.atan2(s.y2 - cy, s.x2 - cx);
+    let a1 = Math.atan2(s.y1 - cy, s.x1 - cx);
+    let a2 = Math.atan2(s.y2 - cy, s.x2 - cx);
+    if (isCone) {
+      // Normaliza cada ângulo pra "quanto ele se desvia do centro do cone",
+      // em vez do ângulo absoluto — e recorta pras bordas do leque, senão
+      // um canto de parede fora do cone criaria um raio na direção errada.
+      a1 = Math.max(-coneHalfAngle, Math.min(coneHalfAngle, Math.atan2(Math.sin(a1 - coneCenterAngle), Math.cos(a1 - coneCenterAngle))));
+      a2 = Math.max(-coneHalfAngle, Math.min(coneHalfAngle, Math.atan2(Math.sin(a2 - coneCenterAngle), Math.cos(a2 - coneCenterAngle))));
+    }
     angles.push(a1 - EPS, a1, a1 + EPS, a2 - EPS, a2, a2 + EPS);
   });
   angles.sort((a, b) => a - b);
 
   const pts = [];
-  for (const angle of angles) {
+  if (isCone) pts.push({ x: cx, y: cy }); // ápice do leque — fecha a forma de volta no próprio token
+  for (const rel of angles) {
+    const angle = isCone ? coneCenterAngle + rel : rel;
     const dx = Math.cos(angle), dy = Math.sin(angle);
     let minT = radius;
     for (const s of segments) {
@@ -826,26 +1045,48 @@ function recomputeAndRenderVision() {
     ctx.fillRect(c * cellPx - 0.5, r * cellPx - 0.5, cellPx + 1, cellPx + 1); // +1px de folga evita frestas entre casas
   });
 
-  // Tokens com visão: cada polígono de visibilidade limpa a névoa por
-  // completo (visível agora) e alimenta a memória de exploração.
-  const segments = wallSegmentsForVision();
+  // Tokens com visão: cada polígono de visibilidade limpa a névoa (visível
+  // agora) e alimenta a memória de exploração. A visão em si já é 100% do
+  // alcance (a exploração e o bloqueio de NPCs não mudam), mas a *pintura*
+  // suaviza numa borda em gradiente perto do limite do alcance — só o corte
+  // por parede/porta continua nítido, como convém.
+  const segments = collisionSegmentsForVision();
   const newCells = {};
   currentVisionPolygons = [];
   ctx.globalCompositeOperation = 'destination-out';
-  ctx.fillStyle = 'rgba(0,0,0,1)';
+  const isMasterView = isTableOwner();
   Object.values(liveTokens).forEach(t => {
     if (!isTokenInActiveScene(t) || !tokenHasVision(t)) return;
     const p = tokenVisionPos(t);
     const cx = p.x * baseMapW, cy = p.y * baseMapH;
     const radius = (t.visionRadius || DEFAULT_VISION_RADIUS_CELLS) * cellPx;
-    const poly = computeVisibilityPolygon(cx, cy, radius, segments);
-    if (poly.length < 3) return;
+    const localSegments = segmentsNearCircle(segments, cx, cy, radius); // só os obstáculos perto o suficiente pra importar
+    const isCone = t.visionMode === 'cone';
+    const rot = liveDragRotations[t.id] != null ? liveDragRotations[t.id] : (t.rot || 0);
+    const coneCenter = isCone ? (rot - 90) * DEG2RAD : null; // rot=0 aponta "pra cima" (mesma convenção da alça de girar)
+    const coneHalf = isCone ? Math.min(179.5, (t.visionConeDeg || DEFAULT_VISION_CONE_DEG) / 2) * DEG2RAD : null;
+    const poly = computeVisibilityPolygon(cx, cy, radius, localSegments, coneCenter, coneHalf);
+    if (poly.length < (isCone ? 2 : 3)) return;
     currentVisionPolygons.push(poly);
+    const grad = ctx.createRadialGradient(cx, cy, radius * FOG_EDGE_SOFTNESS, cx, cy, radius);
+    grad.addColorStop(0, 'rgba(0,0,0,1)');
+    grad.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = grad;
     ctx.beginPath();
     ctx.moveTo(poly[0].x, poly[0].y);
     for (let i = 1; i < poly.length; i++) ctx.lineTo(poly[i].x, poly[i].y);
     ctx.closePath();
     ctx.fill();
+    // Contorno bem sutil do cone, só pro Mestre — ajuda a lembrar pra onde
+    // cada token está "olhando" sem precisar abrir a ficha dele.
+    if (isCone && isMasterView) {
+      ctx.save();
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.strokeStyle = 'rgba(201,161,92,.35)';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+      ctx.restore();
+    }
     collectExploredCells(poly, cx, cy, radius, newCells);
   });
   ctx.globalCompositeOperation = 'source-over';
@@ -856,6 +1097,7 @@ function recomputeAndRenderVision() {
   canvas.style.opacity = isTableOwner() ? '0.4' : '1';
 
   applyNpcFogVisibility();
+  updateDoorVisibility();
 
   let hasNew = false;
   Object.keys(newCells).forEach(k => { if (!exploredCells[k]) { exploredCells[k] = true; hasNew = true; } });
@@ -868,6 +1110,26 @@ function recomputeAndRenderVision() {
 // visão mais enxergar aquele ponto.
 function isPointCurrentlyVisible(px, py) {
   return currentVisionPolygons.some(poly => pointInPolygon(px, py, poly));
+}
+
+// O ícone de uma porta (🚪) só aparece pros jogadores se a área ao redor
+// dela já foi vista (agora ou na memória de exploração) — senão a própria
+// existência da porta seria um spoiler vazando através da névoa ainda não
+// revelada. O Mestre sempre vê todas, prontas para conferir/depurar a cena.
+function updateDoorVisibility() {
+  const svg = document.getElementById('doorSvgLayer');
+  if (!svg || !Object.keys(liveDoors).length) return;
+  const master = isTableOwner();
+  const cellPx = boardCellPx || DEFAULT_CELL_PX;
+  Object.values(liveDoors).forEach(d => {
+    const mark = svg.querySelector(`g[data-door-id="${d.id}"]`);
+    if (!mark) return;
+    if (master) { mark.style.display = ''; return; }
+    const mx = (d.x1 + d.x2) / 2 * baseMapW, my = (d.y1 + d.y2) / 2 * baseMapH;
+    const key = Math.floor(mx / cellPx) + ',' + Math.floor(my / cellPx);
+    const known = isPointCurrentlyVisible(mx, my) || exploredCells[key];
+    mark.style.display = known ? '' : 'none';
+  });
 }
 
 // NPCs/monstros escondidos na névoa não devem aparecer pros jogadores —
@@ -1346,6 +1608,7 @@ function attachBoardInteractionHandlers() {
   attachRulerHandlers(wrap);
   attachDrawHandlers(wrap);
   attachWallHandlers(wrap);
+  attachDoorHandlers(wrap);
   attachPingHandlers(wrap);
   attachTemplateHandlers(wrap);
 }

@@ -48,21 +48,26 @@ let lastRenderedSceneId = undefined; // não confundir com null (= "sem cena nen
 // 'pan' é a ferramenta padrão (arrastar move o mapa / roda-mouse-pinça dá
 // zoom, como já era). As outras ferramentas tomam conta do pointerdown no
 // board-wrap enquanto ativas; ver attachBoardInteractionHandlers.
-let boardTool = 'pan'; // 'pan' | 'ruler' | 'draw' | 'wall' | 'ping' | 'template'
+let boardTool = 'pan'; // 'pan' | 'ruler' | 'draw' | 'wall' | 'door' | 'ping' | 'template'
 // Owlbear Rodeo não usa uma paleta fixa de cores prontas — só a roda
 // cromática. drawColor nasce igual à cor do Mestre na mesa (myColor) e só
 // muda se ele escolher outra na própria roda (ver openTable/renderToolToolbar).
 let drawColor = '#e0473f';
 let drawUnsub = null, fogUnsub = null, pingUnsub = null, templateUnsub = null;
-let wallsUnsub = null, visionMemUnsub = null;
+let wallsUnsub = null, visionMemUnsub = null, doorsUnsub = null;
 let liveDrawings = {}, liveFog = {}, livePings = {}, liveTemplates = {};
-let liveWalls = {}, exploredCells = {};
+let liveWalls = {}, exploredCells = {}, liveDoors = {};
 // Posições "ao vivo" de tokens sendo arrastados agora mesmo (por qualquer
 // cliente, inclusive o próprio) — usadas pelo motor de visão dinâmica pra
 // recalcular a névoa revelada em tempo real durante o arrasto, sem esperar
 // o Firestore confirmar a posição final. Ver broadcastLiveTokenPosition (o
 // próprio arrasto) e o "move" do drag handler em attachTokenDragHandlers.
 let liveDragPositions = {};
+// Mesma ideia, mas para a rotação (usada como direção do cone de visão —
+// ver "VISÃO DINÂMICA" em mesa-tools.js): enquanto a alça de girar está
+// sendo arrastada, o cone acompanha em tempo real em vez de esperar o
+// Firestore confirmar o novo ângulo.
+let liveDragRotations = {};
 
 // ---- Visão dinâmica dos tokens (névoa de guerra estilo Roll20) -----------
 // Cada token com visão revela a névoa ao redor de si (alcance em casas da
@@ -71,6 +76,11 @@ let liveDragPositions = {};
 // mesa-tools.js. Fichas de jogador nascem com visão ligada; NPCs nascem
 // sem (o Mestre liga manualmente quando fizer sentido, ex.: um familiar).
 const DEFAULT_VISION_RADIUS_CELLS = 12;
+// Ângulo padrão (em graus) do cone de visão, para tokens com visionMode ===
+// 'cone' — ver toggleTokenVisionMode em mesa-tokens.js. A direção do cone
+// usa a própria rotação do token (tok.rot, botões ⟲/⟳ ou a alça de girar),
+// então virar o token também vira pra onde ele enxerga.
+const DEFAULT_VISION_CONE_DEG = 100;
 function tokenHasVision(t) {
   if (!t) return false;
   return t.npc ? t.visionOn === true : t.visionOn !== false;
@@ -483,14 +493,16 @@ function refreshBoardForActiveScene() {
     if (fogUnsub) { fogUnsub(); fogUnsub = null; }
     if (templateUnsub) { templateUnsub(); templateUnsub = null; }
     if (wallsUnsub) { wallsUnsub(); wallsUnsub = null; }
+    if (doorsUnsub) { doorsUnsub(); doorsUnsub = null; }
     if (visionMemUnsub) { visionMemUnsub(); visionMemUnsub = null; }
-    liveDrawings = {}; liveFog = {}; liveTemplates = {}; liveWalls = {}; exploredCells = {};
+    liveDrawings = {}; liveFog = {}; liveTemplates = {}; liveWalls = {}; liveDoors = {}; exploredCells = {};
     lastOwnDrawingId = null; // "desfazer último traço" não deve valer pra outra cena
     if (typeof cancelFogPoly === 'function') cancelFogPoly(); // não deixa um polígono de névoa em andamento vazar pra outra cena
     if (typeof cancelWallChain === 'function') cancelWallChain(); // idem, pra um traço de parede em andamento
+    if (typeof cancelDoorDraft === 'function') cancelDoorDraft(); // idem, pra uma porta sendo posicionada
     selectedTokenId = null; handleDraggingTokenId = null;
     boardZoom = 1; boardPanX = 0; boardPanY = 0;
-    if (newId) { listenDrawings(); listenFog(); listenTemplates(); listenWalls(); listenVisionMemory(); }
+    if (newId) { listenDrawings(); listenFog(); listenTemplates(); listenWalls(); listenDoors(); listenVisionMemory(); }
   }
   renderBoardBackground();
   renderScenePanel();
@@ -670,6 +682,7 @@ function closeTable() {
   if (pingUnsub) { pingUnsub(); pingUnsub = null; }
   if (templateUnsub) { templateUnsub(); templateUnsub = null; }
   if (wallsUnsub) { wallsUnsub(); wallsUnsub = null; }
+  if (doorsUnsub) { doorsUnsub(); doorsUnsub = null; }
   if (visionMemUnsub) { visionMemUnsub(); visionMemUnsub = null; }
   if (presenceUnsub) { presenceUnsub(); presenceUnsub = null; }
   if (initiativeUnsub) { initiativeUnsub(); initiativeUnsub = null; }
@@ -677,7 +690,8 @@ function closeTable() {
   stopPresenceHeartbeat();
   hideChatUi();
   chatMessagesCache = [];
-  liveDrawings = {}; liveFog = {}; livePings = {}; liveWalls = {}; exploredCells = {}; liveDragPositions = {};
+  liveDrawings = {}; liveFog = {}; livePings = {}; liveWalls = {}; liveDoors = {}; exploredCells = {};
+  liveDragPositions = {}; liveDragRotations = {};
   liveInitiative = {}; activeInitiativeId = null;
   selectedTokenId = null; handleDraggingTokenId = null;
   curScenes = []; lastRenderedSceneId = undefined;

@@ -450,6 +450,18 @@ if ('serviceWorker' in navigator) {
   .wall-live-dot{ fill:var(--gold); }
   .wall-live-first{ fill:rgba(201,161,92,.35); stroke:var(--gold); stroke-width:2; }
 
+  /* ===== Portas (bloqueiam a visão só enquanto fechadas) — o traço em si
+     só o Mestre vê (igual à parede), mas o ícone abaixo aparece pra todo
+     mundo, porque abrir/fechar é uma ação de jogo de qualquer jogador. ===== */
+  #doorSvgLayer{ position:absolute; top:0; left:0; z-index:3.2; pointer-events:none; }
+  .door-line-shape{ stroke:rgba(201,140,90,.75); stroke-width:4; stroke-dasharray:2 5; stroke-linecap:round; }
+  .door-line-live{ stroke:var(--gold); stroke-width:2.5; stroke-dasharray:6 4; }
+  .door-mark{ cursor:pointer; }
+  .door-mark-bg{ fill:rgba(20,15,10,.85); stroke:rgba(201,140,90,.85); stroke-width:1.5; transition:fill .15s, stroke .15s; }
+  .door-mark.door-open .door-mark-bg{ stroke:rgba(120,200,140,.85); }
+  .door-mark:hover .door-mark-bg{ fill:rgba(40,30,20,.9); }
+  .door-mark-icon{ font-size:13px; }
+
   /* ===== Névoa de guerra automática (visão dinâmica dos tokens) =====
      Fica acima do mapa/desenhos/tokens (pra esconder quem está fora da
      visão de qualquer token), mas abaixo da marcação/alças/régua, que

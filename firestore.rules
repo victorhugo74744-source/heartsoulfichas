@@ -192,6 +192,20 @@ service cloud.firestore {
         allow update: if false;
       }
 
+      // Portas (ferramenta 🚪) — um segmento único que bloqueia a visão só
+      // enquanto fechado (campo "open"). Só o Mestre dono desta mesa cria e
+      // apaga (arrastar/clicar com a ferramenta ativa); abrir/fechar é uma
+      // ação de jogo disponível pra qualquer pessoa presente na mesa, então
+      // "update" fica liberado pra qualquer um — mas só pra mexer no campo
+      // "open" em si, nunca reposicionar a porta ou mudar de cena por essa
+      // via (isso continua exclusivo de criar uma porta nova).
+      match /doors/{doorId} {
+        allow read: if isSignedIn();
+        allow create, delete: if isTableMaster(tableId);
+        allow update: if isSignedIn() &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['open']);
+      }
+
       // Memória de exploração da névoa dinâmica (um doc por cena, campo
       // "cells" acumulando as casas da grade já reveladas por algum token
       // com visão). Qualquer pessoa presente na mesa pode contribuir com

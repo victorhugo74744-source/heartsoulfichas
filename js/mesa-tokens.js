@@ -364,6 +364,8 @@ async function enterBoardAsSheet(sheetId) {
       tokenData.hp = hpFromSheetResources(sheet.resources);
       tokenData.visionOn = true;
       tokenData.visionRadius = DEFAULT_VISION_RADIUS_CELLS;
+      tokenData.visionMode = '360';
+      tokenData.visionConeDeg = DEFAULT_VISION_CONE_DEG;
     }
     await ref.set(tokenData, { merge: true });
     // Registra esta mesa como "ativa" no perfil do jogador — é assim que
@@ -587,6 +589,12 @@ function renderTokenListPanel() {
             <button data-vision-delta="${t.id}" data-delta="-1" title="Diminuir alcance de visão">−</button>
             <input type="number" class="aura-radius-input" data-vision-input="${t.id}" value="${t.visionRadius || DEFAULT_VISION_RADIUS_CELLS}" min="1" step="1" title="Alcance de visão (em casas da grade)">
             <button data-vision-delta="${t.id}" data-delta="1" title="Aumentar alcance de visão">+</button>
+            <button data-vision-mode="${t.id}" title="${t.visionMode === 'cone' ? 'Visão em cone, na direção que o token está virado (use ⟲⟳ ou a alça de girar para mudar) — clique para voltar a 360°' : 'Visão em 360° — clique para restringir a um cone na direção que o token estiver virado (⟲⟳ ou a alça de girar)'}">${t.visionMode === 'cone' ? '🔦' : '🌐'}</button>
+            ${t.visionMode === 'cone' ? `
+              <button data-cone-delta="${t.id}" data-delta="-10" title="Estreitar o cone de visão">‹</button>
+              <input type="number" class="aura-radius-input" data-cone-input="${t.id}" value="${t.visionConeDeg || DEFAULT_VISION_CONE_DEG}" min="10" max="359" step="5" title="Abertura do cone de visão, em graus">
+              <button data-cone-delta="${t.id}" data-delta="10" title="Alargar o cone de visão">›</button>
+            ` : ''}
           ` : ''}
           <button data-rotate="${t.id}" data-delta="-15" title="Girar à esquerda">⟲</button>
           <button data-rotate="${t.id}" data-delta="15" title="Girar à direita">⟳</button>
@@ -651,6 +659,17 @@ function renderTokenListPanel() {
     inp.addEventListener('click', (e) => e.stopPropagation());
     inp.addEventListener('keydown', (e) => { if (e.key === 'Enter') inp.blur(); });
     inp.addEventListener('change', () => setTokenVisionRadius(inp.dataset.visionInput, parseFloat(inp.value)));
+  });
+  body.querySelectorAll('[data-vision-mode]').forEach(b =>
+    b.addEventListener('click', () => toggleTokenVisionMode(b.dataset.visionMode))
+  );
+  body.querySelectorAll('[data-cone-delta]').forEach(b =>
+    b.addEventListener('click', () => adjustTokenVisionCone(b.dataset.coneDelta, parseFloat(b.dataset.delta)))
+  );
+  body.querySelectorAll('[data-cone-input]').forEach(inp => {
+    inp.addEventListener('click', (e) => e.stopPropagation());
+    inp.addEventListener('keydown', (e) => { if (e.key === 'Enter') inp.blur(); });
+    inp.addEventListener('change', () => setTokenVisionCone(inp.dataset.coneInput, parseFloat(inp.value)));
   });
   body.querySelectorAll('[data-rotate]').forEach(b =>
     b.addEventListener('click', () => rotateToken(b.dataset.rotate, parseFloat(b.dataset.delta)))
@@ -805,6 +824,31 @@ async function setTokenVisionRadius(tokenId, value) {
   try {
     await db.collection('tables').doc(curTable.id).collection('tokens').doc(tokenId).update({ visionRadius: r });
   } catch (err) { console.error('Erro ao definir alcance de visão:', err); }
+}
+
+async function toggleTokenVisionMode(tokenId) {
+  const tok = liveTokens[tokenId]; if (!tok) return;
+  const mode = tok.visionMode === 'cone' ? '360' : 'cone';
+  try {
+    await db.collection('tables').doc(curTable.id).collection('tokens').doc(tokenId)
+      .update({ visionMode: mode, visionConeDeg: tok.visionConeDeg || DEFAULT_VISION_CONE_DEG });
+  } catch (err) { console.error('Erro ao alternar modo de visão:', err); }
+}
+
+async function adjustTokenVisionCone(tokenId, delta) {
+  const tok = liveTokens[tokenId]; if (!tok) return;
+  const deg = Math.min(359, Math.max(10, Math.round((tok.visionConeDeg || DEFAULT_VISION_CONE_DEG) + delta)));
+  try {
+    await db.collection('tables').doc(curTable.id).collection('tokens').doc(tokenId).update({ visionConeDeg: deg });
+  } catch (err) { console.error('Erro ao ajustar o cone de visão:', err); }
+}
+
+async function setTokenVisionCone(tokenId, value) {
+  const tok = liveTokens[tokenId]; if (!tok) return;
+  const deg = Math.min(359, Math.max(10, Math.round(isFinite(value) ? value : DEFAULT_VISION_CONE_DEG)));
+  try {
+    await db.collection('tables').doc(curTable.id).collection('tokens').doc(tokenId).update({ visionConeDeg: deg });
+  } catch (err) { console.error('Erro ao definir o cone de visão:', err); }
 }
 
 async function rotateToken(tokenId, delta) {
@@ -1250,12 +1294,20 @@ function attachHandleDragHandlers(wrap) {
       liveRot = angle;
       applyLiveTokenVisual(tokenId, { rot: liveRot });
       updateSelectionHandles({ rot: liveRot });
+      // Se este token enxerga em cone, o cone acompanha o giro ao vivo, sem
+      // esperar o Firestore confirmar o novo ângulo (mesma ideia da posição
+      // durante o arrasto — ver liveDragPositions).
+      if (tok.visionMode === 'cone') {
+        liveDragRotations[tokenId] = liveRot;
+        scheduleVisionRecompute();
+      }
     };
     const up = async () => {
       rotateHandle.removeEventListener('pointermove', move);
       rotateHandle.removeEventListener('pointerup', up);
       rotateHandle.removeEventListener('pointercancel', up);
       handleDraggingTokenId = null;
+      delete liveDragRotations[tokenId];
       try {
         await db.collection('tables').doc(curTable.id).collection('tokens').doc(tokenId).update({ rot: liveRot });
       } catch (err) { console.error('Erro ao girar token:', err); }
