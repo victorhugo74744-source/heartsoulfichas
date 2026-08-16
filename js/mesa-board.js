@@ -525,6 +525,7 @@ function refreshBoardForActiveScene() {
     if (typeof cancelDoorDraft === 'function') cancelDoorDraft(); // idem, pra uma porta sendo posicionada
     if (typeof cancelRoomDraft === 'function') cancelRoomDraft(); // idem, pro contorno de uma sala sendo arrastado
     selectedTokenId = null; handleDraggingTokenId = null;
+    if (typeof updateToolToolbarActive === 'function') updateToolToolbarActive();
     boardZoom = 1; boardPanX = 0; boardPanY = 0;
     if (newId) { listenDrawings(); listenFog(); listenTemplates(); listenWalls(); listenDoors(); listenLights(); listenVisionMemory(); }
   } else if (typeof visionFullRedrawNeeded !== 'undefined') {

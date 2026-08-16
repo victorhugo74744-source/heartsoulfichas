@@ -30,6 +30,7 @@ function renderToolToolbar() {
     <button type="button" data-tool="pan" title="Mover o mapa (padrão) — atalho: V"><span class="tool-label">✋ Mover</span><kbd class="tool-key">V</kbd></button>
     <button type="button" data-tool="ruler" title="Medir distância em casas da grade (segure Alt/Option para medir livre, sem encaixar) — atalho: R"><span class="tool-label">📏 Régua</span><kbd class="tool-key">R</kbd></button>
     <button type="button" data-tool="ping" title="Marcar um ponto para todos verem, na sua cor — atalho: P"><span class="tool-label">📍 Marcar</span><kbd class="tool-key">P</kbd></button>
+    <button type="button" id="cursorLockBtn"><span class="tool-label">🧭 Girar c/ cursor</span><kbd class="tool-key">T</kbd></button>
     <div class="tt-sep"></div>
     <button type="button" data-tool="template" data-shape="circle" title="Área circular (ex.: bola de fogo) — arraste do centro até a borda, na sua cor — atalho: 1"><span class="tool-label">⭕ Círculo</span><kbd class="tool-key">1</kbd></button>
     <button type="button" data-tool="template" data-shape="cone" title="Área em cone (ex.: sopro de dragão) — arraste da origem até a ponta — atalho: 2"><span class="tool-label">🔺 Cone</span><kbd class="tool-key">2</kbd></button>
@@ -92,6 +93,8 @@ function renderToolToolbar() {
   if (clearTemplatesBtn) clearTemplatesBtn.addEventListener('click', clearMyOrAllTemplates);
   const snapBtn = document.getElementById('snapToggleBtn');
   if (snapBtn) snapBtn.addEventListener('click', toggleSnapToGrid);
+  const cursorLockBtn = document.getElementById('cursorLockBtn');
+  if (cursorLockBtn) cursorLockBtn.addEventListener('click', toggleCursorFollowForSelectedToken);
   const metersInput = document.getElementById('metersPerCellInput');
   if (metersInput) metersInput.addEventListener('change', () => {
     const v = parseFloat(metersInput.value);
@@ -124,6 +127,24 @@ function updateToolToolbarActive() {
   });
   const snapBtn = document.getElementById('snapToggleBtn');
   if (snapBtn) snapBtn.classList.toggle('tool-active', snapToGrid);
+  // Botão/atalho "Girar c/ cursor": trava/destrava o giro automático do
+  // token que estiver selecionado no mapa (alças abertas em cima dele).
+  // Sem token selecionado, ou selecionado mas sem permissão pra mexer nele
+  // (não é seu nem você é o Mestre), o botão fica desabilitado — não dá pra
+  // travar o giro de um token que você não pode girar de qualquer jeito.
+  const cursorLockBtn = document.getElementById('cursorLockBtn');
+  if (cursorLockBtn) {
+    const tok = selectedTokenId ? liveTokens[selectedTokenId] : null;
+    const canEdit = !!(tok && curUser && (isTableOwner() || tok.ownerId === curUser.uid));
+    const on = !!(canEdit && cursorFollowTokenIds.has(selectedTokenId));
+    cursorLockBtn.disabled = !canEdit;
+    cursorLockBtn.classList.toggle('tool-active', on);
+    cursorLockBtn.title = !canEdit
+      ? 'Selecione (clique em) um token seu no mapa para travar o giro dele no cursor — atalho: T'
+      : (on
+        ? 'Destravar: o token para de girar sozinho — atalho: T'
+        : 'Travar: o token gira sozinho apontando pra onde o cursor estiver sobre o mapa, e todos na mesa veem o giro ao vivo — atalho: T');
+  }
   const darknessBtn = document.getElementById('darknessToggleBtn');
   if (darknessBtn) {
     const scene = typeof getActiveScene === 'function' ? getActiveScene() : null;
@@ -153,17 +174,18 @@ function setBoardTool(tool) {
 
 // ------------------------------------------------------- ATALHOS DE TECLADO --
 // V/R/P trocam de ferramenta, 1/2/3 escolhem o formato de área, C limpa as
-// áreas, G liga/desliga o encaixe na grade, D/F/N/X/Shift+F são só do
-// Mestre (desenhar/névoa em retângulo/névoa em contorno livre/limpar
-// desenhos/revelar tudo), Ctrl+Z desfaz o último traço, Esc volta pra
-// "Mover" (ou, com um contorno de névoa em andamento, cancela só o
-// contorno). Com a névoa em contorno livre ativa, Enter fecha o contorno
-// atual e Backspace desfaz o último ponto marcado — igual ao botão direito
-// do mouse. Ganha muito em mesas de combate corrido, onde alternar
-// régua/marcar/área toda hora só de mouse atrapalha o ritmo. Ignorado por
-// completo enquanto o foco está num campo de texto (chat, input de dados,
-// nome de cena etc.) — senão digitar "d" numa mensagem de chat trocaria a
-// ferramenta do mapa sem querer.
+// áreas, G liga/desliga o encaixe na grade, T trava/destrava o giro no
+// cursor do token selecionado no mapa (mesmo efeito do botão 🧭 "Seguir
+// cursor" na lista de tokens), D/F/N/X/Shift+F são só do Mestre (desenhar/
+// névoa em retângulo/névoa em contorno livre/limpar desenhos/revelar
+// tudo), Ctrl+Z desfaz o último traço, Esc volta pra "Mover" (ou, com um
+// contorno de névoa em andamento, cancela só o contorno). Com a névoa em
+// contorno livre ativa, Enter fecha o contorno atual e Backspace desfaz o
+// último ponto marcado — igual ao botão direito do mouse. Ganha muito em
+// mesas de combate corrido, onde alternar régua/marcar/área toda hora só de
+// mouse atrapalha o ritmo. Ignorado por completo enquanto o foco está num
+// campo de texto (chat, input de dados, nome de cena etc.) — senão digitar
+// "d" numa mensagem de chat trocaria a ferramenta do mapa sem querer.
 function handleBoardKeydown(e) {
   if (!curTable || !document.getElementById('boardView') ||
       document.getElementById('boardView').style.display === 'none') return;
@@ -195,6 +217,7 @@ function handleBoardKeydown(e) {
     case '3': templateShape = 'line'; setBoardTool('template'); break;
     case 'c': clearMyOrAllTemplates(); break;
     case 'g': toggleSnapToGrid(); break;
+    case 't': toggleCursorFollowForSelectedToken(); break;
     case 'd': if (isMaster) setBoardTool('draw'); break;
     case 'w': if (isMaster) { if (e.shiftKey) clearAllWalls(); else setBoardTool('wall'); } break;
     case 'b': if (isMaster) setBoardTool('room'); break;

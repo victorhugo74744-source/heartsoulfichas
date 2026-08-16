@@ -327,6 +327,8 @@ if ('serviceWorker' in navigator) {
   }
   .tool-toolbar button:hover{ border-color:var(--gold-dim); color:var(--gold); }
   .tool-toolbar button.tool-active{ border-color:var(--gold); color:var(--gold); background:rgba(201,161,92,.12); }
+  .tool-toolbar button:disabled{ opacity:.4; cursor:not-allowed; }
+  .tool-toolbar button:disabled:hover{ border-color:var(--hairline-soft); color:var(--ink-dim); }
   .tool-toolbar .tt-sep{ width:1px; align-self:stretch; background:var(--hairline); margin:0 4px; }
   .tool-toolbar .tool-label{ white-space:nowrap; }
   /* Selo com o atalho de teclado de cada ferramenta — discreto, fica mais

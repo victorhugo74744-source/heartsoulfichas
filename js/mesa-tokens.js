@@ -921,6 +921,21 @@ function toggleTokenCursorFollow(tokenId) {
   if (cursorFollowTokenIds.has(tokenId)) cursorFollowTokenIds.delete(tokenId);
   else cursorFollowTokenIds.add(tokenId);
   renderTokenListPanel();
+  if (typeof updateToolToolbarActive === 'function') updateToolToolbarActive();
+}
+
+// Mesmo alternador de cima, mas mirando o token selecionado no mapa (as
+// alças de girar/redimensionar abertas nele) em vez de pedir o id — é o que
+// o botão/atalho "T" da barra de Ferramentas usa, pra travar/destravar o
+// giro no cursor sem precisar abrir a lista de tokens na lateral e achar o
+// botão 🧭 lá dentro.
+function toggleCursorFollowForSelectedToken() {
+  if (!selectedTokenId) return;
+  const tok = liveTokens[selectedTokenId];
+  if (!tok) return;
+  const canEdit = isTableOwner() || (curUser && tok.ownerId === curUser.uid);
+  if (!canEdit) return;
+  toggleTokenCursorFollow(selectedTokenId);
 }
 
 // Mesma ideia de throttle do broadcastLiveTokenPosition (ver mais abaixo):
@@ -952,6 +967,15 @@ function flushLiveTokenRotation(tokenId) {
   db.collection('tables').doc(curTable.id).collection('tokens').doc(tokenId)
     .update({ rot })
     .catch(err => console.warn('Erro ao transmitir giro ao vivo do token:', err));
+}
+
+// Cancela qualquer giro "ao vivo" ainda pendente pra este token — chamado
+// assim que o arrasto da alça termina, pra um envio atrasado do throttle
+// não sobrescrever por engano o ângulo final logo depois dele ser salvo
+// (mesma ideia de cancelLiveTokenPosition, ver mais abaixo).
+function cancelLiveTokenRotation(tokenId) {
+  if (liveRotTimer[tokenId]) { clearTimeout(liveRotTimer[tokenId]); liveRotTimer[tokenId] = null; }
+  liveRotPending[tokenId] = null;
 }
 
 // Chamado a cada movimento do ponteiro sobre o tabuleiro (ver
@@ -1327,6 +1351,7 @@ function attachTokenDragHandlers(el, tokenId) {
         renderTokenListPanel();
         updateSelectionHandles();
         scheduleVisionRecompute();
+        if (typeof updateToolToolbarActive === 'function') updateToolToolbarActive();
         return;
       }
       if (el._lastX === undefined) { scheduleVisionRecompute(); return; }
@@ -1480,6 +1505,11 @@ function attachHandleDragHandlers(wrap) {
         liveDragRotations[tokenId] = liveRot;
         scheduleVisionRecompute();
       }
+      // Transmite o giro ao vivo pro Firestore (com throttle), do mesmo
+      // jeito que "girar seguindo o cursor" já fazia — assim todo mundo na
+      // mesa vê o token virando em tempo real enquanto a alça é arrastada,
+      // em vez de só ver o resultado final ao soltar.
+      broadcastLiveTokenRotation(tokenId, liveRot);
     };
     const up = async () => {
       rotateHandle.removeEventListener('pointermove', move);
@@ -1487,6 +1517,7 @@ function attachHandleDragHandlers(wrap) {
       rotateHandle.removeEventListener('pointercancel', up);
       handleDraggingTokenId = null;
       delete liveDragRotations[tokenId];
+      cancelLiveTokenRotation(tokenId); // a escrita final abaixo já cobre o ângulo; evita um envio atrasado sobrescrevê-la
       try {
         await db.collection('tables').doc(curTable.id).collection('tokens').doc(tokenId).update({ rot: liveRot });
       } catch (err) { console.error('Erro ao girar token:', err); }
