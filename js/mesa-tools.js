@@ -24,6 +24,8 @@ function boardPointFromEvent(ev) {
 
 function renderToolToolbar() {
   const bar = document.getElementById('toolToolbar');
+  const fogBar = document.getElementById('fogToolToolbar');
+  const fogLabel = document.getElementById('fogToolbarLabel');
   if (!bar) return;
   const isMaster = isTableOwner();
   bar.innerHTML = `
@@ -46,7 +48,15 @@ function renderToolToolbar() {
       <button type="button" class="color-swatch" id="drawWheelBtn" style="background:${drawColor};" title="Cor do desenho (roda cromática)"></button>
       <button type="button" id="undoDrawBtn" title="Desfazer o último traço — atalho: Ctrl/Cmd+Z"><span class="tool-label">↩️ Desfazer</span><kbd class="tool-key">Ctrl+Z</kbd></button>
       <button type="button" id="clearDrawBtn" title="Apagar todos os desenhos desta cena — dica: com a ferramenta de desenho ativa, clique num traço pra apagar só ele — atalho: X"><span class="tool-label">🧹 Limpar desenhos</span><kbd class="tool-key">X</kbd></button>
-      <div class="tt-sep"></div>
+    ` : ''}`;
+
+  // Ferramentas de névoa/paredes (só Mestre) ganharam fileira própria, com
+  // rótulo acima — antes ficavam no fim da barra principal, que foi
+  // acumulando tantos botões ao longo do tempo (régua, áreas, desenho...)
+  // que no celular (fileira rolável na horizontal) elas praticamente
+  // nunca eram vistas/achadas sem rolar bastante pro lado.
+  if (fogBar) {
+    fogBar.innerHTML = isMaster ? `
       <button type="button" data-tool="wall" title="Desenhar paredes que bloqueiam a visão dos tokens: clique ponto a ponto contornando o obstáculo e clique no ponto inicial (ou dê 2 cliques / Enter) para terminar — a névoa de guerra é revelada automaticamente pela visão de cada token (👁 na lista de tokens), bloqueada por estas paredes; botão direito (ou Backspace) desfaz o último ponto, Esc cancela o traço atual; com a ferramenta ativa (e nenhum traço em andamento), arraste um ponto já existente de uma parede salva para reposicioná-lo — atalho: W"><span class="tool-label">🧱 Parede</span><kbd class="tool-key">W</kbd></button>
       <button type="button" data-tool="room" title="Contornar um retângulo/sala inteira com paredes de uma vez: arraste de um canto ao outro e solte — nasce como um contorno fechado, sem precisar clicar ponto a ponto — atalho: B"><span class="tool-label">▭ Sala</span><kbd class="tool-key">B</kbd></button>
       <button type="button" id="clearWallsBtn" title="Apagar todas as paredes desta cena — atalho: Shift+W"><span class="tool-label">🧹 Limpar paredes</span><kbd class="tool-key">⇧W</kbd></button>
@@ -60,12 +70,17 @@ function renderToolToolbar() {
       <button type="button" id="resetExploredBtn" title="Resetar a memória de exploração desta cena: a névoa volta a cobrir tudo que já foi visto até agora — as paredes e o mapa em si não são afetados">
         <span class="tool-label">🌫 Resetar memória</span>
       </button>
-    ` : ''}`;
+    ` : '';
+    if (fogLabel) fogLabel.classList.toggle('hidden', !isMaster);
+  }
 
-  bar.querySelectorAll('[data-tool]').forEach(b => b.addEventListener('click', () => {
-    if (b.dataset.shape) templateShape = b.dataset.shape; // botões de área também escolhem o formato
-    setBoardTool(b.dataset.tool);
-  }));
+  [bar, fogBar].forEach(b => {
+    if (!b) return;
+    b.querySelectorAll('[data-tool]').forEach(btn => btn.addEventListener('click', () => {
+      if (btn.dataset.shape) templateShape = btn.dataset.shape; // botões de área também escolhem o formato
+      setBoardTool(btn.dataset.tool);
+    }));
+  });
   const drawWheelBtn = document.getElementById('drawWheelBtn');
   if (drawWheelBtn) drawWheelBtn.addEventListener('click', () => {
     openColorWheel(drawWheelBtn, drawColor, (hex) => {
@@ -115,12 +130,16 @@ function toggleSnapToGrid() {
 
 function updateToolToolbarActive() {
   const bar = document.getElementById('toolToolbar');
+  const fogBar = document.getElementById('fogToolToolbar');
   if (!bar) return;
-  bar.querySelectorAll('[data-tool]').forEach(b => {
-    // Os três botões de área compartilham data-tool="template" — só o que
-    // bate também com o formato escolhido (templateShape) fica realçado.
-    const active = b.dataset.tool === boardTool && (!b.dataset.shape || b.dataset.shape === templateShape);
-    b.classList.toggle('tool-active', active);
+  [bar, fogBar].forEach(el => {
+    if (!el) return;
+    el.querySelectorAll('[data-tool]').forEach(b => {
+      // Os três botões de área compartilham data-tool="template" — só o que
+      // bate também com o formato escolhido (templateShape) fica realçado.
+      const active = b.dataset.tool === boardTool && (!b.dataset.shape || b.dataset.shape === templateShape);
+      b.classList.toggle('tool-active', active);
+    });
   });
   const snapBtn = document.getElementById('snapToggleBtn');
   if (snapBtn) snapBtn.classList.toggle('tool-active', snapToGrid);

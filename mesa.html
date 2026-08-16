@@ -309,6 +309,16 @@ if ('serviceWorker' in navigator) {
 
   /* ===== Ferramentas do mapa (régua, desenho, névoa, marcar) ===== */
   .tool-toolbar{ display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin-bottom:10px; }
+  /* Cabeçalho curto acima da 2ª barra (paredes/portas/luzes/névoa), só pra
+     deixar claro que aquela fileira é um grupo à parte — sem isso, com
+     tantos botões acumulados ao longo do tempo, a barra virava uma fileira
+     só gigante (no celular, rolando na horizontal) e os botões de névoa,
+     lá no fim, praticamente não eram vistos/achados. */
+  .tool-toolbar-label{
+    font-family:'Cinzel',serif; font-size:11.5px; letter-spacing:.03em; color:var(--gold-dim);
+    margin:-2px 0 6px 2px; text-transform:uppercase;
+  }
+  .tool-toolbar-label.hidden{ display:none; }
   .tool-toolbar button{
     background:none; border:1px solid var(--hairline-soft); color:var(--ink-dim); cursor:pointer;
     font-size:13px; padding:7px 12px; border-radius:6px; font-family:'EB Garamond', serif;
@@ -361,7 +371,8 @@ if ('serviceWorker' in navigator) {
   }
   .tools-panel-toggle:hover{ border-color:var(--gold-dim); color:var(--gold); }
   .tp-toggle-icon{ transition:transform .18s ease; font-size:12px; }
-  .tools-panel.retracted .tool-toolbar{ display:none; }
+  .tools-panel.retracted .tool-toolbar,
+  .tools-panel.retracted .tool-toolbar-label{ display:none; }
   /* A coluna vertical (botões empilhados, largura fixa) só faz sentido no
      layout lado a lado do desktop — abaixo de 821px o .board-layout vira
      coluna (ver @media max-width:820px) e o painel de ferramentas volta a
@@ -995,6 +1006,8 @@ if ('serviceWorker' in navigator) {
           <span class="tp-toggle-label">Ferramentas</span>
         </button>
         <div class="tool-toolbar" id="toolToolbar"></div>
+        <div class="tool-toolbar-label hidden" id="fogToolbarLabel">🌫 Névoa e paredes</div>
+        <div class="tool-toolbar" id="fogToolToolbar"></div>
       </div>
 
       <div class="board-wrap" id="boardWrap">
