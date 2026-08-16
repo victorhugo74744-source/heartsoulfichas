@@ -159,6 +159,17 @@ if ('serviceWorker' in navigator) {
   }
   .token.dragging{ transition:none; z-index:5; cursor:grabbing; }
   .token.mine{ border-color:var(--seal-bright); }
+  /* Marca só pro Mestre (jogadores nem chegam a ter este elemento no DOM —
+     ver isTokenVisibleToViewer em mesa-tokens.js): borda tracejada e um
+     pouco apagado, pra distinguir de relance um token que os jogadores
+     não conseguem ver. */
+  .token.token-invisible-to-players{ opacity:.55; border-style:dashed; }
+  .token.token-invisible-to-players::after{
+    content:'👻'; position:absolute; top:-6px; right:-6px; font-size:12px;
+    background:var(--panel-2); border:1px solid var(--gold-dim); border-radius:50%;
+    width:16px; height:16px; display:flex; align-items:center; justify-content:center;
+    line-height:1; pointer-events:none;
+  }
   .token:active{ cursor:grabbing; }
   .token img{ width:100%; height:100%; object-fit:cover; display:block; }
   .token .token-ph{ display:flex; align-items:center; justify-content:center; height:100%; font-size:22px; }
@@ -559,6 +570,7 @@ if ('serviceWorker' in navigator) {
   }
   .token-row .tr-tools button:hover{ border-color:var(--gold-dim); color:var(--gold); }
   .token-row .tr-tools button.cursor-follow-on{ color:var(--gold); border-color:var(--gold); background:rgba(201,161,92,.12); }
+  .token-row .tr-tools button.token-invisible-on{ color:var(--seal-bright); border-color:var(--seal-bright); background:rgba(159,58,58,.12); }
   .token-row .tr-tools input.aura-radius-input{
     width:38px; background:none; border:1px solid var(--hairline-soft); color:var(--ink-mute);
     font-size:11px; padding:2px 3px; border-radius:4px; text-align:center;

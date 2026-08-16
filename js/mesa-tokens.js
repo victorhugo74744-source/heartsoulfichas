@@ -435,6 +435,16 @@ function isTokenInActiveScene(tok) {
   return tok.sceneId === (curTable && curTable.activeSceneId);
 }
 
+// Invisibilidade "de Mestre" (👻, ver toggleTokenInvisible): esconde o
+// token por completo — do mapa e da lista lateral — de todo mundo que não
+// for o Mestre, mesmo que a área onde ele está já esteja revelada pela
+// névoa de guerra. Diferente da névoa (automática, por linha de visão),
+// esta é sempre manual e vale pra qualquer jogador, incluindo o dono do
+// token.
+function isTokenVisibleToViewer(tok) {
+  return !tok.invisible || isTableOwner();
+}
+
 function listenTokens() {
   tokenUnsub = db.collection('tables').doc(curTable.id).collection('tokens')
     .onSnapshot(snap => {
@@ -448,15 +458,29 @@ function renderAllTokens() {
   const surface = document.getElementById('boardSurface');
   if (!surface) return;
 
-  // Remove tokens que não existem mais (ou que pertencem a outra cena).
+  // Remove tokens que não existem mais (ou que pertencem a outra cena, ou
+  // que o Mestre acabou de tornar invisível pra você).
   surface.querySelectorAll('.token').forEach(el => {
     const t = liveTokens[el.dataset.id];
-    if (!t || !isTokenInActiveScene(t)) { el.remove(); delete tokenElCache[el.dataset.id]; }
+    if (!t || !isTokenInActiveScene(t) || !isTokenVisibleToViewer(t)) { el.remove(); delete tokenElCache[el.dataset.id]; }
   });
   surface.querySelectorAll('.token-aura').forEach(el => {
     const t = liveTokens[el.dataset.auraId];
-    if (!t || !isTokenInActiveScene(t)) { el.remove(); delete tokenAuraElCache[el.dataset.auraId]; }
+    if (!t || !isTokenInActiveScene(t) || !isTokenVisibleToViewer(t)) { el.remove(); delete tokenAuraElCache[el.dataset.auraId]; }
   });
+
+  // Se o token que você tinha selecionado (alças de girar/redimensionar
+  // abertas) sumiu, trocou de cena ou acabou de ficar invisível pra você,
+  // solta a seleção — senão as alças ficariam "penduradas" sem token
+  // embaixo, ou (pior) continuariam mexendo num token que você não devia
+  // nem conseguir ver mais.
+  if (selectedTokenId) {
+    const st = liveTokens[selectedTokenId];
+    if (!st || !isTokenInActiveScene(st) || !isTokenVisibleToViewer(st)) {
+      selectedTokenId = null;
+      if (typeof updateToolToolbarActive === 'function') updateToolToolbarActive();
+    }
+  }
 
   // O board-surface agora sempre fica no tamanho "natural" (sem zoom) — quem
   // escala tudo (mapa, grade e tokens) é o transform aplicado nele. Por isso
@@ -469,6 +493,7 @@ function renderAllTokens() {
     if (tok.id === draggingTokenId) return; // não sobrescreve enquanto o próprio usuário arrasta
     if (tok.id === handleDraggingTokenId) return; // idem, enquanto arrasta a alça de girar/redimensionar
     if (!isTokenInActiveScene(tok)) return; // NPC pertence a outra cena: não aparece no mapa agora
+    if (!isTokenVisibleToViewer(tok)) return; // invisível pra você (só o Mestre vê) — não chega nem a criar o elemento
     // Tamanho por token: célula da grade × o multiplicador próprio do token
     // (ferramenta de redimensionar, na lista lateral) — assim uma criatura
     // "grande" pode ocupar mais de uma célula sem mudar o zoom de ninguém.
@@ -484,6 +509,11 @@ function renderAllTokens() {
     tokenElCache[tok.id] = el;
     el.classList.toggle('mine', tok.ownerId === curUser.uid);
     el.classList.toggle('active-turn', !!activeInitiativeId && tok.id === activeInitiativeId);
+    // Só chega a marcar esta classe pra quem pode ver o token mesmo estando
+    // invisível (ou seja, só o Mestre — jogadores nem geram o elemento,
+    // ver isTokenVisibleToViewer acima) — dá uma pista visual (ver CSS) de
+    // que aquele token ali some pros jogadores, sem precisar abrir a lista.
+    el.classList.toggle('token-invisible-to-players', !!tok.invisible);
     el.style.width = tokenPx + 'px';
     el.style.height = tokenPx + 'px';
     el.style.marginLeft = (-tokenPx / 2) + 'px';
@@ -565,7 +595,9 @@ function renderTokenListPanel() {
   const canManage = isTableOwner();
   // Jogadores não veem NPCs/monstros na lista de fichas da mesa — só o Mestre
   // controla e enxerga os NPCs; jogadores só veem as fichas de personagem.
-  const tokens = Object.values(liveTokens).filter(t => canManage || !t.npc);
+  // Tokens marcados como invisíveis (👻, só o Mestre alterna) também somem
+  // da lista de quem não é o Mestre — nem o nome do token deve vazar.
+  const tokens = Object.values(liveTokens).filter(t => canManage || (!t.npc && !t.invisible));
   if (tokens.length === 0) { body.innerHTML = `<span class="tc-meta">Nenhum token ainda.</span>`; return; }
   body.innerHTML = tokens.map(t => {
     // Cada jogador gira/redimensiona o próprio token; o Mestre pode mexer em qualquer um.
@@ -578,7 +610,7 @@ function renderTokenListPanel() {
     const toolsOpen = tokenToolsExpanded.has(t.id);
     return `
     <div class="token-row ${elsewhere ? 'token-row-elsewhere' : ''}" data-token-row="${t.id}">
-      <span class="${t.sheetId ? 'tr-name' : ''}" ${t.sheetId ? `data-view-sheet="${t.sheetId}"` : ''}>${escapeHtml(t.name || 'Token')}${elsewhere ? ' <span class="tc-meta">(outra cena)</span>' : ''}</span>
+      <span class="${t.sheetId ? 'tr-name' : ''}" ${t.sheetId ? `data-view-sheet="${t.sheetId}"` : ''}>${escapeHtml(t.name || 'Token')}${elsewhere ? ' <span class="tc-meta">(outra cena)</span>' : ''}${t.invisible ? ' <span class="tc-meta">(invisível p/ jogadores)</span>' : ''}</span>
       <div class="tr-tools ${toolsOpen ? '' : 'hidden'}">
         ${sumMax ? `<span class="tr-hp-summary" title="HP total (soma das partes)">❤ ${sumCur}/${sumMax}</span>` : ''}
         ${canEdit && !elsewhere ? `<button data-hp-toggle="${t.id}" title="Ver/editar HP por parte">${expanded ? '❤︎ fechar' : '❤ HP'}</button>` : ''}
@@ -619,6 +651,7 @@ function renderTokenListPanel() {
           <button data-tofront="${t.id}" title="Trazer para frente (fica por cima dos outros tokens)">⬆︎</button>
           <button data-toback="${t.id}" title="Enviar para trás (fica por baixo dos outros tokens)">⬇︎</button>
         ` : ''}
+        ${canManage ? `<button data-invisible-toggle="${t.id}" class="${t.invisible ? 'token-invisible-on' : ''}" title="${t.invisible ? 'Tornar visível de novo para os jogadores' : 'Tornar invisível: só o Mestre passa a ver este token no mapa'}">${t.invisible ? '🫥 Invisível' : '👻 Tornar invisível'}</button>` : ''}
         ${canManage ? `<button data-remove="${t.id}">remover</button>` : ''}
       </div>
     </div>
@@ -711,6 +744,9 @@ function renderTokenListPanel() {
     body.querySelectorAll('[data-remove]').forEach(b => b.addEventListener('click', () =>
       db.collection('tables').doc(curTable.id).collection('tokens').doc(b.dataset.remove).delete()
     ));
+    body.querySelectorAll('[data-invisible-toggle]').forEach(b =>
+      b.addEventListener('click', () => toggleTokenInvisible(b.dataset.invisibleToggle))
+    );
   }
   body.querySelectorAll('[data-xp-input]').forEach(inp => {
     inp.addEventListener('click', (e) => e.stopPropagation());
@@ -817,6 +853,25 @@ async function toggleTokenAura(tokenId) {
     await db.collection('tables').doc(curTable.id).collection('tokens').doc(tokenId)
       .update({ auraOn: !tok.auraOn, auraRadius: tok.auraRadius || 2 });
   } catch (err) { console.error('Erro ao alternar aura:', err); }
+}
+
+// Invisibilidade "de Mestre": ao contrário da névoa de guerra (que some e
+// volta sozinha conforme os tokens com visão se movem), este é um
+// interruptor manual, só do Mestre — o token some do mapa e da lista pra
+// TODOS os jogadores (dono do token incluso), até o Mestre religar. Serve
+// pra emboscadas, um NPC disfarçado, ou qualquer coisa que o Mestre queira
+// esconder mesmo que a área já esteja totalmente revelada/explorada. O
+// Mestre continua vendo o token normalmente (com uma marca visual — ver
+// classe token-invisible-to-players no render), nunca perde o controle
+// dele. isTokenVisibleToViewer() (ver mais abaixo) é quem lê esta flag na
+// hora de desenhar tokens e a névoa/lista de tokens já filtram por ela
+// também (ver renderTokenListPanel).
+async function toggleTokenInvisible(tokenId) {
+  const tok = liveTokens[tokenId]; if (!tok) return;
+  try {
+    await db.collection('tables').doc(curTable.id).collection('tokens').doc(tokenId)
+      .update({ invisible: !tok.invisible });
+  } catch (err) { console.error('Erro ao alternar invisibilidade do token:', err); }
 }
 
 async function adjustTokenAuraRadius(tokenId, delta) {

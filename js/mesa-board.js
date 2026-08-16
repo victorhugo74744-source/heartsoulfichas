@@ -70,7 +70,7 @@ let liveDragPositions = {};
 let liveDragRotations = {};
 // Cache do elemento DOM (.token / .token-aura) de cada token, por id —
 // evita um document.querySelector (busca no documento inteiro) a cada
-// token a cada recálculo de visão (applyNpcFogVisibility roda em todo
+// token a cada recálculo de visão (applyTokenFogVisibility roda em todo
 // frame de arrasto). Mantido em dia por renderAllTokens, que é quem
 // cria/remove esses elementos.
 let tokenElCache = {};

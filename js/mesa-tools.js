@@ -1789,7 +1789,7 @@ function recomputeAndRenderVision() {
   // visão geral do tabuleiro.
   canvas.style.opacity = isTableOwner() ? '0.4' : '1';
 
-  applyNpcFogVisibility();
+  applyTokenFogVisibility();
   updateDoorVisibility();
   updateLightVisibility();
 
@@ -1824,14 +1824,18 @@ function updateDoorVisibility() {
   });
 }
 
-// NPCs/monstros escondidos na névoa não devem aparecer pros jogadores —
-// só a ficha dos próprios personagens fica sempre visível pra quem joga.
-// O Mestre continua vendo todo mundo, sempre. Isso é reaplicado a cada
-// recálculo de visão (token se move, parede muda, etc.).
-function applyNpcFogVisibility() {
+// Tokens de fora do seu alcance de visão não devem aparecer — nem os NPCs
+// escondidos na névoa, nem o personagem de outro jogador que tenha saído do
+// seu campo de visão (parede no meio, longe demais, etc.). O único token que
+// fica sempre visível pra você é o seu próprio — não faria sentido perder de
+// vista o próprio personagem. O Mestre continua vendo todo mundo, sempre.
+// Isso é reaplicado a cada recálculo de visão (token se move, parede muda,
+// etc.) — ver applyTokenFogVisibility() rodando ao fim de
+// recomputeAndRenderVision().
+function applyTokenFogVisibility() {
   const master = isTableOwner();
   Object.values(liveTokens).forEach(t => {
-    if (!t.npc) return; // fichas de jogador nunca ficam escondidas dos jogadores
+    if (t.ownerId === curUser.uid) return; // o próprio token nunca fica escondido de você mesmo
     const el = tokenElCache[t.id];
     const auraEl = tokenAuraElCache[t.id];
     if (!el && !auraEl) return;
