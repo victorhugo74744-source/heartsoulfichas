@@ -47,10 +47,19 @@ function renderToolToolbar() {
       <button type="button" id="undoDrawBtn" title="Desfazer o último traço — atalho: Ctrl/Cmd+Z"><span class="tool-label">↩️ Desfazer</span><kbd class="tool-key">Ctrl+Z</kbd></button>
       <button type="button" id="clearDrawBtn" title="Apagar todos os desenhos desta cena — dica: com a ferramenta de desenho ativa, clique num traço pra apagar só ele — atalho: X"><span class="tool-label">🧹 Limpar desenhos</span><kbd class="tool-key">X</kbd></button>
       <div class="tt-sep"></div>
-      <button type="button" data-tool="wall" title="Desenhar paredes que bloqueiam a visão dos tokens: clique ponto a ponto contornando o obstáculo e clique no ponto inicial (ou dê 2 cliques / Enter) para terminar — a névoa de guerra é revelada automaticamente pela visão de cada token (👁 na lista de tokens), bloqueada por estas paredes; botão direito (ou Backspace) desfaz o último ponto, Esc cancela o traço atual — atalho: W"><span class="tool-label">🧱 Parede</span><kbd class="tool-key">W</kbd></button>
+      <button type="button" data-tool="wall" title="Desenhar paredes que bloqueiam a visão dos tokens: clique ponto a ponto contornando o obstáculo e clique no ponto inicial (ou dê 2 cliques / Enter) para terminar — a névoa de guerra é revelada automaticamente pela visão de cada token (👁 na lista de tokens), bloqueada por estas paredes; botão direito (ou Backspace) desfaz o último ponto, Esc cancela o traço atual; com a ferramenta ativa (e nenhum traço em andamento), arraste um ponto já existente de uma parede salva para reposicioná-lo — atalho: W"><span class="tool-label">🧱 Parede</span><kbd class="tool-key">W</kbd></button>
+      <button type="button" data-tool="room" title="Contornar um retângulo/sala inteira com paredes de uma vez: arraste de um canto ao outro e solte — nasce como um contorno fechado, sem precisar clicar ponto a ponto — atalho: B"><span class="tool-label">▭ Sala</span><kbd class="tool-key">B</kbd></button>
       <button type="button" id="clearWallsBtn" title="Apagar todas as paredes desta cena — atalho: Shift+W"><span class="tool-label">🧹 Limpar paredes</span><kbd class="tool-key">⇧W</kbd></button>
-      <button type="button" data-tool="door" title="Colocar uma porta: arraste de um lado ao outro do vão — porta nasce fechada (bloqueia a visão igual a uma parede); qualquer pessoa na mesa clica no ícone 🚪 no mapa para abrir/fechar, revelando a névoa do outro lado; com esta ferramenta ativa, clicar numa porta já existente a apaga — atalho: O"><span class="tool-label">🚪 Porta</span><kbd class="tool-key">O</kbd></button>
+      <button type="button" data-tool="door" title="Colocar uma porta: arraste de um lado ao outro do vão — porta nasce fechada (bloqueia a visão igual a uma parede); qualquer pessoa na mesa clica no ícone 🚪 no mapa para abrir/fechar, revelando a névoa do outro lado; botão direito (Mestre) tranca/destranca — porta trancada só o Mestre abre; com a ferramenta 🚪 ativa, clicar numa porta já existente a apaga — atalho: O"><span class="tool-label">🚪 Porta</span><kbd class="tool-key">O</kbd></button>
       <button type="button" id="clearDoorsBtn" title="Apagar todas as portas desta cena — atalho: Shift+O"><span class="tool-label">🧹 Limpar portas</span><kbd class="tool-key">⇧O</kbd></button>
+      <div class="tt-sep"></div>
+      <button type="button" data-tool="light" title="Colocar uma fonte de luz (tocha): clique no mapa para acender uma — ela revela sua área sempre, independente de onde os tokens estão, bloqueada pelas paredes; role a roda do mouse sobre uma luz já acesa pra ajustar o raio; com a ferramenta ativa, clique numa luz já existente pra apagá-la — atalho: L"><span class="tool-label">🔥 Luz</span><kbd class="tool-key">L</kbd></button>
+      <button type="button" id="clearLightsBtn" title="Apagar todas as fontes de luz desta cena — atalho: Shift+L"><span class="tool-label">🧹 Limpar luzes</span><kbd class="tool-key">⇧L</kbd></button>
+      <button type="button" id="darknessToggleBtn" title="Escuridão real: liga/desliga pra esta cena. Ligada, cada token só enxerga bem perto de si (mais o alcance da própria visão no escuro, ajustável no painel do token) — exceto onde uma fonte de luz (🔥) estiver acesa. Desligada (padrão), os tokens enxergam normalmente até o alcance de visão de cada um, como sempre — atalho: N"><span class="tool-label">🌑 Escuridão</span><kbd class="tool-key">N</kbd></button>
+      <div class="tt-sep"></div>
+      <button type="button" id="resetExploredBtn" title="Resetar a memória de exploração desta cena: a névoa volta a cobrir tudo que já foi visto até agora — as paredes e o mapa em si não são afetados">
+        <span class="tool-label">🌫 Resetar memória</span>
+      </button>
     ` : ''}`;
 
   bar.querySelectorAll('[data-tool]').forEach(b => b.addEventListener('click', () => {
@@ -73,6 +82,12 @@ function renderToolToolbar() {
   if (clearWallsBtn) clearWallsBtn.addEventListener('click', clearAllWalls);
   const clearDoorsBtn = document.getElementById('clearDoorsBtn');
   if (clearDoorsBtn) clearDoorsBtn.addEventListener('click', clearAllDoors);
+  const clearLightsBtn = document.getElementById('clearLightsBtn');
+  if (clearLightsBtn) clearLightsBtn.addEventListener('click', clearAllLights);
+  const darknessBtn = document.getElementById('darknessToggleBtn');
+  if (darknessBtn) darknessBtn.addEventListener('click', toggleSceneDarkness);
+  const resetExploredBtn = document.getElementById('resetExploredBtn');
+  if (resetExploredBtn) resetExploredBtn.addEventListener('click', resetExplorationMemory);
   const clearTemplatesBtn = document.getElementById('clearTemplatesBtn');
   if (clearTemplatesBtn) clearTemplatesBtn.addEventListener('click', clearMyOrAllTemplates);
   const snapBtn = document.getElementById('snapToggleBtn');
@@ -109,9 +124,18 @@ function updateToolToolbarActive() {
   });
   const snapBtn = document.getElementById('snapToggleBtn');
   if (snapBtn) snapBtn.classList.toggle('tool-active', snapToGrid);
+  const darknessBtn = document.getElementById('darknessToggleBtn');
+  if (darknessBtn) {
+    const scene = typeof getActiveScene === 'function' ? getActiveScene() : null;
+    darknessBtn.classList.toggle('tool-active', !!(scene && scene.darkness));
+  }
+  // As alças de edição de ponto de parede só aparecem com a ferramenta 🧱
+  // ativa (ver showHandles em renderWalls) — reaplica sempre que a
+  // ferramenta muda, não só quando as paredes em si mudam.
+  if (typeof renderWalls === 'function' && typeof isTableOwner === 'function' && isTableOwner()) renderWalls();
   const wrap = document.getElementById('boardWrap');
   if (wrap) {
-    wrap.classList.remove('tool-draw', 'tool-wall', 'tool-door', 'tool-ruler', 'tool-ping', 'tool-template');
+    wrap.classList.remove('tool-draw', 'tool-wall', 'tool-door', 'tool-room', 'tool-light', 'tool-ruler', 'tool-ping', 'tool-template');
     if (boardTool !== 'pan') wrap.classList.add('tool-' + boardTool);
   }
 }
@@ -122,6 +146,7 @@ function setBoardTool(tool) {
   // parede nem sumir da tela).
   if (boardTool === 'wall' && tool !== 'wall' && typeof cancelWallChain === 'function') cancelWallChain();
   if (boardTool === 'door' && tool !== 'door' && typeof cancelDoorDraft === 'function') cancelDoorDraft();
+  if (boardTool === 'room' && tool !== 'room' && typeof cancelRoomDraft === 'function') cancelRoomDraft();
   boardTool = tool;
   updateToolToolbarActive();
 }
@@ -159,6 +184,7 @@ function handleBoardKeydown(e) {
     case 'escape':
       if (boardTool === 'wall' && wallPoints.length) cancelWallChain(); // primeiro Esc só limpa o traço em andamento
       else if (boardTool === 'door' && doorStartPt) cancelDoorDraft();
+      else if (boardTool === 'room' && roomStartPt) cancelRoomDraft();
       else setBoardTool('pan');
       break;
     case 'v': setBoardTool('pan'); break;
@@ -171,7 +197,10 @@ function handleBoardKeydown(e) {
     case 'g': toggleSnapToGrid(); break;
     case 'd': if (isMaster) setBoardTool('draw'); break;
     case 'w': if (isMaster) { if (e.shiftKey) clearAllWalls(); else setBoardTool('wall'); } break;
+    case 'b': if (isMaster) setBoardTool('room'); break;
     case 'o': if (isMaster) { if (e.shiftKey) clearAllDoors(); else setBoardTool('door'); } break;
+    case 'l': if (isMaster) { if (e.shiftKey) clearAllLights(); else setBoardTool('light'); } break;
+    case 'n': if (isMaster) toggleSceneDarkness(); break;
     case 'x': if (isMaster) clearAllDrawings(); break;
     default: return;
   }
@@ -618,6 +647,13 @@ function renderWalls() {
   svg.querySelectorAll('polyline[data-wall-id]').forEach(el => {
     if (!liveWalls[el.dataset.wallId]) el.remove();
   });
+  svg.querySelectorAll('circle.wall-edit-dot[data-wall-id]').forEach(el => {
+    if (!liveWalls[el.dataset.wallId]) el.remove();
+  });
+  // As alças de edição de ponto só aparecem com a ferramenta de parede
+  // ativa e nenhum traço novo em andamento — senão ficariam confundindo
+  // com os pontos do próprio traço sendo desenhado (wallPoints).
+  const showHandles = boardTool === 'wall' && !wallPoints.length;
   Object.values(liveWalls).forEach(w => {
     let el = svg.querySelector(`polyline[data-wall-id="${w.id}"]`);
     if (!el) {
@@ -628,6 +664,7 @@ function renderWalls() {
       svg.appendChild(el);
       el.addEventListener('pointerdown', async (e) => {
         if (boardTool !== 'wall' || !isTableOwner()) return;
+        if (e.target.closest('.wall-edit-dot')) return; // clique numa alça: ver abaixo (arrasta, não apaga)
         e.stopPropagation();
         try { await db.collection('tables').doc(curTable.id).collection('walls').doc(w.id).delete(); }
         catch (err) { console.error('Erro ao apagar parede:', err); }
@@ -636,7 +673,75 @@ function renderWalls() {
     const pts = w.points || [];
     const drawPts = (w.closed && pts.length >= 3) ? [...pts, pts[0]] : pts;
     el.setAttribute('points', pointsToPathAttr(drawPts));
+
+    // Alças de edição: uma por ponto salvo — arrastar reposiciona o ponto
+    // (ver startWallVertexDrag), em vez de precisar apagar e redesenhar a
+    // parede inteira pra corrigir um único vértice.
+    pts.forEach((p, idx) => {
+      let dot = svg.querySelector(`circle.wall-edit-dot[data-wall-id="${w.id}"][data-pt="${idx}"]`);
+      if (!dot) {
+        dot = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+        dot.dataset.wallId = w.id;
+        dot.dataset.pt = idx;
+        dot.setAttribute('class', 'wall-edit-dot');
+        dot.setAttribute('r', 6);
+        dot.style.pointerEvents = 'auto';
+        svg.appendChild(dot);
+        dot.addEventListener('pointerdown', (e) => startWallVertexDrag(e, w.id, idx));
+        const title = document.createElementNS('http://www.w3.org/2000/svg', 'title');
+        title.textContent = 'Arraste para mover este ponto da parede';
+        dot.appendChild(title);
+      }
+      dot.setAttribute('cx', p.x * baseMapW);
+      dot.setAttribute('cy', p.y * baseMapH);
+      dot.style.display = showHandles ? '' : 'none';
+    });
   });
+}
+
+// Arrastar um ponto já existente de uma parede salva pra reposicioná-lo,
+// em vez de apagar a parede inteira e redesenhar do zero só pra corrigir
+// um vértice. Ativo só com a ferramenta 🧱 e nenhum traço novo em
+// andamento (ver showHandles em renderWalls). Atualiza a prévia local a
+// cada movimento e só grava no Firestore quando o ponteiro é solto.
+let wallVertexDrag = null; // {wallId, idx, pointerId, points}
+function startWallVertexDrag(e, wallId, idx) {
+  if (boardTool !== 'wall' || !isTableOwner()) return;
+  e.stopPropagation();
+  e.preventDefault();
+  const w = liveWalls[wallId];
+  if (!w) return;
+  wallVertexDrag = { wallId, idx, pointerId: e.pointerId, points: (w.points || []).map(p => ({ x: p.x, y: p.y })) };
+  document.addEventListener('pointermove', onWallVertexDragMove);
+  document.addEventListener('pointerup', onWallVertexDragEnd);
+  document.addEventListener('pointercancel', onWallVertexDragEnd);
+}
+
+function onWallVertexDragMove(e) {
+  if (!wallVertexDrag || e.pointerId !== wallVertexDrag.pointerId) return;
+  const pt = boardPointFromEvent(e);
+  wallVertexDrag.points[wallVertexDrag.idx] = pt;
+  const svg = wallSvgLayer();
+  const dot = svg.querySelector(`circle.wall-edit-dot[data-wall-id="${wallVertexDrag.wallId}"][data-pt="${wallVertexDrag.idx}"]`);
+  if (dot) { dot.setAttribute('cx', pt.x * baseMapW); dot.setAttribute('cy', pt.y * baseMapH); }
+  const line = svg.querySelector(`polyline[data-wall-id="${wallVertexDrag.wallId}"]`);
+  const w = liveWalls[wallVertexDrag.wallId];
+  if (line && w) {
+    const drawPts = (w.closed && wallVertexDrag.points.length >= 3) ? [...wallVertexDrag.points, wallVertexDrag.points[0]] : wallVertexDrag.points;
+    line.setAttribute('points', pointsToPathAttr(drawPts));
+  }
+}
+
+async function onWallVertexDragEnd(e) {
+  if (!wallVertexDrag || e.pointerId !== wallVertexDrag.pointerId) return;
+  const { wallId, points } = wallVertexDrag;
+  wallVertexDrag = null;
+  document.removeEventListener('pointermove', onWallVertexDragMove);
+  document.removeEventListener('pointerup', onWallVertexDragEnd);
+  document.removeEventListener('pointercancel', onWallVertexDragEnd);
+  try {
+    await db.collection('tables').doc(curTable.id).collection('walls').doc(wallId).update({ points });
+  } catch (err) { console.error('Erro ao mover ponto da parede:', err); }
 }
 
 function listenWalls() {
@@ -662,6 +767,58 @@ async function clearAllWalls() {
     snap.forEach(d => batch.delete(d.ref));
     await batch.commit();
   } catch (err) { alert('Erro ao limpar paredes: ' + err.message); }
+}
+
+// Chamada pela geração de mapa procedural (generateAndSaveMap, em
+// mesa-tokens.js) logo depois que um mapa novo é salvo — contorna
+// automaticamente toda a área de piso do mapa recém-gerado com paredes de
+// bloqueio de visão (ver mapgenWallSegmentsFromGrid, em mapgen.js), sem o
+// Mestre precisar traçar nada à mão.
+//
+// Como o layout é completamente novo a cada geração, as paredes, portas e
+// luzes da geração anterior — se houver — deixariam de fazer sentido
+// (uma porta ou tocha antiga podia cair em cima de rocha sólida no
+// layout novo), então são removidas junto; a memória de exploração também
+// é zerada, já que "já visto" de um layout que não existe mais não quer
+// dizer nada no novo.
+async function regenerateWallsFromGrid(sceneId, grid, cols, rows) {
+  const tableRef = db.collection('tables').doc(curTable.id);
+  const [oldWalls, oldDoors, oldLights] = await Promise.all([
+    tableRef.collection('walls').where('sceneId', '==', sceneId).get(),
+    tableRef.collection('doors').where('sceneId', '==', sceneId).get(),
+    tableRef.collection('lights').where('sceneId', '==', sceneId).get()
+  ]);
+  const segments = mapgenWallSegmentsFromGrid(grid, cols, rows);
+
+  const ops = [];
+  oldWalls.forEach(d => ops.push({ type: 'delete', ref: d.ref }));
+  oldDoors.forEach(d => ops.push({ type: 'delete', ref: d.ref }));
+  oldLights.forEach(d => ops.push({ type: 'delete', ref: d.ref }));
+  segments.forEach(s => ops.push({
+    type: 'create',
+    ref: tableRef.collection('walls').doc(),
+    data: {
+      points: [{ x: s.x1 / cols, y: s.y1 / rows }, { x: s.x2 / cols, y: s.y2 / rows }],
+      closed: false, sceneId
+    }
+  }));
+
+  // Um lote do Firestore aceita no máximo 500 operações — mapas grandes
+  // (colossal, por ex.) podem passar disso, então divide em lotes de 400
+  // (folga de sobra) e vai disparando em sequência.
+  const CHUNK = 400;
+  for (let i = 0; i < ops.length; i += CHUNK) {
+    const batch = db.batch();
+    ops.slice(i, i + CHUNK).forEach(op => {
+      if (op.type === 'delete') batch.delete(op.ref); else batch.set(op.ref, op.data);
+    });
+    await batch.commit();
+  }
+
+  await clearSceneExplorationMemory(sceneId).catch(() => {});
+  if (typeof invalidateCollisionSegmentsCache === 'function') invalidateCollisionSegmentsCache();
+  visionFullRedrawNeeded = true;
+  if (typeof scheduleVisionRecompute === 'function') scheduleVisionRecompute();
 }
 
 // ---------------------------------------------------------------- PORTAS --
@@ -784,19 +941,35 @@ function renderDoors() {
           catch (err) { console.error('Erro ao apagar porta:', err); }
           return;
         }
+        const cur = liveDoors[d.id];
+        // Porta trancada: só o Mestre consegue abrir — pra quem joga, o
+        // clique simplesmente não faz nada (a porta continua fechada).
+        if (!isTableOwner() && cur.locked && !cur.open) return;
         try {
-          await db.collection('tables').doc(curTable.id).collection('doors').doc(d.id).update({ open: !liveDoors[d.id].open });
+          await db.collection('tables').doc(curTable.id).collection('doors').doc(d.id).update({ open: !cur.open });
         } catch (err) { console.error('Erro ao abrir/fechar porta:', err); }
+      });
+      // Botão direito (só o Mestre): tranca/destranca, sem abrir nem fechar.
+      mark.addEventListener('contextmenu', async (e) => {
+        e.preventDefault(); e.stopPropagation();
+        if (!isTableOwner()) return;
+        const cur = liveDoors[d.id];
+        try {
+          await db.collection('tables').doc(curTable.id).collection('doors').doc(d.id).update({ locked: !cur.locked });
+        } catch (err) { console.error('Erro ao trancar/destrancar porta:', err); }
       });
     }
     doorMarkElCache[d.id] = mark;
     const mx = (d.x1 + d.x2) / 2 * baseMapW, my = (d.y1 + d.y2) / 2 * baseMapH;
     mark.setAttribute('transform', `translate(${mx},${my})`);
     mark.classList.toggle('door-open', !!d.open);
-    mark.querySelector('.door-mark-icon').textContent = d.open ? '🔓' : '🚪';
+    mark.classList.toggle('door-locked', !!(d.locked && !d.open));
+    mark.querySelector('.door-mark-icon').textContent = d.open ? '🔓' : (d.locked ? '🔒' : '🚪');
     mark.querySelector('title')?.remove();
     const title = document.createElementNS('http://www.w3.org/2000/svg', 'title');
-    title.textContent = d.open ? 'Porta aberta — clique para fechar' : 'Porta fechada — clique para abrir';
+    title.textContent = d.open ? 'Porta aberta — clique para fechar'
+      : d.locked ? (isMaster ? 'Porta trancada — clique para abrir (jogadores não conseguem) — botão direito destranca' : 'Porta trancada — só o Mestre pode abrir')
+      : `Porta fechada — clique para abrir${isMaster ? ' — botão direito tranca' : ''}`;
     mark.appendChild(title);
   });
 }
@@ -824,6 +997,206 @@ async function clearAllDoors() {
     snap.forEach(d => batch.delete(d.ref));
     await batch.commit();
   } catch (err) { alert('Erro ao limpar portas: ' + err.message); }
+}
+
+// -------------------------------------------------------- SALA (RETÂNGULO) --
+// Atalho pra contornar uma sala inteira com paredes de uma vez: arraste de
+// um canto ao outro e solte — nasce como uma única parede fechada
+// (4 pontos, closed:true), igual a fechar um contorno manual com a
+// ferramenta 🧱 mas sem precisar clicar ponto a ponto. Reaproveita a mesma
+// coleção 'walls' — a "sala" resultante é uma parede comum daí pra frente,
+// editável ponto a ponto (ver startWallVertexDrag) e apagável clicando nela
+// com a ferramenta 🧱.
+let roomPointerId = null;
+let roomStartPt = null;
+
+function attachRoomHandlers(wrap) {
+  wrap.addEventListener('pointerdown', (e) => {
+    if (boardTool !== 'room' || !isTableOwner()) return;
+    if (e.button === 2) return;
+    e.preventDefault();
+    roomPointerId = e.pointerId;
+    roomStartPt = boardPointFromEvent(e);
+    wrap.setPointerCapture(e.pointerId);
+    renderRoomPreview(roomStartPt, roomStartPt);
+  });
+  wrap.addEventListener('pointermove', (e) => {
+    if (boardTool !== 'room' || roomPointerId !== e.pointerId || !roomStartPt) return;
+    renderRoomPreview(roomStartPt, boardPointFromEvent(e));
+  });
+  const endRoom = async (e) => {
+    if (roomPointerId !== e.pointerId) return;
+    roomPointerId = null;
+    const start = roomStartPt; roomStartPt = null;
+    removeRoomPreview();
+    if (!start || !curTable.activeSceneId) return;
+    const end = boardPointFromEvent(e);
+    const dx = (end.x - start.x) * baseMapW, dy = (end.y - start.y) * baseMapH;
+    if (Math.hypot(dx, dy) < 6) return; // clique sem arrastar: ignora (evita sala minúscula sem querer)
+    const points = [
+      { x: start.x, y: start.y }, { x: end.x, y: start.y },
+      { x: end.x, y: end.y }, { x: start.x, y: end.y }
+    ];
+    try {
+      await db.collection('tables').doc(curTable.id).collection('walls').add({
+        points, closed: true, sceneId: curTable.activeSceneId
+      });
+    } catch (err) { console.error('Erro ao criar sala:', err); }
+  };
+  wrap.addEventListener('pointerup', endRoom);
+  wrap.addEventListener('pointercancel', endRoom);
+}
+
+function cancelRoomDraft() {
+  roomPointerId = null; roomStartPt = null;
+  removeRoomPreview();
+}
+
+function renderRoomPreview(a, b) {
+  const svg = wallSvgLayer(); // mesma camada visual das paredes (só o Mestre vê)
+  let rect = svg.querySelector('#liveRoomPreview');
+  if (!rect) {
+    rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+    rect.id = 'liveRoomPreview';
+    rect.setAttribute('class', 'room-rect-live');
+    svg.appendChild(rect);
+  }
+  const x1 = Math.min(a.x, b.x) * baseMapW, y1 = Math.min(a.y, b.y) * baseMapH;
+  const x2 = Math.max(a.x, b.x) * baseMapW, y2 = Math.max(a.y, b.y) * baseMapH;
+  rect.setAttribute('x', x1); rect.setAttribute('y', y1);
+  rect.setAttribute('width', Math.max(0, x2 - x1)); rect.setAttribute('height', Math.max(0, y2 - y1));
+}
+
+function removeRoomPreview() {
+  const rect = document.querySelector('#wallSvgLayer #liveRoomPreview');
+  if (rect) rect.remove();
+}
+
+// ---------------------------------------------------------------- LUZES --
+// Fonte de luz (🔥 tocha): um ponto fixo no mapa que revela sua área
+// sempre, bloqueado pelas paredes/portas fechadas — igual à visão de um
+// token, mas sem precisar de nenhum token perto. Só o Mestre cria/apaga
+// (clique com a ferramenta ativa) e ajusta o raio (roda do mouse sobre uma
+// luz já acesa). O ícone aparece pra todo mundo — como qualquer objeto do
+// cenário —, mas só depois que a área dela já foi vista/explorada, pra não
+// entregar o que tem lá adiante através da névoa ainda não revelada (mesma
+// regra do ícone de porta, ver updateDoorVisibility). O efeito de
+// iluminar de fato (limpar a névoa) é calculado em recomputeAndRenderVision.
+let lightPointerId = null;
+let lightMarkElCache = {};
+
+function attachLightHandlers(wrap) {
+  wrap.addEventListener('pointerdown', async (e) => {
+    if (boardTool !== 'light' || !isTableOwner()) return;
+    if (e.target.closest('.light-mark')) return; // clique numa luz existente: ver renderLights (apaga)
+    if (e.button === 2) return;
+    e.preventDefault();
+    const pt = boardPointFromEvent(e);
+    try {
+      await db.collection('tables').doc(curTable.id).collection('lights').add({
+        x: pt.x, y: pt.y, radius: LIGHT_DEFAULT_RADIUS_CELLS, sceneId: curTable.activeSceneId
+      });
+    } catch (err) { console.error('Erro ao acender fonte de luz:', err); }
+  });
+}
+
+function lightSvgLayer() {
+  let svg = document.getElementById('lightSvgLayer');
+  if (!svg) {
+    svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.id = 'lightSvgLayer';
+    svg.style.position = 'absolute'; svg.style.top = '0'; svg.style.left = '0';
+    svg.style.pointerEvents = 'none';
+    document.getElementById('boardSurface').appendChild(svg);
+  }
+  svg.setAttribute('width', baseMapW); svg.setAttribute('height', baseMapH);
+  svg.setAttribute('viewBox', `0 0 ${baseMapW} ${baseMapH}`);
+  return svg;
+}
+
+function renderLights() {
+  const svg = lightSvgLayer();
+  svg.querySelectorAll('[data-light-id]').forEach(el => {
+    if (!liveLights[el.dataset.lightId]) { el.remove(); delete lightMarkElCache[el.dataset.lightId]; }
+  });
+  Object.values(liveLights).forEach(l => {
+    let mark = svg.querySelector(`g[data-light-id="${l.id}"]`);
+    if (!mark) {
+      mark = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+      mark.dataset.lightId = l.id;
+      mark.setAttribute('class', 'light-mark');
+      mark.style.pointerEvents = 'auto';
+      mark.innerHTML = '<circle class="light-mark-bg" r="10"></circle><text class="light-mark-icon" text-anchor="middle" dominant-baseline="central">🔥</text>';
+      svg.appendChild(mark);
+      mark.addEventListener('pointerdown', async (e) => {
+        e.stopPropagation();
+        if (boardTool !== 'light' || !isTableOwner()) return;
+        try { await db.collection('tables').doc(curTable.id).collection('lights').doc(l.id).delete(); }
+        catch (err) { console.error('Erro ao apagar fonte de luz:', err); }
+      });
+      // Roda do mouse sobre a luz ajusta o raio (só o Mestre) — evita
+      // precisar de um painel à parte só pra isso.
+      mark.addEventListener('wheel', async (e) => {
+        if (!isTableOwner()) return;
+        e.preventDefault();
+        const cur = liveLights[l.id];
+        if (!cur) return;
+        const next = Math.max(1, Math.round(((cur.radius || LIGHT_DEFAULT_RADIUS_CELLS) + (e.deltaY < 0 ? 0.5 : -0.5)) * 2) / 2);
+        try { await db.collection('tables').doc(curTable.id).collection('lights').doc(l.id).update({ radius: next }); }
+        catch (err) { console.error('Erro ao ajustar raio da luz:', err); }
+      }, { passive: false });
+    }
+    lightMarkElCache[l.id] = mark;
+    mark.setAttribute('transform', `translate(${l.x * baseMapW},${l.y * baseMapH})`);
+    mark.querySelector('title')?.remove();
+    const title = document.createElementNS('http://www.w3.org/2000/svg', 'title');
+    title.textContent = `Fonte de luz (raio ${l.radius || LIGHT_DEFAULT_RADIUS_CELLS} casas) — role a roda do mouse pra ajustar`;
+    mark.appendChild(title);
+  });
+  updateLightVisibility();
+}
+
+function listenLights() {
+  if (!curTable.activeSceneId) return;
+  lightsUnsub = db.collection('tables').doc(curTable.id).collection('lights')
+    .where('sceneId', '==', curTable.activeSceneId)
+    .onSnapshot(snap => {
+      liveLights = {};
+      snap.forEach(d => { liveLights[d.id] = { id: d.id, ...d.data() }; });
+      renderLights();
+      visionFullRedrawNeeded = true; // fontes de luz mudaram: recalcula tudo
+      scheduleVisionRecompute();
+    }, err => console.error('Erro ao sincronizar fontes de luz:', err));
+}
+
+async function clearAllLights() {
+  if (!curTable.activeSceneId) return;
+  if (!confirm('Apagar todas as fontes de luz desta cena?')) return;
+  try {
+    const snap = await db.collection('tables').doc(curTable.id).collection('lights')
+      .where('sceneId', '==', curTable.activeSceneId).get();
+    const batch = db.batch();
+    snap.forEach(d => batch.delete(d.ref));
+    await batch.commit();
+  } catch (err) { alert('Erro ao limpar luzes: ' + err.message); }
+}
+
+// Mesma regra do ícone de porta: só aparece pra quem joga depois que a área
+// ao redor já foi vista/explorada — senão a luz entregaria uma sala inteira
+// através da névoa ainda não revelada. O Mestre sempre vê todas.
+function updateLightVisibility() {
+  if (!Object.keys(liveLights).length) return;
+  const master = isTableOwner();
+  const cellPx = boardCellPx || DEFAULT_CELL_PX;
+  Object.values(liveLights).forEach(l => {
+    const mark = lightMarkElCache[l.id];
+    if (!mark) return;
+    if (master) { mark.style.display = ''; return; }
+    const mx = l.x * baseMapW, my = l.y * baseMapH;
+    const key = Math.floor(mx / cellPx) + ',' + Math.floor(my / cellPx);
+    const known = isPointCurrentlyVisible(mx, my) || exploredCells[key];
+    mark.style.display = known ? '' : 'none';
+  });
 }
 
 // ------------------------------------------------- VISÃO DINÂMICA (névoa) --
@@ -1156,8 +1529,22 @@ function recomputeAndRenderVision() {
   const cellPx = boardCellPx || DEFAULT_CELL_PX;
   const segmentsGrid = collisionSegmentsGrid();
   const isMasterView = isTableOwner();
-  const visionTokens = Object.values(liveTokens).filter(t => isTokenInActiveScene(t) && tokenHasVision(t));
+  // Visão privada por dono de token: cada jogador só descobre o mapa
+  // através dos próprios tokens — o token de outro jogador (ou um NPC do
+  // Mestre) não revela nada pra quem não é dono dele. O Mestre continua
+  // vendo através de qualquer token, como sempre (é assim que ele vê o
+  // mapa inteiro, mesmo sem token nenhum próprio).
+  const visionTokens = Object.values(liveTokens).filter(t =>
+    isTokenInActiveScene(t) && tokenHasVision(t) && (isMasterView || t.ownerId === curUser.uid));
   const samples = adaptiveFogSamples(visionTokens.length);
+  // Escuridão real (ver toggleSceneDarkness): fora daqui, cada token vale o
+  // próprio visionRadius como sempre ("luz ambiente"). Com a cena marcada
+  // como escura, o alcance normal do token só passa a valer dentro de uma
+  // fonte de luz (ver bloco de luzes abaixo) — fora da luz, o token só
+  // enxerga o piso DARK_SELF_RADIUS_CELLS mais a própria infravisão
+  // (t.darkRadius, editável no painel do token).
+  const activeScene = typeof getActiveScene === 'function' ? getActiveScene() : null;
+  const sceneIsDark = !!(activeScene && activeScene.darkness);
 
   // forceAll: quando true, TODO token tem o polígono recalculado e a
   // região "suja" vira o mapa inteiro (o canvas pode estar em branco por
@@ -1183,7 +1570,10 @@ function recomputeAndRenderVision() {
   visionTokens.forEach(t => {
     const p = tokenVisionPos(t);
     const cx = p.x * baseMapW, cy = p.y * baseMapH;
-    const radius = (t.visionRadius || DEFAULT_VISION_RADIUS_CELLS) * cellPx;
+    const radiusCells = sceneIsDark
+      ? Math.max(DARK_SELF_RADIUS_CELLS, t.darkRadius || 0) // sem luz por perto: só a infravisão (ou o mínimo de sempre)
+      : (t.visionRadius || DEFAULT_VISION_RADIUS_CELLS);     // luz ambiente normal: alcance de visão de sempre
+    const radius = radiusCells * cellPx;
     const isCone = t.visionMode === 'cone';
     const rot = liveDragRotations[t.id] != null ? liveDragRotations[t.id] : (t.rot || 0);
     const coneCenter = isCone ? (rot - 90) * DEG2RAD : null; // rot=0 aponta "pra cima" (mesma convenção da alça de girar)
@@ -1251,13 +1641,40 @@ function recomputeAndRenderVision() {
       }
     }
 
+    // Fontes de luz (🔥): revelam sua área sempre, independente de onde os
+    // tokens estão — calculadas com o mesmo shadowcasting da visão de
+    // token, só que a partir da posição da luz. Vêm ANTES dos tokens
+    // porque, na "escuridão real", é a luz quem dá o alcance normal de
+    // volta pra quem está dentro dela (ver rótulo currentVisionPolygons
+    // logo abaixo, que começa já com as luzes dentro).
+    const newCells = {};
+    const currentLightPolygons = [];
+    ctx.globalCompositeOperation = 'destination-out';
+    Object.values(liveLights).forEach(l => {
+      const lx = l.x * baseMapW, ly = l.y * baseMapH;
+      const lr = (l.radius || LIGHT_DEFAULT_RADIUS_CELLS) * cellPx;
+      const localSegments = segmentsNearCircle(segmentsGrid, lx, ly, lr);
+      const poly = computeVisibilityPolygon(lx, ly, lr, localSegments, null, null, samples);
+      if (poly.length < 3) return;
+      currentLightPolygons.push(poly);
+      collectExploredCells(poly, lx, ly, lr, newCells); // luz também vira memória de exploração permanente
+      const grad = ctx.createRadialGradient(lx, ly, lr * FOG_EDGE_SOFTNESS, lx, ly, lr);
+      grad.addColorStop(0, 'rgba(0,0,0,1)');
+      grad.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.moveTo(poly[0].x, poly[0].y);
+      for (let i = 1; i < poly.length; i++) ctx.lineTo(poly[i].x, poly[i].y);
+      ctx.closePath();
+      ctx.fill();
+    });
+
     // Tokens com visão: cada polígono de visibilidade limpa a névoa
     // (visível agora) e alimenta a memória de exploração. Só os tokens
     // marcados como "mudaram" têm o shadowcasting recalculado; os outros
     // reaproveitam o polígono do frame anterior (ele continua correto,
     // já que nada que o afeta mudou).
-    const newCells = {};
-    currentVisionPolygons = [];
+    currentVisionPolygons = currentLightPolygons.slice();
     ctx.globalCompositeOperation = 'destination-out';
     visionTokens.forEach(t => {
       const st = nextState[t.id];
@@ -1317,6 +1734,7 @@ function recomputeAndRenderVision() {
 
   applyNpcFogVisibility();
   updateDoorVisibility();
+  updateLightVisibility();
 
   lastVisionTokenState = nextState;
   visionFullRedrawNeeded = false;
@@ -1367,10 +1785,26 @@ function applyNpcFogVisibility() {
   });
 }
 
-// Grava as casas recém-reveladas na memória compartilhada da mesa
-// (tables/{id}/visionMemory/{sceneId}), agrupando várias descobertas numa
-// única escrita (throttle) pra não sobrecarregar o Firestore durante um
-// arrasto ou quando várias casas somem da névoa de uma vez.
+// Vis\u00e3o privada por dono de token: cada jogador só descobre o mapa
+// através dos próprios tokens (ver filtro de visionTokens em
+// recomputeAndRenderVision) — então a memória de exploração de cada
+// jogador também precisa ficar isolada, senão a descoberta de um jogador
+// vazaria pra tela dos outros por essa via. O Mestre continua com o
+// documento "base" de sempre (tables/{id}/visionMemory/{sceneId}), que
+// funciona como o histórico agregado de tudo que qualquer token já
+// revelou — só como referência pro Mestre, que já enxerga o mapa inteiro
+// sempre, com ou sem isso. Cada jogador usa um subdocumento só dele,
+// debaixo do mesmo documento base.
+function visionMemoryDocRef(sceneId) {
+  const base = db.collection('tables').doc(curTable.id).collection('visionMemory').doc(sceneId);
+  return isTableOwner() ? base : base.collection('players').doc(curUser.uid);
+}
+
+// Grava as casas recém-reveladas na memória de visão (ver
+// visionMemoryDocRef acima pra saber em qual documento cada um grava),
+// agrupando várias descobertas numa única escrita (throttle) pra não
+// sobrecarregar o Firestore durante um arrasto ou quando várias casas
+// somem da névoa de uma vez.
 function scheduleExploredPersist(newCells) {
   Object.assign(pendingExploredCells, newCells);
   if (exploredPersistTimer) return;
@@ -1384,19 +1818,47 @@ function flushExploredPersist() {
   if (!keys.length || !curTable || !curTable.activeSceneId) return;
   const update = {};
   keys.forEach(k => { update['cells.' + k] = true; });
-  db.collection('tables').doc(curTable.id).collection('visionMemory').doc(curTable.activeSceneId)
+  visionMemoryDocRef(curTable.activeSceneId)
     .set(update, { merge: true })
     .catch(err => console.error('Erro ao salvar memória de visão:', err));
 }
 
 function listenVisionMemory() {
   if (!curTable.activeSceneId) return;
-  visionMemUnsub = db.collection('tables').doc(curTable.id).collection('visionMemory').doc(curTable.activeSceneId)
+  visionMemUnsub = visionMemoryDocRef(curTable.activeSceneId)
     .onSnapshot(doc => {
       exploredCells = (doc.exists && doc.data().cells) || {};
       visionFullRedrawNeeded = true; // memória sincronizada em bloco: qualquer casa do mapa pode ter mudado
       scheduleVisionRecompute();
     }, err => console.error('Erro ao sincronizar memória de visão:', err));
+}
+
+// Reseta a memória de exploração de TODO MUNDO nesta cena — a do Mestre
+// (documento agregado de sempre) e a privada de cada jogador. Usada tanto
+// pelo botão "🌫 Resetar memória" quanto pela geração de mapa procedural
+// (regenerateWallsFromGrid), já que um layout novo torna a memória antiga
+// de todo mundo sem sentido.
+async function clearSceneExplorationMemory(sceneId) {
+  const base = db.collection('tables').doc(curTable.id).collection('visionMemory').doc(sceneId);
+  const playersSnap = await base.collection('players').get();
+  const batch = db.batch();
+  batch.set(base, { cells: {} });
+  playersSnap.forEach(d => batch.delete(d.ref));
+  await batch.commit();
+}
+
+// Botão do Mestre "🌫 Resetar memória": limpa tudo que já foi explorado
+// nesta cena, pra todo mundo — a névoa volta a cobrir o mapa inteiro de
+// novo, mas as paredes/portas/luzes continuam intactas (só zera a
+// memória, não mexe em mais nada). Útil pra rejogar uma área às escuras
+// de novo (ex.: os jogadores voltam a uma masmorra tempos depois, ou o
+// Mestre quer reforçar a tensão de reexplorar um lugar já visto).
+async function resetExplorationMemory() {
+  if (!curTable.activeSceneId || !isTableOwner()) return;
+  if (!confirm('Resetar a memória de exploração desta cena pra todo mundo (Mestre e jogadores)? A névoa volta a cobrir tudo que já foi visto até agora — as paredes, portas e luzes continuam intactas.')) return;
+  try {
+    await clearSceneExplorationMemory(curTable.activeSceneId);
+  } catch (err) { alert('Erro ao resetar memória de exploração: ' + err.message); }
 }
 
 
@@ -1826,7 +2288,9 @@ function attachBoardInteractionHandlers() {
   attachRulerHandlers(wrap);
   attachDrawHandlers(wrap);
   attachWallHandlers(wrap);
+  attachRoomHandlers(wrap);
   attachDoorHandlers(wrap);
+  attachLightHandlers(wrap);
   attachPingHandlers(wrap);
   attachTemplateHandlers(wrap);
 }

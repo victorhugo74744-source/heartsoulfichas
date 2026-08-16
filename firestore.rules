@@ -189,21 +189,46 @@ service cloud.firestore {
       match /walls/{wallId} {
         allow read: if isSignedIn();
         allow create, delete: if isTableMaster(tableId);
-        allow update: if false;
+        // "update" existe só pra alça de edição de ponto (arrastar um
+        // vértice já salvo pra reposicioná-lo, ver startWallVertexDrag em
+        // mesa-tools.js) — trava em "points" pra ninguém reatribuir a
+        // parede pra outra cena ou mudar "closed" por essa via.
+        allow update: if isTableMaster(tableId) &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['points']);
       }
 
       // Portas (ferramenta 🚪) — um segmento único que bloqueia a visão só
       // enquanto fechado (campo "open"). Só o Mestre dono desta mesa cria e
       // apaga (arrastar/clicar com a ferramenta ativa); abrir/fechar é uma
       // ação de jogo disponível pra qualquer pessoa presente na mesa, então
-      // "update" fica liberado pra qualquer um — mas só pra mexer no campo
-      // "open" em si, nunca reposicionar a porta ou mudar de cena por essa
-      // via (isso continua exclusivo de criar uma porta nova).
+      // "open" fica liberado pra qualquer um — mas nunca mexer em mais
+      // nada por essa via. Uma porta "locked" (trancada, botão direito do
+      // Mestre) só abre pela mão do próprio Mestre: pra quem não é Mestre,
+      // a trava aqui replica exatamente a checagem que o cliente já faz
+      // antes de chamar update, pra um cliente malicioso não conseguir
+      // abrir uma porta trancada só pulando a checagem do próprio app.
       match /doors/{doorId} {
         allow read: if isSignedIn();
         allow create, delete: if isTableMaster(tableId);
-        allow update: if isSignedIn() &&
-          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['open']);
+        allow update: if isSignedIn() && (
+          (isTableMaster(tableId) &&
+            request.resource.data.diff(resource.data).affectedKeys().hasOnly(['open', 'locked'])) ||
+          (!isTableMaster(tableId) &&
+            request.resource.data.diff(resource.data).affectedKeys().hasOnly(['open']) &&
+            (resource.data.locked != true || resource.data.open == true))
+        );
+      }
+
+      // Fontes de luz (ferramenta 🔥) — revelam sua área sempre, independente
+      // de token por perto (ver bloco de luzes em recomputeAndRenderVision,
+      // mesa-tools.js). Só o Mestre dono desta mesa acende/apaga/ajusta o
+      // raio (roda do mouse sobre uma luz já acesa); todos na mesa leem,
+      // porque o cálculo de visão roda no cliente de todo mundo.
+      match /lights/{lightId} {
+        allow read: if isSignedIn();
+        allow create, delete: if isTableMaster(tableId);
+        allow update: if isTableMaster(tableId) &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['radius']);
       }
 
       // Memória de exploração da névoa dinâmica (um doc por cena, campo
@@ -213,10 +238,29 @@ service cloud.firestore {
       // cliente de cada jogador, que grava aqui) — nunca "esquece" uma
       // área, só soma; por isso não há necessidade de restringir a
       // escrita ao Mestre. Só o Mestre remove (ao excluir a cena).
+      // Memória de exploração da névoa dinâmica. Documento "base" (um por
+      // cena): histórico agregado de tudo que qualquer token já revelou —
+      // só usado como referência pelo Mestre (ele já enxerga o mapa
+      // inteiro sempre, com ou sem isso), então continua aberto a
+      // qualquer pessoa presente na mesa contribuir (é o próprio cálculo
+      // de visão do Mestre, rodando no cliente dele, que grava aqui).
       match /visionMemory/{sceneId} {
         allow read: if isSignedIn();
         allow create, update: if isSignedIn();
         allow delete: if isTableMaster(tableId);
+
+        // Memória PRIVADA de cada jogador — visão restrita ao dono do
+        // token: cada jogador só descobre o mapa através dos próprios
+        // tokens, então a memória de exploração de cada um fica isolada
+        // aqui, num subdocumento só dele. Só ele mesmo escreve na
+        // própria (é o cálculo de visão rodando no cliente dele); o
+        // Mestre pode ler qualquer uma (não usa isso hoje, mas não há
+        // razão pra esconder do dono da mesa), só não escreve.
+        match /players/{uid} {
+          allow read: if isSignedIn() && (request.auth.uid == uid || isTableMaster(tableId));
+          allow create, update: if isSignedIn() && request.auth.uid == uid;
+          allow delete: if isSignedIn() && (request.auth.uid == uid || isTableMaster(tableId));
+        }
       }
 
       // Marcações temporárias de "ping" no mapa (ferramenta 📍). Qualquer

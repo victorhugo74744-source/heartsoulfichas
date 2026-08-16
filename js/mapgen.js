@@ -442,6 +442,59 @@ function mapgenGenerate({ size = 'medio', biome = 'dungeon', seed } = {}) {
     // Firestore — é isso que mantém o encaixe dos tokens na grade correto.
     width: canvas.width,
     height: canvas.height,
-    cols, rows, cellPx: cell, seed: usedSeed
+    cols, rows, cellPx: cell, seed: usedSeed,
+    // Grade lógica piso(1)/parede(0) usada pra desenhar o mapa acima — devolvida
+    // aqui pra quem gerou o mapa poder traçar as paredes de bloqueio de visão
+    // automaticamente, sem precisar contornar tudo à mão (ver
+    // mapgenWallSegmentsFromGrid, chamado por regenerateWallsFromGrid em
+    // mesa-tools.js logo depois que o mapa é salvo).
+    grid
   };
+}
+
+// A partir da grade piso(1)/parede(0) de um mapa gerado, devolve os
+// segmentos de parede que contornam toda área de piso — tanto a borda
+// externa das salas/cavernas quanto qualquer "ilha" de rocha sólida dentro
+// de uma sala (ex.: um pilar isolado também vira uma parede fechando ao
+// redor dele). Percorre as linhas de grade horizontais e verticais uma vez
+// cada, e junta (merge) trechos retos consecutivos num único segmento em
+// vez de um documento por aresta de casa — o resultado típico é algumas
+// centenas de segmentos, não milhares. As coordenadas devolvidas estão em
+// "casas de grade" (0..cols, 0..rows); quem usa esta função ainda precisa
+// dividir por cols/rows pra virar a fração 0..1 que a coleção 'walls' espera.
+function mapgenWallSegmentsFromGrid(grid, cols, rows) {
+  const isFloor = (x, y) => x >= 0 && x < cols && y >= 0 && y < rows && grid[y][x] === 1;
+  const segments = [];
+
+  // Arestas horizontais: uma por linha de grade (0..rows), juntando os
+  // trechos em x onde a casa de cima e a de baixo dessa linha divergem
+  // (uma é piso, a outra não) em runs retos.
+  for (let yLine = 0; yLine <= rows; yLine++) {
+    let runStart = null;
+    for (let x = 0; x <= cols; x++) {
+      const isEdge = x < cols && (isFloor(x, yLine - 1) !== isFloor(x, yLine));
+      if (isEdge) {
+        if (runStart === null) runStart = x;
+      } else if (runStart !== null) {
+        segments.push({ x1: runStart, y1: yLine, x2: x, y2: yLine });
+        runStart = null;
+      }
+    }
+  }
+
+  // Mesma ideia, arestas verticais.
+  for (let xLine = 0; xLine <= cols; xLine++) {
+    let runStart = null;
+    for (let y = 0; y <= rows; y++) {
+      const isEdge = y < rows && (isFloor(xLine - 1, y) !== isFloor(xLine, y));
+      if (isEdge) {
+        if (runStart === null) runStart = y;
+      } else if (runStart !== null) {
+        segments.push({ x1: xLine, y1: runStart, x2: xLine, y2: y });
+        runStart = null;
+      }
+    }
+  }
+
+  return segments;
 }

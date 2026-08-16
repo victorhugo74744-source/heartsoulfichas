@@ -54,9 +54,9 @@ let boardTool = 'pan'; // 'pan' | 'ruler' | 'draw' | 'wall' | 'door' | 'ping' | 
 // muda se ele escolher outra na própria roda (ver openTable/renderToolToolbar).
 let drawColor = '#e0473f';
 let drawUnsub = null, fogUnsub = null, pingUnsub = null, templateUnsub = null;
-let wallsUnsub = null, visionMemUnsub = null, doorsUnsub = null;
+let wallsUnsub = null, visionMemUnsub = null, doorsUnsub = null, lightsUnsub = null;
 let liveDrawings = {}, liveFog = {}, livePings = {}, liveTemplates = {};
-let liveWalls = {}, exploredCells = {}, liveDoors = {};
+let liveWalls = {}, exploredCells = {}, liveDoors = {}, liveLights = {};
 // Posições "ao vivo" de tokens sendo arrastados agora mesmo (por qualquer
 // cliente, inclusive o próprio) — usadas pelo motor de visão dinâmica pra
 // recalcular a névoa revelada em tempo real durante o arrasto, sem esperar
@@ -92,6 +92,19 @@ function tokenHasVision(t) {
   if (!t) return false;
   return t.npc ? t.visionOn === true : t.visionOn !== false;
 }
+// ---- Luz/iluminação (tochas) e escuridão real -----------------------------
+// Por padrão uma cena tem "luz ambiente": todo token com visão enxerga
+// normalmente até visionRadius, como sempre. O Mestre pode ligar
+// scene.darkness (botão 🌑 Escuridão na barra de ferramentas) pra virar a
+// cena "escuridão real": aí cada token só enxerga bem perto de si (o piso
+// DARK_SELF_RADIUS_CELLS) mais o alcance extra da própria infravisão
+// (tok.darkRadius, editável no painel do token), EXCETO onde uma fonte de
+// luz (🔥, ferramenta própria) estiver revelando a área — luzes iluminam
+// seu raio sempre, independente de onde os tokens estão, e viram memória
+// de exploração permanente igual a qualquer área vista. Ver o motor em
+// mesa-tools.js (recomputeAndRenderVision, currentLightPolygons).
+const LIGHT_DEFAULT_RADIUS_CELLS = 4;
+const DARK_SELF_RADIUS_CELLS = 0.6; // mínimo sempre visível ao redor do próprio token, mesmo sem infravisão nenhuma
 // ---- Áreas de efeito (templates de magia/ataque: círculo, cone, linha) ----
 // Igual à régua/marcação: qualquer jogador presente pode desenhar uma área
 // (não só o Mestre), já que é o próprio jogador quem conjura a magia. Fica
@@ -501,17 +514,25 @@ function refreshBoardForActiveScene() {
     if (templateUnsub) { templateUnsub(); templateUnsub = null; }
     if (wallsUnsub) { wallsUnsub(); wallsUnsub = null; }
     if (doorsUnsub) { doorsUnsub(); doorsUnsub = null; }
+    if (lightsUnsub) { lightsUnsub(); lightsUnsub = null; }
     if (visionMemUnsub) { visionMemUnsub(); visionMemUnsub = null; }
-    liveDrawings = {}; liveFog = {}; liveTemplates = {}; liveWalls = {}; liveDoors = {}; exploredCells = {};
+    liveDrawings = {}; liveFog = {}; liveTemplates = {}; liveWalls = {}; liveDoors = {}; liveLights = {}; exploredCells = {};
     if (typeof invalidateCollisionSegmentsCache === 'function') invalidateCollisionSegmentsCache(); // paredes/portas da cena anterior não valem mais
     if (typeof lastVisionTokenState !== 'undefined') { lastVisionTokenState = {}; visionFullRedrawNeeded = true; } // polígonos da cena anterior não valem mais
     lastOwnDrawingId = null; // "desfazer último traço" não deve valer pra outra cena
     if (typeof cancelFogPoly === 'function') cancelFogPoly(); // não deixa um polígono de névoa em andamento vazar pra outra cena
     if (typeof cancelWallChain === 'function') cancelWallChain(); // idem, pra um traço de parede em andamento
     if (typeof cancelDoorDraft === 'function') cancelDoorDraft(); // idem, pra uma porta sendo posicionada
+    if (typeof cancelRoomDraft === 'function') cancelRoomDraft(); // idem, pro contorno de uma sala sendo arrastado
     selectedTokenId = null; handleDraggingTokenId = null;
     boardZoom = 1; boardPanX = 0; boardPanY = 0;
-    if (newId) { listenDrawings(); listenFog(); listenTemplates(); listenWalls(); listenDoors(); listenVisionMemory(); }
+    if (newId) { listenDrawings(); listenFog(); listenTemplates(); listenWalls(); listenDoors(); listenLights(); listenVisionMemory(); }
+  } else if (typeof visionFullRedrawNeeded !== 'undefined') {
+    // Mesma cena, mas o snapshot da cena pode ter mudado um campo que afeta
+    // a visão (ex.: o Mestre ligou/desligou scene.darkness) — força um
+    // recálculo completo pra isso valer imediatamente pra todo mundo.
+    visionFullRedrawNeeded = true;
+    if (typeof scheduleVisionRecompute === 'function') scheduleVisionRecompute();
   }
   renderBoardBackground();
   renderScenePanel();
@@ -588,6 +609,16 @@ async function setActiveScene(sceneId) {
   catch (err) { alert('Erro ao trocar de cena: ' + err.message); }
 }
 
+// Liga/desliga "escuridão real" na cena ativa — ver nota grande junto de
+// LIGHT_DEFAULT_RADIUS_CELLS/DARK_SELF_RADIUS_CELLS mais acima.
+async function toggleSceneDarkness() {
+  const scene = getActiveScene();
+  if (!scene || !isTableOwner()) return;
+  try {
+    await db.collection('tables').doc(curTable.id).collection('scenes').doc(scene.id).update({ darkness: !scene.darkness });
+  } catch (err) { alert('Erro ao mudar a iluminação da cena: ' + err.message); }
+}
+
 async function renameScene(sceneId, name) {
   const clean = (name || '').trim() || 'Sem nome';
   try { await db.collection('tables').doc(curTable.id).collection('scenes').doc(sceneId).update({ name: clean }); }
@@ -614,16 +645,23 @@ async function deleteScene(sceneId) {
   if (!confirm(`Excluir a cena "${(scene && scene.name) || ''}"? Os desenhos e a névoa dela também serão apagados. Isso não pode ser desfeito.`)) return;
   try {
     const tableRef = db.collection('tables').doc(curTable.id);
-    const [drawSnap, fogSnap, wallsSnap] = await Promise.all([
+    const visionMemRef = tableRef.collection('visionMemory').doc(sceneId);
+    const [drawSnap, fogSnap, wallsSnap, doorsSnap, lightsSnap, playersMemSnap] = await Promise.all([
       tableRef.collection('drawings').where('sceneId', '==', sceneId).get(),
       tableRef.collection('fog').where('sceneId', '==', sceneId).get(),
-      tableRef.collection('walls').where('sceneId', '==', sceneId).get()
+      tableRef.collection('walls').where('sceneId', '==', sceneId).get(),
+      tableRef.collection('doors').where('sceneId', '==', sceneId).get(),
+      tableRef.collection('lights').where('sceneId', '==', sceneId).get(),
+      visionMemRef.collection('players').get() // memória privada de cada jogador nesta cena (visão restrita ao dono do token)
     ]);
     const batch = db.batch();
     drawSnap.forEach(d => batch.delete(d.ref));
     fogSnap.forEach(d => batch.delete(d.ref));
     wallsSnap.forEach(d => batch.delete(d.ref));
-    batch.delete(tableRef.collection('visionMemory').doc(sceneId));
+    doorsSnap.forEach(d => batch.delete(d.ref));
+    lightsSnap.forEach(d => batch.delete(d.ref));
+    playersMemSnap.forEach(d => batch.delete(d.ref));
+    batch.delete(visionMemRef);
     batch.delete(tableRef.collection('scenes').doc(sceneId));
     if (curTable.activeSceneId === sceneId) {
       const fallback = curScenes.find(s => s.id !== sceneId);
@@ -692,6 +730,7 @@ function closeTable() {
   if (templateUnsub) { templateUnsub(); templateUnsub = null; }
   if (wallsUnsub) { wallsUnsub(); wallsUnsub = null; }
   if (doorsUnsub) { doorsUnsub(); doorsUnsub = null; }
+  if (lightsUnsub) { lightsUnsub(); lightsUnsub = null; }
   if (visionMemUnsub) { visionMemUnsub(); visionMemUnsub = null; }
   if (presenceUnsub) { presenceUnsub(); presenceUnsub = null; }
   if (initiativeUnsub) { initiativeUnsub(); initiativeUnsub = null; }
@@ -699,7 +738,7 @@ function closeTable() {
   stopPresenceHeartbeat();
   hideChatUi();
   chatMessagesCache = [];
-  liveDrawings = {}; liveFog = {}; livePings = {}; liveWalls = {}; liveDoors = {}; exploredCells = {};
+  liveDrawings = {}; liveFog = {}; livePings = {}; liveWalls = {}; liveDoors = {}; liveLights = {}; exploredCells = {};
   if (typeof invalidateCollisionSegmentsCache === 'function') invalidateCollisionSegmentsCache();
   if (typeof lastVisionTokenState !== 'undefined') { lastVisionTokenState = {}; visionFullRedrawNeeded = true; }
   liveDragPositions = {}; liveDragRotations = {};

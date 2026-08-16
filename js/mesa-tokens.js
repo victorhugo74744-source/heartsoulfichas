@@ -595,7 +595,7 @@ function renderTokenListPanel() {
           <button data-vision-toggle="${t.id}" title="${tokenHasVision(t) ? 'Desligar visão (para de revelar a névoa)' : 'Ligar visão (revela a névoa ao redor, bloqueada por paredes)'}">${tokenHasVision(t) ? '👁' : '🙈'}</button>
           ${tokenHasVision(t) ? `
             <button data-vision-delta="${t.id}" data-delta="-1" title="Diminuir alcance de visão">−</button>
-            <input type="number" class="aura-radius-input" data-vision-input="${t.id}" value="${t.visionRadius || DEFAULT_VISION_RADIUS_CELLS}" min="1" step="1" title="Alcance de visão (em casas da grade)">
+            <input type="number" class="aura-radius-input" data-vision-input="${t.id}" value="${t.visionRadius || DEFAULT_VISION_RADIUS_CELLS}" min="1" step="1" title="Alcance de visão (em casas da grade), com luz ambiente ou dentro de uma fonte de luz (🔥)">
             <button data-vision-delta="${t.id}" data-delta="1" title="Aumentar alcance de visão">+</button>
             <button data-vision-mode="${t.id}" title="${t.visionMode === 'cone' ? 'Visão em cone, na direção que o token está virado (use ⟲⟳ ou a alça de girar para mudar) — clique para voltar a 360°' : 'Visão em 360° — clique para restringir a um cone na direção que o token estiver virado (⟲⟳ ou a alça de girar)'}">${t.visionMode === 'cone' ? '🔦' : '🌐'}</button>
             ${t.visionMode === 'cone' ? `
@@ -603,6 +603,9 @@ function renderTokenListPanel() {
               <input type="number" class="aura-radius-input" data-cone-input="${t.id}" value="${t.visionConeDeg || DEFAULT_VISION_CONE_DEG}" min="10" max="359" step="5" title="Abertura do cone de visão, em graus">
               <button data-cone-delta="${t.id}" data-delta="10" title="Alargar o cone de visão">›</button>
             ` : ''}
+            <span class="tr-dark-vision" title="Visão no escuro (infravisão): alcance, em casas, que este token ainda enxerga numa cena com 'Escuridão real' (🌑) ligada e fora de qualquer fonte de luz. 0 = cego no escuro, só enxergando bem pertinho de si.">
+              🌑<input type="number" class="aura-radius-input" data-dark-input="${t.id}" value="${t.darkRadius || 0}" min="0" step="0.5">
+            </span>
           ` : ''}
           <button data-rotate="${t.id}" data-delta="-15" title="Girar à esquerda">⟲</button>
           <button data-rotate="${t.id}" data-delta="15" title="Girar à direita">⟳</button>
@@ -667,6 +670,11 @@ function renderTokenListPanel() {
     inp.addEventListener('click', (e) => e.stopPropagation());
     inp.addEventListener('keydown', (e) => { if (e.key === 'Enter') inp.blur(); });
     inp.addEventListener('change', () => setTokenVisionRadius(inp.dataset.visionInput, parseFloat(inp.value)));
+  });
+  body.querySelectorAll('[data-dark-input]').forEach(inp => {
+    inp.addEventListener('click', (e) => e.stopPropagation());
+    inp.addEventListener('keydown', (e) => { if (e.key === 'Enter') inp.blur(); });
+    inp.addEventListener('change', () => setTokenDarkRadius(inp.dataset.darkInput, parseFloat(inp.value)));
   });
   body.querySelectorAll('[data-vision-mode]').forEach(b =>
     b.addEventListener('click', () => toggleTokenVisionMode(b.dataset.visionMode))
@@ -832,6 +840,19 @@ async function setTokenVisionRadius(tokenId, value) {
   try {
     await db.collection('tables').doc(curTable.id).collection('tokens').doc(tokenId).update({ visionRadius: r });
   } catch (err) { console.error('Erro ao definir alcance de visão:', err); }
+}
+
+// Visão no escuro / infravisão: alcance (em casas) que este token ainda
+// enxerga fora de qualquer luz, numa cena marcada como "Escuridão real"
+// (🌑) — ver DARK_SELF_RADIUS_CELLS e sceneIsDark em recomputeAndRenderVision.
+// 0 é um valor válido (token sem infravisão nenhuma).
+async function setTokenDarkRadius(tokenId, value) {
+  const tok = liveTokens[tokenId]; if (!tok) return;
+  if (isNaN(value)) { renderTokenListPanel(); return; }
+  const r = Math.max(0, Math.round(value * 2) / 2);
+  try {
+    await db.collection('tables').doc(curTable.id).collection('tokens').doc(tokenId).update({ darkRadius: r });
+  } catch (err) { console.error('Erro ao definir visão no escuro:', err); }
 }
 
 async function toggleTokenVisionMode(tokenId) {
@@ -1442,6 +1463,13 @@ async function generateAndSaveMap() {
     await db.collection('tables').doc(curTable.id).collection('scenes').doc(scene.id).update({
       mapImage: map.dataUrl, mapW: map.width, mapH: map.height, cellPx: map.cellPx, biome
     });
+    // Contorna a área de piso do mapa recém-gerado com paredes de bloqueio
+    // de visão automaticamente — ver regenerateWallsFromGrid, em
+    // mesa-tools.js (também some com paredes/portas/luzes/memória da
+    // geração anterior, que não fazem mais sentido no layout novo).
+    if (map.grid) {
+      await regenerateWallsFromGrid(scene.id, map.grid, map.cols, map.rows);
+    }
     document.getElementById('regenSameBtn').classList.remove('hidden');
     boardZoom = 1;
     setTimeout(fitBoardToScreen, 60);
