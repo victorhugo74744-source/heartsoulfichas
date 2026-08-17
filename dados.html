@@ -114,7 +114,12 @@ if ('serviceWorker' in navigator) {
     <div class="sheet-section-title" style="margin-top:0;">Comando</div>
 
     <div class="roll-cmd-row">
-      <input type="text" id="cmdInput" placeholder="ex: d20   2d6+3   1d5+1d6+3+1d4   2#d20" autocomplete="off">
+      <!-- BUG (corrigido): o placeholder original ("ex: d20  2d6+3  1d5+1d6+3+1d4
+           2#d20") cabia numa linha só no desktop, mas no celular ficava
+           cortado bem em cima do exemplo mais comprido — a explicação
+           completa de cada comando já existe no parágrafo logo abaixo do
+           campo, então o placeholder não precisa repetir todos eles. -->
+      <input type="text" id="cmdInput" placeholder="ex: d20, 2d6+3, 2#d20" autocomplete="off">
       <button class="btn" id="rollBtn" type="button">🎲 Rolar</button>
     </div>
     <p class="cmd-hint">

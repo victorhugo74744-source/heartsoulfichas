@@ -159,11 +159,11 @@ if ('serviceWorker' in navigator) {
   }
   .token.dragging{ transition:none; z-index:5; cursor:grabbing; }
   .token.mine{ border-color:var(--seal-bright); }
-  /* Marca só pro Mestre (jogadores nem chegam a ter este elemento no DOM —
-     ver isTokenVisibleToViewer em mesa-tokens.js): borda tracejada e um
-     pouco apagado, pra distinguir de relance um token que os jogadores
-     não conseguem ver. */
-  .token.token-invisible-to-players{ opacity:.55; border-style:dashed; }
+  /* Invisível pros outros: dono do token e Mestre continuam vendo (ver
+     isTokenVisibleToViewer em mesa-tokens.js — quem mais nem chega a ter
+     este elemento no DOM), só que translúcido, pra ficar claro que aquele
+     token "sumiu" pra quem mais está na mesa. */
+  .token.token-invisible-to-players{ opacity:.4; border-style:dashed; }
   .token.token-invisible-to-players::after{
     content:'👻'; position:absolute; top:-6px; right:-6px; font-size:12px;
     background:var(--panel-2); border:1px solid var(--gold-dim); border-radius:50%;
@@ -229,7 +229,7 @@ if ('serviceWorker' in navigator) {
   .side-panel.collapsed > *{ display:none !important; }
   .side-panel.collapsed > h4:first-child{ display:flex !important; }
   .token-row{
-    display:flex; align-items:center; justify-content:space-between; gap:8px;
+    display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:4px 8px;
     font-size:13.5px; color:var(--ink-dim); padding:5px 0; border-bottom:1px solid var(--hairline-soft);
     cursor:pointer; /* clique na linha abre/fecha os botões de ação (tr-tools) */
   }
@@ -562,8 +562,23 @@ if ('serviceWorker' in navigator) {
     box-shadow:0 4px 14px rgba(0,0,0,.5); border-color:var(--gold-dim);
   }
 
-  /* Controles de girar/redimensionar de um token, na lista lateral */
   .token-row .tr-tools{ display:flex; align-items:center; gap:3px; flex-wrap:wrap; justify-content:flex-end; }
+  /* Controles de girar/redimensionar de um token, no painel "Fichas na
+     mesa" especificamente (#tokenListPanel — não a Iniciativa, que
+     reaproveita as mesmas classes .token-row/.tr-tools só com 1 campo e 1
+     botão, cabendo numa linha só do jeito antigo).
+     BUG (corrigido): antes ficava lado a lado com o nome do token, na mesma
+     linha (flex justify-content:space-between) — com vários controles
+     ligados (aura, visão, cone) a fileira de botões ficava enorme e
+     "engolia" o nome, os dois espremidos e sobrepostos visualmente na
+     largura estreita do painel lateral. Agora "quebra" pra linha de baixo,
+     ocupando a largura toda do painel: o nome sempre fica sozinho na
+     primeira linha, e os controles têm espaço de sobra pra quebrar em
+     várias linhas organizadas abaixo. */
+  #tokenListPanel .token-row .tr-tools{
+    justify-content:flex-start; flex:1 1 100%; width:100%;
+  }
+  #tokenListPanel .token-row .tr-tools:not(.hidden){ margin-top:4px; }
   .token-row .tr-tools button{
     background:none; border:1px solid var(--hairline-soft); color:var(--ink-mute); cursor:pointer;
     font-size:11px; padding:2px 6px; border-radius:4px;
@@ -875,6 +890,7 @@ if ('serviceWorker' in navigator) {
   .chat-popup.minimized .chat-input-row,
   .chat-popup.minimized .chat-err{ display:none; }
   .chat-popup.minimized{ height:auto; }
+  .chat-popup.minimized::before{ content:none; }
 
   .chat-popup-head{
     display:flex; align-items:center; justify-content:space-between; gap:6px;
@@ -949,6 +965,17 @@ if ('serviceWorker' in navigator) {
       right:8px; left:8px; bottom:0; width:auto;
       height:82vh; height:82dvh; max-height:none; border-radius:var(--radius) var(--radius) 0 0;
       padding-bottom:env(safe-area-inset-bottom);
+    }
+    /* BUG (corrigido): o popup só ocupa 82% da altura da tela, ancorado
+       embaixo — sobravam ~18% no topo por onde o conteúdo da página
+       (botão "Voltar às mesas", título da mesa) aparecia "vazando" atrás
+       do popup, às vezes cortado bem no meio do texto do título. Esse
+       fundo escurecido cobre a tela inteira atrás do popup (truque do
+       ::before com z-index negativo, fica atrás só da caixa do popup) pra
+       parecer um modal de verdade em vez de conteúdo da página aparecendo
+       picotado por trás. */
+    .chat-popup::before{
+      content:''; position:fixed; inset:0; background:rgba(10,6,4,.6); z-index:-1;
     }
     .chat-tab{ padding:8px 10px; font-size:13px; }
     .chat-input-row input{ padding:11px 12px; font-size:16px; }
