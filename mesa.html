@@ -563,6 +563,22 @@ if ('serviceWorker' in navigator) {
   }
 
   .token-row .tr-tools{ display:flex; align-items:center; gap:3px; flex-wrap:wrap; justify-content:flex-end; }
+  /* Cada grupo (Vida/XP, Aparência, Visão, Movimento, Estado) é um
+     flex-item próprio dentro de .tr-tools — assim o quebra-linha do flex
+     acontece grupo a grupo, e os botões de uma mesma função nunca ficam
+     separados em linhas diferentes. Uma linha vertical fina entre grupos
+     (exceto no último) deixa visível onde uma função termina e a próxima
+     começa, no lugar da fileira única e corrida de antes. */
+  .token-row .tr-tools .tr-group{
+    display:flex; align-items:center; gap:3px; flex-wrap:wrap;
+    padding-right:7px; margin-right:4px; border-right:1px solid var(--hairline-soft);
+  }
+  .token-row .tr-tools .tr-group:last-child{ padding-right:0; margin-right:0; border-right:none; }
+  /* Rótulo do grupo (Vida, Aparência, Visão...): no desktop o "title" já
+     explica cada grupo ao passar o mouse na divisória, então o rótulo
+     fica escondido; no celular não existe hover, então ele reaparece
+     como legenda pequena (ver @media max-width:820px). */
+  .token-row .tr-tools .tr-group-label{ display:none; }
   /* Controles de girar/redimensionar de um token, no painel "Fichas na
      mesa" especificamente (#tokenListPanel — não a Iniciativa, que
      reaproveita as mesmas classes .token-row/.tr-tools só com 1 campo e 1
@@ -780,8 +796,36 @@ if ('serviceWorker' in navigator) {
        redor, fácil de errar e acabar girando/redimensionando o token errado. */
     .token-row button{ font-size:14px; padding:8px 8px; min-height:38px; min-width:38px; }
     .token-row .tr-tools{ gap:6px; }
+    /* No celular cada grupo já ocupa a largura toda sozinho (não cabe
+       lado a lado com outro), então a linha divisória vertical vira só um
+       traço solto na ponta da linha — troca por um traço horizontal por
+       baixo de cada grupo, separando as "seções" empilhadas. */
+    .token-row .tr-tools .tr-group{
+      flex:1 1 100%; padding-right:0; margin-right:0; border-right:none;
+      padding-bottom:8px; margin-bottom:8px; border-bottom:1px solid var(--hairline-soft);
+    }
+    .token-row .tr-tools .tr-group:last-child{ padding-bottom:0; margin-bottom:0; border-bottom:none; }
+    /* Sem hover no touch, o "title" de cada grupo (que no desktop explica
+       a divisória ao passar o mouse) nunca é visto — sem rótulo, cor,
+       visão e movimento viram 3 fileiras de ícones idênticas empilhadas,
+       sem nenhuma pista de qual é qual. Aqui o rótulo (escondido no
+       desktop) reaparece como uma legenda miúda no topo do grupo. */
+    .token-row .tr-tools .tr-group-label{
+      display:block; flex:1 1 100%; font-size:10.5px; letter-spacing:.04em;
+      text-transform:uppercase; color:var(--ink-mute);
+      opacity:.75; margin-bottom:1px;
+    }
     .token-row .tr-tools input.aura-radius-input{ padding:8px 4px; min-height:38px; font-size:13px; }
     .token-row .tr-tools input.xp-add-input{ padding:8px 4px; min-height:38px; font-size:13px; width:54px; }
+    /* BUG: o swatch de cor do token (data-tcolor) tem width/height/padding
+       inline (14px, pensado pro mouse) — como estilo inline vence a classe,
+       a regra geral de alvo de toque de ".token-row button" acima não
+       encostava nele; sobrava um círculo minúsculo, fácil de errar com o
+       dedo e abrir sem querer outro controle do lado. !important aqui é
+       o único jeito de vencer o inline sem mexer no HTML gerado. */
+    .token-row .tr-tools button[data-tcolor]{
+      width:30px !important; height:30px !important; padding:0 !important; min-width:0;
+    }
     #myTokenPanel select, #myTokenPanel input[type=file]{ padding:11px 12px; }
     /* Botões −/+ e campos de Estamina/Energia: mesma folga de toque dos
        outros controles da mesa no celular. */

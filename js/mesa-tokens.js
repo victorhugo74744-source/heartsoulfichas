@@ -617,15 +617,24 @@ function renderTokenListPanel() {
     <div class="token-row ${elsewhere ? 'token-row-elsewhere' : ''}" data-token-row="${t.id}">
       <span class="${t.sheetId ? 'tr-name' : ''}" ${t.sheetId ? `data-view-sheet="${t.sheetId}"` : ''}>${escapeHtml(t.name || 'Token')}${elsewhere ? ' <span class="tc-meta">(outra cena)</span>' : ''}${t.invisible ? ' <span class="tc-meta">(invisível p/ jogadores)</span>' : ''}</span>
       <div class="tr-tools ${toolsOpen ? '' : 'hidden'}">
-        ${sumMax ? `<span class="tr-hp-summary" title="HP total (soma das partes)">❤ ${sumCur}/${sumMax}</span>` : ''}
-        ${canEdit && !elsewhere ? `<button data-hp-toggle="${t.id}" title="Ver/editar HP por parte">${expanded ? '❤︎ fechar' : '❤ HP'}</button>` : ''}
-        ${elsewhere && canManage ? `<button data-bring-scene="${t.id}" title="Trazer este NPC para a cena atual">📥 trazer</button>` : ''}
-        ${canManage && t.sheetId ? `
-          <span class="tr-xp-add">
-            <input type="number" class="xp-add-input" data-xp-input="${t.id}" placeholder="± XP" title="Quantidade de XP para dar (ou tirar, com número negativo)">
-            <button data-xp-add="${t.id}" title="Adicionar XP à ficha deste jogador">🌟 XP</button>
-          </span>` : ''}
+        ${elsewhere && canManage ? `
+        <div class="tr-group">
+          <button data-bring-scene="${t.id}" title="Trazer este NPC para a cena atual">📥 trazer</button>
+        </div>` : ''}
+        ${(sumMax || (canEdit && !elsewhere) || (canManage && t.sheetId)) ? `
+        <div class="tr-group" title="Vida e experiência">
+          <span class="tr-group-label">Vida</span>
+          ${sumMax ? `<span class="tr-hp-summary" title="HP total (soma das partes)">❤ ${sumCur}/${sumMax}</span>` : ''}
+          ${canEdit && !elsewhere ? `<button data-hp-toggle="${t.id}" title="Ver/editar HP por parte">${expanded ? '❤︎ fechar' : '❤ HP'}</button>` : ''}
+          ${canManage && t.sheetId ? `
+            <span class="tr-xp-add">
+              <input type="number" class="xp-add-input" data-xp-input="${t.id}" placeholder="± XP" title="Quantidade de XP para dar (ou tirar, com número negativo)">
+              <button data-xp-add="${t.id}" title="Adicionar XP à ficha deste jogador">🌟 XP</button>
+            </span>` : ''}
+        </div>` : ''}
         ${canEdit && !elsewhere ? `
+        <div class="tr-group" title="Aparência">
+          <span class="tr-group-label">Aparência</span>
           <button data-tcolor="${t.id}" style="background:${t.color || '#c9a15c'}; width:14px; height:14px; border-radius:50%; padding:0; border:1px solid var(--hairline-soft);" title="Cor do token"></button>
           <button data-aura-toggle="${t.id}" title="${t.auraOn ? 'Desligar aura' : 'Ligar aura'}">${t.auraOn ? '💡' : '🕯'}</button>
           ${t.auraOn ? `
@@ -633,6 +642,9 @@ function renderTokenListPanel() {
             <input type="number" class="aura-radius-input" data-aura-input="${t.id}" value="${t.auraRadius || 2}" min="0.5" step="0.5" title="Raio da aura (em quadrados)">
             <button data-aura-delta="${t.id}" data-delta="0.5" title="Aumentar aura">+</button>
           ` : ''}
+        </div>
+        <div class="tr-group" title="Visão">
+          <span class="tr-group-label">Visão</span>
           <button data-vision-toggle="${t.id}" title="${tokenHasVision(t) ? 'Desligar visão (para de revelar a névoa)' : 'Ligar visão (revela a névoa ao redor, bloqueada por paredes)'}">${tokenHasVision(t) ? '👁' : '🙈'}</button>
           ${tokenHasVision(t) ? `
             <button data-vision-delta="${t.id}" data-delta="-1" title="Diminuir alcance de visão">−</button>
@@ -648,6 +660,9 @@ function renderTokenListPanel() {
               🌑<input type="number" class="aura-radius-input" data-dark-input="${t.id}" value="${t.darkRadius || 0}" min="0" step="0.5">
             </span>
           ` : ''}
+        </div>
+        <div class="tr-group" title="Movimento">
+          <span class="tr-group-label">Movimento</span>
           <button data-rotate="${t.id}" data-delta="-15" title="Girar à esquerda">⟲</button>
           <button data-rotate="${t.id}" data-delta="15" title="Girar à direita">⟳</button>
           <button data-cursor-follow="${t.id}" class="${cursorFollowTokenIds.has(t.id) ? 'cursor-follow-on' : ''}" title="${cursorFollowTokenIds.has(t.id) ? 'Desligar: o token para de girar sozinho' : 'Ligar: o token gira sozinho apontando para onde o cursor estiver sobre o mapa'}">🧭 ${cursorFollowTokenIds.has(t.id) ? 'Seguindo cursor' : 'Seguir cursor'}</button>
@@ -655,9 +670,13 @@ function renderTokenListPanel() {
           <button data-scale="${t.id}" data-delta="0.25" title="Aumentar">+</button>
           <button data-tofront="${t.id}" title="Trazer para frente (fica por cima dos outros tokens)">⬆︎</button>
           <button data-toback="${t.id}" title="Enviar para trás (fica por baixo dos outros tokens)">⬇︎</button>
-        ` : ''}
-        ${canManage ? `<button data-invisible-toggle="${t.id}" class="${t.invisible ? 'token-invisible-on' : ''}" title="${t.invisible ? 'Tornar visível de novo para os jogadores' : 'Tornar invisível: só o Mestre e o dono do token continuam vendo (meio transparente); os outros jogadores deixam de ver'}">${t.invisible ? '🫥 Invisível' : '👻 Tornar invisível'}</button>` : ''}
-        ${canManage ? `<button data-remove="${t.id}">remover</button>` : ''}
+        </div>` : ''}
+        ${canManage ? `
+        <div class="tr-group" title="Estado">
+          <span class="tr-group-label">Estado</span>
+          <button data-invisible-toggle="${t.id}" class="${t.invisible ? 'token-invisible-on' : ''}" title="${t.invisible ? 'Tornar visível de novo para os jogadores' : 'Tornar invisível: só o Mestre e o dono do token continuam vendo (meio transparente); os outros jogadores deixam de ver'}">${t.invisible ? '🫥 Invisível' : '👻 Tornar invisível'}</button>
+          <button data-remove="${t.id}">remover</button>
+        </div>` : ''}
       </div>
     </div>
     ${expanded && canEdit && !elsewhere ? `
