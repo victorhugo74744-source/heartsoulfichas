@@ -1,4 +1,4 @@
-// Dados das 21 raças jogáveis do sistema Heartsoul (extraído de js/data.js).
+// Dados das 23 raças jogáveis do sistema Heartsoul (extraído de js/data.js).
 // Não editar manualmente sem checar js/data.js, que combina este arquivo com
 // traits.js e backgrounds.js em window.HEARTSOUL_DATA.
 window.HEARTSOUL_RACES = [
@@ -323,6 +323,121 @@ window.HEARTSOUL_RACES = [
     "Visão da Morte: Seus olhos enxergam no escuro absoluto e percebem a aura dos moribundos. Visão no escuro total até 18 metros. Você pode saber automaticamente se uma criatura viva está com HP abaixo da metade em uma parte vital (cabeça ou tronco).",
     "Carne Recomposta: Sua carne se costura sozinha, fechando feridas com tecido necrótico. Durante um descanso curto, você recupera o dobro de PV (40% em vez de 20%). Sempre que sofrer dano Cortante, role 1d6; com 5 ou 6, recupera 1 PV imediatamente.",
     "Inimigo da Luz: A luz solar não o destrói, mas o enfraquece. Sob luz solar direta, você sofre -2 em todos os testes físicos e -1 em testes de ataque. Em contrapartida, você recebe +2 em testes de Furtividade durante a noite ou em ambientes subterrâneos."
+   ]
+  },
+  {
+   "id": "raca-gnomo",
+   "name": "Gnomo",
+   "flavor": [
+    "Pequenos, curiosos e incansavelmente inventivos, os gnomos são uma das raças mais subestimadas de Heartsoul. Medem entre 90 centímetros e 1,10 metro, mas compensam o tamanho com uma energia mental que parece nunca se esgotar. Sua pele varia do moreno claro ao bronzeado, seus cabelos costumam ser vibrantes (ruivos, castanhos, negros ou até mesmo verdes e azuis em linhagens mais místicas), e seus olhos brilham com a centelha de quem está sempre tramando algo.",
+    "A sociedade gnômica gira em torno de duas paixões: inventar e descobrir. Eles não constroem grandes reinos nem exércitos imponentes; preferem oficinas abarrotadas, bibliotecas empoeiradas e laboratórios onde cheiros estranhos escapam pelas janelas. Um gnomo entediado é um perigo para si mesmo e para os outros — é quando as engenhocas explodem, as poções mudam de cor e os experimentos \"quase deram certo\". Apesar disso, são criaturas fundamentalmente bondosas, leais a seus amigos e capazes de uma bravura surpreendente quando alguém que amam está em perigo.",
+    "Em Heartsoul, os gnomos são encontrados principalmente em cidades multiraciais, onde trabalham como artesãos, alquimistas, relojoeiros e engenheiros. Muitos sonham em estudar na Universidade de Meridiana ou na Fundição Livre de Ferrum, e não é raro que um gnomo se aventure pelo mundo em busca de um componente raro ou de uma ideia que ainda não teve."
+   ],
+   "fixedTrait": "Mente Inventiva: Sua mente é uma fornalha de ideias, e suas mãos transformam sucata em ferramentas. Você nasceu para criar, consertar e improvisar. Engenhosidade: +1 Intelecto. +2 em testes de criação, reparo ou improviso de itens e mecanismos simples. Improviso Rápido: Uma vez por cena, como Ação de Suporte, você pode construir uma ferramenta improvisada (uma alavanca, uma corda, uma pequena bomba de fumaça, um abre-fechaduras rudimentar, etc.) usando materiais disponíveis. A ferramenta funciona por 1 hora ou até ser usada, o que acontecer primeiro. O mestre define a eficácia exata. Aprendiz Acelerado: Você recebe +1 Ponto de Perícia adicional durante a criação do personagem, que deve ser gasto em uma perícia de Ofício ou Conhecimento. Curiosidade Compulsiva: Sempre que você se deparar com um mecanismo, artefato ou enigma que nunca viu antes, deve fazer um teste de Vontade (CD 12). Se falhar, fica distraído por 1 rodada, fascinado pelo objeto. Este efeito pode ser ignorado gastando 1 Ponto de Inspiração ou se um aliado gastar uma Ação de Suporte para chamá-lo de volta à realidade.",
+   "optionalTraits": [
+    "Alquimista de Borda (Custo: 1): Você cresceu entre frascos, ervas e explosões. A alquimia é sua segunda língua. +1 Intelecto. Você pode criar poções simples (cura, ácido, solvente) com metade do custo em materiais e metade do tempo normal. Uma vez por descanso longo, pode preparar uma poção de efeito improvisado (aprovado pelo mestre) sem custo.",
+    "Ilusionista Nato (Custo: 1): Sua mente é treinada para enganar os sentidos, criando imagens e sons que não estão lá. +1 Foco. Você conhece uma ilusão menor: pode criar uma imagem ou som falso a até 6 metros, que dura enquanto você mantiver concentração (até 1 minuto). Útil para distrair, assustar ou esconder. Uma vez por cena, pode usar essa ilusão para impor -2 no próximo ataque de um inimigo (ele hesita com o que vê).",
+    "Amigo dos Animais (Custo: 1): Pequenos animais confiam em você instintivamente, e os grandes raramente o veem como ameaça. +1 Foco. Criaturas naturais de tamanho pequeno ou menor não o atacam, a menos que você as machuque primeiro. Você pode se comunicar de forma básica com animais (entender intenções simples e transmitir emoções).",
+    "Sorte Gnômica (Custo: 1): Dizem que os gnomos nasceram sob uma estrela brincalhona, e você é a prova disso. Uma vez por sessão, quando você falhar em um teste de sorte, pode rolar novamente e ficar com o segundo resultado. +5 em todas as rolagens de Dado de Sorte (1d100).",
+    "Resistência a Magia (Custo: 1): Sua linhagem carrega uma resistência natural aos efeitos arcanos. +1 Vontade. Você tem vantagem em testes de resistência contra encantamentos e ilusões. Sempre que sofrer dano mágico, reduz o dano em 1 ponto (após outras reduções)."
+   ]
+  },
+  {
+   "id": "raca-soulbeast",
+   "name": "Soulbeast",
+   "flavor": [
+    "Os Soulbeasts são humanos que carregam dentro de si uma alma que não lhes pertence. Por meio de rituais antigos, pactos desesperados, maldições hereditárias ou acidentes mágicos, a essência de um ser poderoso foi aprisionada em seus corpos, fundindo-se à sua própria alma. Essa união não é pacífica — é uma dança constante entre a vontade do hospedeiro e os instintos da criatura aprisionada. Alguns Soulbeasts dominam sua alma interior e a usam como fonte de poder; outros são dominados por ela, perdendo-se gradualmente na identidade do ser que carregam.",
+    "A aparência de um Soulbeast reflete a natureza da alma presa. Um Soulbeast Celestial pode ter olhos que brilham com luz dourada e uma aura de serenidade. Um Corrupto pode exibir veias escuras sob a pele e um sorriso que nunca alcança os olhos. Um Abissal pode ter escamas, garras ou olhos negros como o vazio. Um Bestial pode possuir orelhas pontudas, presas ou uma pelagem sutil. Um Elemental pode ter cabelos que ondulam como chamas, pele fria como gelo ou uma estática constante no ar ao seu redor.",
+    "Seja qual for a variação, todos os Soulbeasts compartilham a experiência de nunca estarem verdadeiramente sozinhos. A alma aprisionada sussurra, sonha, deseja. Cabe ao hospedeiro decidir se a trata como aliada, prisioneira ou maldição."
+   ],
+   "fixedTrait": "Alma Aprisionada: Você carrega dentro de si a essência de um ser que não é humano. No momento da criação do personagem, escolha uma das cinco variações abaixo. Essa escolha define os poderes concedidos e as marcas que a alma deixa em seu corpo. Dualidade Interior: Você possui uma segunda presença dentro de sua mente. Em momentos de extremo estresse (ao sofrer um acerto crítico, ao falhar em um teste de Vontade por 5 ou mais, ou quando o mestre julgar apropriado), a alma aprisionada pode tentar assumir o controle. Faça um teste de Vontade (CD 15). Se falhar, a alma assume por 1d4 turnos, e o mestre controla suas ações de acordo com a natureza do ser (um Celestial tentará proteger aliados; um Corrupto tentará causar sofrimento; um Bestial atacará o alvo mais próximo; etc.). Se passar, você mantém o controle e recebe +1 em todos os testes físicos por 2 turnos (a adrenalina da luta interna). Fonte de Poder: Dependendo da variação escolhida, você recebe bônus e habilidades adicionais conforme descrito a seguir.",
+   "variantChoice": {
+    "label": "Variação Soulbeast",
+    "hint": "Escolha obrigatória durante a criação do personagem: qual a natureza da alma aprisionada em você.",
+    "options": [
+     {
+      "name": "Celestial",
+      "desc": "A alma aprisionada pertence a um ser de luz divina. Dons da Luz: +1 Vontade, +1 Foco. Seus ataques causam +1 de dano radiante. Você emite luz natural em um raio de 3 metros (pode ser suprimida com concentração). Bênção Protetora: uma vez por combate, como Ação de Suporte, você pode curar 1d6+1 PV em um aliado tocado; se o aliado estiver sob efeito de medo ou enfeitiçado, ele recebe um novo teste de resistência imediato. Fardo Celestial: você não pode mentir sem sofrer as consequências. Sempre que tentar enganar alguém, sofre -3 no teste e perde 1 ponto de Sanidade."
+     },
+     {
+      "name": "Corrupto",
+      "desc": "A alma aprisionada é a de uma criatura corrompida. Dons da Corrupção: +1 Vontade, +1 Destreza. Seus ataques causam +1 de dano necrótico. Seus olhos brilham na escuridão (visão no escuro até 12 metros). Toque Corruptor: uma vez por combate, como Ação Principal, você pode tocar um inimigo e drenar sua vitalidade: causa 1d6 de dano necrótico e recupera metade do dano causado em PV. Fardo da Corrupção: sempre que você causar dano a um inimigo indefeso ou rendido, a alma o recompensa com +1 em todos os testes físicos por 2 turnos; recusar-se a causar sofrimento quando a oportunidade surge exige um teste de Vontade (CD 15) ou você sofre -1 em todos os testes físicos por 2 turnos."
+     },
+     {
+      "name": "Abissal",
+      "desc": "A alma aprisionada pertence a uma criatura do abismo profundo. Dons do Abismo: +1 Força, +1 Constituição. Você pode respirar debaixo d'água. Seus ataques desarmados causam 1d4 de dano perfurante (garras ou presas abissais). Fúria Predatória: uma vez por combate, quando você reduzir um inimigo a 0 PV em qualquer parte do corpo, pode entrar em frenesi: +1 em testes de ataque corpo a corpo por 2 turnos, mas não pode recuar ou se esquivar. Fardo do Abismo: sob luz solar direta, você sofre -1 em todos os testes físicos; se passar mais de 24 horas sem imergir em água, sofre -1 em todos os modificadores de atributo (recupera ao se submergir)."
+     },
+     {
+      "name": "Bestial",
+      "desc": "A alma aprisionada é a de um animal selvagem. Dons Bestiais: +1 Força, +1 Destreza. +2 em testes de Percepção (audição e olfato). Uma vez por combate, você pode rolar novamente um teste de Iniciativa falho. Garras e Presas: seus ataques desarmados causam 1d6 + Força de dano cortante ou perfurante (à sua escolha); nunca fica desarmado. Fardo Bestial: sempre que sentir cheiro de sangue (aliado ou inimigo ferido), deve fazer um teste de Vontade (CD 12) ou atacar o alvo mais próximo no próximo turno; uma vez por combate, pode ignorar essa penalidade gastando uma Ação de Suporte para se recompor."
+     },
+     {
+      "name": "Elemental",
+      "desc": "A alma aprisionada pertence a um espírito elemental. Dons Elementais: +1 Intelecto, +1 Foco. Escolha um elemento (fogo, gelo, vento, terra ou raio); seus ataques causam +1 de dano desse elemento e você tem resistência a ele (reduz 1 ponto de dano recebido). Manifestação Elemental: uma vez por combate, como Ação Principal, libera uma rajada do seu elemento: causa 1d6 + Foco de dano em um alvo a até 6 metros; se o alvo falhar em um teste de Constituição (CD 15), sofre o efeito de status correspondente por 1 turno. Fardo Elemental: quando sofre dano do elemento oposto, o dano recebido é aumentado em 2; em ambientes dominados pelo elemento oposto, sofre -1 em todos os testes físicos."
+     }
+    ]
+   },
+   "optionalTraits": [
+    "Sintonia de Almas: Você e sua alma aprisionada chegaram a um acordo. Você ganha vantagem nos testes de Vontade para resistir ao controle da alma. Uma vez por dia, pode pedir ajuda à alma: recebe +2 em um teste de qualquer atributo (declara antes de rolar).",
+    "Fusão Parcial: Você pode permitir que a alma assuma parcialmente, fundindo-se ao seu corpo. Uma vez por combate, como Ação de Suporte, você entra em estado de Fusão por 3 turnos: +1 Força, +1 Destreza, +1 Constituição, e seus ataques causam +1d4 de dano elemental ou necrótico (dependendo da variação). Após o efeito, sofre -3 em todos os testes físicos por 3 turnos (exaustão).",
+    "Barreira Espiritual: A alma aprisionada cria um escudo invisível ao seu redor. +1 Defesa. Uma vez por combate, você pode reduzir o dano de um ataque em 2d4 (Reação).",
+    "Visão da Alma: Você enxerga o mundo através dos olhos da alma. +2 Foco. Você pode sentir a presença de criaturas sobrenaturais (mortos-vivos, demônios, celestiais, elementais) a até 12 metros, mesmo através de paredes.",
+    "Poder Despertado: Sua alma aprisionada despertou um poder latente. Escolha um atributo. Você recebe +1 permanente nesse atributo. Além disso, sempre que sua alma tentar assumir o controle (e você resistir), você ganha +1 em todos os testes por 3 turnos em vez de 2.",
+    "Resistência Sobrenatural: Sua carne foi fortalecida pela presença da alma. +1 Constituição. Uma vez por descanso curto, você pode gastar uma Reação para reduzir o dano recebido de um ataque em 1d6 (a alma desvia o golpe instintivamente)."
+   ]
+  },
+  {
+   "id": "raca-meio-elemental",
+   "name": "Meio-Elemental",
+   "flavor": [
+    "Os Meio-Elementais são o resultado da união — rara e frequentemente acidental — entre um mortal e um espírito elemental puro. Não são elementais completos, mas também não são totalmente mortais: carregam na alma e no sangue a essência de um dos elementos primordiais. Essa herança se manifesta em sua aparência e em seus poderes. Um Meio-Elemental Ígneo pode ter cabelos que ondulam como chamas e olhos cor de brasa; um Aquático pode ter escamas translúcidas no pescoço e nos ombros; um Telúrico pode ter a pele acinzentada como rocha; um Eólio pode sussurrar sem querer quando fala; e um Fulminante pode ter uma estática constante nos fios de cabelo.",
+    "Diferente dos elementais puros, os Meio-Elementais têm corpo de carne e osso. Precisam comer, dormir e respirar. Mas seu sangue carrega o eco do elemento, concedendo resistência ao seu próprio elemento e vulnerabilidade ao elemento oposto. Essa dualidade molda suas personalidades: são intensos, instáveis e fascinantes, como a força da natureza que carregam dentro de si."
+   ],
+   "fixedTrait": "Herança Elemental: Você carrega a essência de um elemento primordial. No momento da criação do personagem, escolha uma das variações abaixo. Essa escolha define seus bônus de atributos, resistências, vulnerabilidades e sua manifestação elemental básica. Resistência Elemental: Você recebe resistência ao seu elemento: reduz em 2 pontos qualquer dano recebido desse tipo. Vulnerabilidade Elemental: Você sofre +2 de dano do elemento oposto ao seu. Manifestação Básica: Você pode realizar um pequeno efeito elemental à vontade (detalhado em cada variação).",
+   "variantChoice": {
+    "label": "Variação Meio-Elemental",
+    "hint": "Escolha obrigatória durante a criação do personagem: qual elemento primordial corre em seu sangue.",
+    "options": [
+     {
+      "name": "Ígneo (Fogo)",
+      "desc": "+1 Força, +1 Vontade. Resistência a Calor; vulnerabilidade a Gélido. Manifestação: você pode acender ou apagar pequenas chamas (velas, tochas, fogueiras) com um toque. Seus ataques desarmados podem causar 1 de dano de Calor adicional (uma vez por turno)."
+     },
+     {
+      "name": "Aquático (Água)",
+      "desc": "+1 Constituição, +1 Foco. Resistência a Gélido e dano de Água; vulnerabilidade a Raio. Manifestação: você pode respirar debaixo d'água por até 10 minutos e criar até 1 litro de água potável por dia. Seu deslocamento de natação é de 6 metros."
+     },
+     {
+      "name": "Telúrico (Terra)",
+      "desc": "+1 Força, +1 Constituição. Resistência a dano Contundente e Perfurante; vulnerabilidade a dano de Ar (rajadas cortantes, tempestades). Manifestação: você pode moldar pequenas porções de terra ou pedra (até 1 kg) com as mãos, como se fossem argila."
+     },
+     {
+      "name": "Eólio (Ar)",
+      "desc": "+1 Destreza, +1 Foco. Resistência a dano de Vento e efeitos de empurrão; vulnerabilidade a dano de Terra (pedras, esmagamento). Manifestação: você pode planar de grandes alturas sem sofrer dano de queda e criar uma brisa leve capaz de apagar velas ou mover folhas."
+     },
+     {
+      "name": "Fulminante (Raio)",
+      "desc": "+1 Destreza, +1 Intelecto. Resistência a dano Elétrico; vulnerabilidade a dano de Água (pressão, jatos d'água cortantes). Manifestação: você pode gerar pequenas descargas estáticas que causam 1 de dano Elétrico ao toque e carregar pequenos objetos metálicos."
+     },
+     {
+      "name": "Tenebrio (Escuridão)",
+      "desc": "+1 Foco, +1 Vontade. Resistência a dano Necrótico e de Escuridão; vulnerabilidade a dano Radiante (Luz). Manifestação: você pode apagar pequenas fontes de luz (velas, tochas) a até 3 metros com um gesto, e seus olhos enxergam no escuro total até 12 metros. Em áreas de escuridão, recebe +2 em testes de Furtividade."
+     },
+     {
+      "name": "Luminoso (Luz)",
+      "desc": "+1 Vontade, +1 Intelecto. Resistência a dano Radiante (Luz); vulnerabilidade a dano Necrótico e de Escuridão. Manifestação: você emite luz natural em um raio de até 6 metros (pode reduzir a intensidade à vontade) e, uma vez por cena, pode liberar um flash que ofusca inimigos a até 3 metros (teste de Constituição CD 15 ou cegueira por 1 turno). Sob a luz do sol, recebe +1 em testes físicos."
+     },
+     {
+      "name": "Gélido (Gelo)",
+      "desc": "+1 Constituição, +1 Vontade. Resistência a dano Gélido; vulnerabilidade a dano de Calor. Manifestação: você pode congelar pequenas porções de água com um toque (criar até 1 litro de gelo por dia) e sua pele é fria ao toque, mas não lhe causa dano. Em ambientes frios, recebe +2 em testes de Sobrevivência."
+     }
+    ]
+   },
+   "optionalTraits": [
+    "Explosão Elemental: Você pode liberar uma rajada concentrada do seu elemento em combate. Uma vez por combate, como Ação Principal, cause 2d6 + Foco/Intelecto de dano elemental (tipo conforme sua variação) em um alvo a até 9 metros. O alvo deve fazer um teste de Destreza (CD 16) para reduzir o dano à metade. Se o alvo for vulnerável ao seu elemento, o dano é dobrado.",
+    "Pele Elemental: Sua pele se adaptou ao seu elemento, tornando-se mais resistente. +1 Defesa. Você não sofre penalidades ambientais relacionadas ao seu elemento (calor extremo para Ígneo, frio extremo para Aquático, etc.). Seu elemento oposto causa penalidades ambientais dobradas em você (ex.: Ígneo sofre -2 em ambientes gelados em vez de -1).",
+    "Fusão Elemental Parcial: Você pode permitir que a essência elemental se manifeste parcialmente, envolvendo seu corpo. Uma vez por combate, como Ação de Suporte, entre em estado de Fusão por 2 turnos: +1 em Força, Destreza e Constituição. Seus ataques corpo a corpo causam +1d4 de dano elemental (tipo da sua variação). Após o efeito, sofre -2 em todos os testes físicos por 2 turnos (exaustão).",
+    "Sentidos Elementais: Você percebe o mundo através do seu elemento. +1 Foco. Você pode sentir a presença do seu elemento a até 24 metros (fontes de fogo para Ígneo, corpos d'água para Aquático, minérios para Telúrico, correntes de ar para Eólio, cargas elétricas para Fulminante). Em ambientes ricos no seu elemento, você recebe +2 em testes de Percepção.",
+    "Afinidade Elemental Superior: Sua conexão com o elemento é mais profunda. +2 de dano com ataques e habilidades do seu elemento. Se sua classe usar Mana, recebe +2 pontos de Mana adicionais. Se usar Aura ou Fé, recebe +1 ponto adicional da energia correspondente."
    ]
   }
 ];
