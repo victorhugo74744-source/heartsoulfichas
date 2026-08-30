@@ -391,6 +391,7 @@ async function loadTables() {
         <div>
           <h3>${escapeHtml(t.name)}</h3>
           <div class="tc-meta">Criada em ${fmtDate(t.createdAt)}</div>
+          ${t.folderName ? `<div class="folder-badge">${escapeHtml(t.folderName)}</div>` : ''}
         </div>
         <div style="display:flex; gap:8px;">
           <button class="btn small" style="width:auto;" data-open="${t.id}">Entrar</button>
@@ -406,26 +407,60 @@ async function loadTables() {
   }
 }
 
-function renderCreateTableBox() {
+// Toda mesa tem de estar afiliada a uma pasta de campanha (ver
+// firestore.rules) — e só pode ser afiliada a uma pasta que o próprio
+// Mestre logado criou, então o seletor só lista essas. Sem nenhuma pasta
+// criada ainda, mostra um aviso em vez do formulário (o Mestre precisa
+// criar uma campanha no Painel do Mestre primeiro).
+async function renderCreateTableBox() {
   const box = document.getElementById('createTableBox');
   if (curProfile.role !== 'master') { box.innerHTML = ''; return; }
+
+  let myFolders = [];
+  try {
+    const snap = await db.collection('folders').where('createdBy', '==', curUser.uid).get();
+    myFolders = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  } catch (err) {
+    box.innerHTML = `<div class="error-msg">Erro ao carregar pastas de campanha: ${escapeHtml(err.message)}</div>`;
+    return;
+  }
+
+  if (myFolders.length === 0) {
+    box.innerHTML = `
+      <div class="create-table-form">
+        <h4 style="font-family:'Cinzel',serif; color:var(--gold); margin:0 0 12px;">Criar nova mesa</h4>
+        <p class="hint" style="margin:0;">Toda mesa precisa estar afiliada a uma pasta de campanha. Crie uma pasta no <a href="master.html">Painel do Mestre</a> antes de criar uma mesa.</p>
+      </div>`;
+    return;
+  }
+
   box.innerHTML = `
     <div class="create-table-form">
       <h4 style="font-family:'Cinzel',serif; color:var(--gold); margin:0 0 12px;">Criar nova mesa</h4>
       <div class="field">
         <input type="text" id="newTableName" placeholder="Nome da mesa (ex.: Sessão 1 — A Torre Afundada)">
       </div>
+      <div class="field">
+        <select id="newTableFolder">
+          ${myFolders.map(f => `<option value="${f.id}">${escapeHtml(f.name)}</option>`).join('')}
+        </select>
+      </div>
       <button class="btn" id="createTableBtn" style="width:auto; margin-top:8px;">Criar mesa</button>
       <div class="error-msg hidden" id="createTableErr"></div>
     </div>`;
   document.getElementById('createTableBtn').addEventListener('click', async () => {
     const nameEl = document.getElementById('newTableName');
+    const folderEl = document.getElementById('newTableFolder');
     const errEl = document.getElementById('createTableErr');
     const name = nameEl.value.trim();
+    const folderId = folderEl.value;
     if (!name) { errEl.textContent = 'Dê um nome à mesa.'; errEl.classList.remove('hidden'); return; }
+    if (!folderId) { errEl.textContent = 'Escolha a pasta de campanha desta mesa.'; errEl.classList.remove('hidden'); return; }
+    const folder = myFolders.find(f => f.id === folderId);
     try {
       await db.collection('tables').add({
         name, createdBy: curUser.uid,
+        folderId, folderName: folder ? folder.name : null,
         createdAt: firebase.firestore.FieldValue.serverTimestamp()
       });
       nameEl.value = '';

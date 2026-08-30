@@ -1088,26 +1088,38 @@ if ('serviceWorker' in navigator) {
     .board-toolbar{ position:static; } /* aqui não precisa fixar: já cabe tudo com o painel do lado */
   }
 
-  /* ===== Chat da mesa ===== */
+  /* ===== Chat da mesa =====
+     Reforma visual (mantendo toda a lógica/estrutura de antes): bolhas com
+     avatar (iniciais coloridas por pessoa), agrupamento de mensagens
+     seguidas da mesma pessoa (sem repetir nome/avatar/hora em cada uma),
+     divisor de dia quando a conversa atravessa mais de uma sessão, cabeçalho
+     do popup com o nome da mesa, botão de enviar circular, e uma pequena
+     animação de entrada pra mensagem nova. */
   .chat-fab{
     position:fixed; right:20px; bottom:20px; z-index:180;
-    width:54px; height:54px; border-radius:50%;
-    background:var(--panel); border:1px solid var(--gold-dim); color:var(--gold);
-    font-size:22px; cursor:pointer; box-shadow:0 4px 16px rgba(0,0,0,.5);
+    width:56px; height:56px; border-radius:50%;
+    background:linear-gradient(155deg, var(--panel-2), var(--panel));
+    border:1px solid var(--gold-dim); color:var(--gold);
+    font-size:23px; cursor:pointer; box-shadow:0 6px 20px rgba(0,0,0,.55);
     display:flex; align-items:center; justify-content:center;
+    transition:border-color .15s, transform .15s, box-shadow .15s;
   }
-  .chat-fab:hover{ border-color:var(--gold); }
+  .chat-fab:hover{ border-color:var(--gold); transform:translateY(-1px); box-shadow:0 8px 24px rgba(0,0,0,.6); }
+  .chat-fab:active{ transform:translateY(0); }
   .chat-fab-badge{
-    position:absolute; top:-4px; right:-4px; min-width:19px; height:19px; padding:0 4px;
-    border-radius:10px; background:var(--seal-bright); color:#fff; font-size:11px;
+    position:absolute; top:-4px; right:-4px; min-width:20px; height:20px; padding:0 5px;
+    border-radius:10px; background:var(--seal-bright); color:#fff; font-size:11px; font-weight:600;
     font-family:'JetBrains Mono', monospace; display:flex; align-items:center; justify-content:center;
+    border:2px solid var(--bg); box-shadow:0 0 0 1px var(--seal-bright), 0 2px 8px rgba(196,67,60,.5);
+    animation:chatBadgePop .25s ease-out;
   }
+  @keyframes chatBadgePop{ from{ transform:scale(.4); opacity:0; } to{ transform:scale(1); opacity:1; } }
 
   .chat-popup{
-    position:fixed; right:20px; bottom:86px; z-index:181;
-    width:340px; height:460px; max-height:70vh;
-    background:var(--panel); border:1px solid var(--hairline); border-radius:var(--radius);
-    box-shadow:0 10px 40px rgba(0,0,0,.6);
+    position:fixed; right:20px; bottom:88px; z-index:181;
+    width:352px; height:480px; max-height:72vh;
+    background:var(--panel); border:1px solid var(--hairline); border-radius:10px;
+    box-shadow:0 16px 48px rgba(0,0,0,.6), 0 0 0 1px rgba(201,161,92,.06);
     display:flex; flex-direction:column; overflow:hidden;
   }
   .chat-popup.hidden{ display:none; }
@@ -1115,21 +1127,30 @@ if ('serviceWorker' in navigator) {
   .chat-popup.minimized .chat-messages,
   .chat-popup.minimized .chat-input-row,
   .chat-popup.minimized .chat-err{ display:none; }
-  .chat-popup.minimized{ height:auto; }
+  .chat-popup.minimized{ height:auto; box-shadow:0 8px 28px rgba(0,0,0,.5); }
   .chat-popup.minimized::before{ content:none; }
+  .chat-popup.minimized .chat-popup-head{ border-bottom:none; }
 
   .chat-popup-head{
-    display:flex; align-items:center; justify-content:space-between; gap:6px;
-    padding:8px 8px 8px 12px; border-bottom:1px solid var(--hairline-soft); flex-shrink:0;
+    display:flex; flex-direction:column; gap:6px; flex-shrink:0;
+    padding:10px 10px 8px 14px; border-bottom:1px solid var(--hairline-soft);
+    background:linear-gradient(180deg, var(--panel-2), var(--panel));
   }
+  .chat-popup-title-row{ display:flex; align-items:center; justify-content:space-between; gap:6px; }
+  .chat-popup-title{
+    font-family:'Cinzel', serif; font-size:13px; letter-spacing:.03em; color:var(--gold);
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis; display:flex; align-items:center; gap:6px;
+  }
+  .chat-popup-title::before{ content:'💬'; font-size:12px; filter:saturate(0) brightness(1.6); opacity:.85; }
   .chat-tabs{ display:flex; gap:4px; flex-wrap:wrap; }
   .chat-tab{
     position:relative;
     background:none; border:1px solid var(--hairline-soft); color:var(--ink-mute);
-    padding:5px 9px; border-radius:6px; cursor:pointer; font-size:12px; font-family:'EB Garamond', serif;
+    padding:5px 10px; border-radius:20px; cursor:pointer; font-size:12px; font-family:'EB Garamond', serif;
+    transition:border-color .15s, color .15s, background .15s;
   }
   .chat-tab:hover{ border-color:var(--gold-dim); color:var(--gold); }
-  .chat-tab.active{ border-color:var(--gold); color:var(--gold); background:var(--panel-2); }
+  .chat-tab.active{ border-color:var(--gold); color:var(--gold); background:rgba(201,161,92,.1); }
   .chat-tab.disabled{ opacity:.45; cursor:not-allowed; }
   .chat-tab-dot{
     position:absolute; top:-3px; right:-3px; width:9px; height:9px; border-radius:50%;
@@ -1139,7 +1160,7 @@ if ('serviceWorker' in navigator) {
   .chat-head-actions{ display:flex; gap:2px; flex-shrink:0; }
   .chat-min-btn, .chat-close-btn{
     background:none; border:none; color:var(--ink-mute); cursor:pointer; font-size:15px;
-    width:26px; height:26px; border-radius:5px;
+    width:26px; height:26px; border-radius:50%; transition:color .15s, background .15s;
   }
   .chat-min-btn:hover, .chat-close-btn:hover{ color:var(--gold); background:var(--panel-2); }
 
@@ -1147,34 +1168,116 @@ if ('serviceWorker' in navigator) {
   .chat-target-row select{ width:100%; font-size:13px; padding:7px 8px; }
 
   .chat-messages{
-    flex:1 1 auto; overflow-y:auto; padding:10px 12px; display:flex; flex-direction:column; gap:8px;
+    flex:1 1 auto; overflow-y:auto; padding:12px; display:flex; flex-direction:column; gap:2px;
+    background:
+      radial-gradient(ellipse at top, rgba(201,161,92,.03), transparent 60%),
+      var(--bg-alt);
   }
-  .chat-empty{ color:var(--ink-mute); font-size:12.5px; text-align:center; margin-top:16px; }
-  .chat-msg{
-    background:var(--panel-2); border:1px solid var(--hairline-soft); border-radius:8px;
-    padding:6px 9px; font-size:13px; max-width:88%; align-self:flex-start;
+  .chat-empty{
+    color:var(--ink-mute); font-size:12.5px; text-align:center; margin:auto;
+    display:flex; flex-direction:column; align-items:center; gap:6px;
   }
-  .chat-msg.mine{ align-self:flex-end; border-color:var(--gold-dim); }
-  .chat-msg.whisper{ border-style:dashed; background:var(--panel); }
-  .chat-msg.whisper .chat-msg-body{ font-style:italic; }
-  .chat-msg-head{ display:flex; justify-content:space-between; gap:8px; margin-bottom:2px; }
-  .chat-msg-who{ color:var(--gold); font-size:11.5px; }
-  .chat-msg-who.clickable{ cursor:pointer; text-decoration:underline dotted; }
+  .chat-empty::before{ content:'🕊️'; font-size:22px; opacity:.5; }
+
+  /* Divisor de dia ("Hoje" / "Ontem" / dd/mm) — aparece entre grupos de
+     mensagens de dias diferentes, pra separar visualmente sessões
+     distintas de jogo na mesma conversa. */
+  .chat-day-divider{
+    display:flex; align-items:center; gap:8px; margin:12px 0 6px; flex-shrink:0;
+  }
+  .chat-day-divider:first-child{ margin-top:0; }
+  .chat-day-divider::before, .chat-day-divider::after{ content:''; flex:1; height:1px; background:var(--hairline-soft); }
+  .chat-day-divider span{
+    font-size:10.5px; color:var(--ink-mute); font-family:'JetBrains Mono', monospace;
+    letter-spacing:.03em; text-transform:uppercase; white-space:nowrap;
+  }
+
+  /* Uma "fileira" agrupa mensagens seguidas da mesma pessoa: avatar só na
+     primeira, bolhas coladas nas seguintes (menos espaço entre elas do que
+     entre grupos de pessoas diferentes). */
+  .chat-msg-row{
+    display:flex; gap:7px; align-items:flex-end; margin-top:10px; animation:chatMsgIn .18s ease-out;
+  }
+  .chat-msg-row.grouped{ margin-top:2px; }
+  .chat-msg-row.mine{ flex-direction:row-reverse; }
+  @keyframes chatMsgIn{ from{ opacity:0; transform:translateY(4px); } to{ opacity:1; transform:translateY(0); } }
+
+  .chat-avatar{
+    flex-shrink:0; width:26px; height:26px; border-radius:50%;
+    display:flex; align-items:center; justify-content:center;
+    font-family:'Cinzel', serif; font-size:11px; font-weight:600; color:#fff;
+    box-shadow:0 1px 3px rgba(0,0,0,.4);
+  }
+  .chat-avatar.spacer{ visibility:hidden; }
+  .chat-msg-row.observing .chat-avatar{ display:none; }
+
+  .chat-msg-col{ display:flex; flex-direction:column; max-width:78%; min-width:0; }
+  .chat-msg-row.mine .chat-msg-col{ align-items:flex-end; }
+  .chat-msg-row.observing .chat-msg-col{ max-width:88%; }
+
+  .chat-msg-head{
+    display:flex; align-items:baseline; gap:6px; margin:0 2px 3px; flex-wrap:wrap;
+  }
+  .chat-msg-row.mine .chat-msg-head{ flex-direction:row-reverse; }
+  .chat-msg-who{ color:var(--gold); font-size:11.5px; font-family:'Cinzel', serif; letter-spacing:.01em; }
+  .chat-msg-who.clickable{ cursor:pointer; text-decoration:underline dotted; text-underline-offset:2px; }
   .chat-msg-who.clickable:hover{ color:var(--seal-bright); }
   .chat-msg-master-tag{
-    color:var(--seal-bright); font-size:10px; border:1px solid var(--seal-bright);
-    border-radius:4px; padding:0 4px; margin-left:5px; vertical-align:1px;
+    color:var(--seal-bright); font-size:9.5px; border:1px solid var(--seal-bright);
+    border-radius:4px; padding:0 4px; vertical-align:1px; text-transform:uppercase; letter-spacing:.03em;
   }
-  .chat-msg-time{ color:var(--ink-mute); font-size:10.5px; font-family:'JetBrains Mono', monospace; }
+  .chat-msg-time{ color:var(--ink-mute); font-size:10px; font-family:'JetBrains Mono', monospace; }
+
+  .chat-msg{
+    background:var(--panel-2); border:1px solid var(--hairline-soft);
+    border-radius:14px 14px 14px 4px;
+    padding:7px 11px; font-size:13.5px; line-height:1.4;
+  }
+  .chat-msg-row.mine .chat-msg{
+    border-radius:14px 14px 4px 14px;
+    background:linear-gradient(155deg, rgba(201,161,92,.16), rgba(201,161,92,.08));
+    border-color:var(--gold-dim);
+  }
+  .chat-msg-row.whisper .chat-msg{
+    border-style:dashed; background:var(--panel);
+  }
+  .chat-msg-row.whisper.mine .chat-msg{
+    background:linear-gradient(155deg, rgba(196,67,60,.14), rgba(196,67,60,.06));
+    border-color:var(--seal-bright);
+  }
+  .chat-msg-row.whisper .chat-msg-body{ font-style:italic; }
+  .chat-msg-row.whisper .chat-msg-body::before{ content:'🤫 '; font-style:normal; opacity:.7; }
   .chat-msg-body{ color:var(--ink-dim); white-space:pre-wrap; word-break:break-word; }
 
-  .chat-hint{ padding:6px 12px 0; color:var(--ink-mute); font-size:11px; flex-shrink:0; }
+  /* Modo "Ver todos" do Mestre: cada linha mostra remetente → destinatário,
+     sem avatar (não faz sentido pra uma conversa observada de fora) e sem
+     a distinção mine/de-outros de uma conversa normal. */
+  .chat-msg-row.observing{ flex-direction:row; margin-top:8px; }
+  .chat-msg-row.observing .chat-msg-col{ align-items:flex-start; }
+  .chat-msg-row.observing .chat-msg{ border-radius:10px; }
+
+  .chat-hint{
+    margin:0 10px 8px; padding:6px 10px; color:var(--ink-mute); font-size:11px; flex-shrink:0;
+    background:var(--panel-2); border:1px solid var(--hairline-soft); border-radius:8px; line-height:1.4;
+  }
   .chat-hint.hidden{ display:none; }
 
-  .chat-input-row{ display:flex; gap:6px; padding:9px 10px; border-top:1px solid var(--hairline-soft); flex-shrink:0; }
-  .chat-input-row input{ flex:1; font-size:13.5px; padding:8px 10px; }
+  .chat-input-row{ display:flex; gap:7px; align-items:center; padding:10px; border-top:1px solid var(--hairline-soft); flex-shrink:0; }
+  .chat-input-row input{
+    flex:1; font-size:13.5px; padding:9px 14px; border-radius:20px;
+    background:var(--panel-2); border:1px solid var(--hairline-soft);
+  }
+  .chat-input-row input:focus{ border-color:var(--gold-dim); }
   .chat-input-row input:disabled{ opacity:.5; cursor:not-allowed; }
-  .chat-input-row button{ width:auto; padding:8px 14px; flex-shrink:0; }
+  .chat-send-btn{
+    flex-shrink:0; width:36px; height:36px; border-radius:50%; padding:0;
+    display:flex; align-items:center; justify-content:center; font-size:15px;
+    background:var(--gold); border:1px solid var(--gold); color:var(--bg);
+    cursor:pointer; transition:transform .12s, filter .12s;
+  }
+  .chat-send-btn:hover{ filter:brightness(1.1); }
+  .chat-send-btn:active{ transform:scale(.92); }
+  .chat-send-btn:disabled{ background:var(--panel-2); border-color:var(--hairline-soft); color:var(--ink-mute); cursor:not-allowed; }
   .chat-err{ padding:0 12px 8px; color:#e0a5a5; font-size:11.5px; flex-shrink:0; }
 
   /* Mobile: quase tela cheia, alvo de toque maior */
@@ -1189,7 +1292,7 @@ if ('serviceWorker' in navigator) {
     }
     .chat-popup{
       right:8px; left:8px; bottom:0; width:auto;
-      height:82vh; height:82dvh; max-height:none; border-radius:var(--radius) var(--radius) 0 0;
+      height:82vh; height:82dvh; max-height:none; border-radius:14px 14px 0 0;
       padding-bottom:env(safe-area-inset-bottom);
     }
     /* BUG (corrigido): o popup só ocupa 82% da altura da tela, ancorado
@@ -1203,15 +1306,22 @@ if ('serviceWorker' in navigator) {
     .chat-popup::before{
       content:''; position:fixed; inset:0; background:rgba(10,6,4,.6); z-index:-1;
     }
+    /* Puxador visual de bottom-sheet, só decorativo. */
+    .chat-popup-head{ position:relative; padding-top:14px; }
+    .chat-popup-head::before{
+      content:''; position:absolute; top:6px; left:50%; transform:translateX(-50%);
+      width:36px; height:4px; border-radius:3px; background:var(--hairline);
+    }
     .chat-tab{ padding:8px 10px; font-size:13px; }
-    .chat-input-row input{ padding:11px 12px; font-size:16px; }
-    .chat-input-row button{ padding:11px 16px; }
+    .chat-input-row input{ padding:11px 14px; font-size:16px; }
+    .chat-send-btn{ width:42px; height:42px; font-size:17px; }
     .chat-target-row select{ padding:10px 8px; font-size:16px; }
     /* BUG: minimizar/fechar e as abas do chat mediam ~26-34px de altura —
        abaixo do mínimo confortável de toque (~40-44px), fácil de errar com
        o dedo justamente nos botões que fecham/minimizam a conversa. */
     .chat-tab{ padding:11px 13px; font-size:13.5px; min-height:42px; }
     .chat-min-btn, .chat-close-btn{ width:38px; height:38px; font-size:17px; }
+    .chat-avatar{ width:28px; height:28px; font-size:11.5px; }
   }
 </style>
 </head>
@@ -1372,13 +1482,16 @@ if ('serviceWorker' in navigator) {
 
 <div class="chat-popup hidden" id="chatPopup" role="dialog" aria-label="Chat da mesa">
   <div class="chat-popup-head">
+    <div class="chat-popup-title-row">
+      <div class="chat-popup-title" id="chatPopupTitle">Chat da mesa</div>
+      <div class="chat-head-actions">
+        <button type="button" class="chat-min-btn" id="chatMinBtn" title="Minimizar">–</button>
+        <button type="button" class="chat-close-btn" id="chatCloseBtn" title="Fechar">✕</button>
+      </div>
+    </div>
     <div class="chat-tabs" id="chatTabs">
       <button type="button" class="chat-tab active" data-chat-type="general">📣 Geral<span class="chat-tab-dot hidden" id="chatDotGeneral"></span></button>
       <button type="button" class="chat-tab" data-chat-type="whisper">🤫 Sussurro<span class="chat-tab-dot hidden" id="chatDotWhisper"></span></button>
-    </div>
-    <div class="chat-head-actions">
-      <button type="button" class="chat-min-btn" id="chatMinBtn" title="Minimizar">–</button>
-      <button type="button" class="chat-close-btn" id="chatCloseBtn" title="Fechar">✕</button>
     </div>
   </div>
   <div class="chat-target-row hidden" id="chatTargetRow">
@@ -1388,7 +1501,7 @@ if ('serviceWorker' in navigator) {
   <div class="chat-hint hidden" id="chatHint"></div>
   <div class="chat-input-row">
     <input type="text" id="chatInput" maxlength="1000" placeholder="Escreva uma mensagem…">
-    <button type="button" class="btn small" id="chatSendBtn">Enviar</button>
+    <button type="button" class="chat-send-btn" id="chatSendBtn" title="Enviar" aria-label="Enviar mensagem">➤</button>
   </div>
   <div class="chat-err hidden" id="chatErr"></div>
 </div>

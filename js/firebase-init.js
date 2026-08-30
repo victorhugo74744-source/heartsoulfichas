@@ -22,6 +22,44 @@ async function getFolders() {
   return snap.docs.map(d => ({ id: d.id, ...d.data() }));
 }
 
+// Mantém a marca /folders/{folderId}/members/{uid} em dia sempre que a
+// pasta de UMA ficha muda de valor — é essa marca (não a ficha em si) que
+// as regras do Firestore usam pra decidir quem enxerga as mesas afiliadas
+// a cada pasta (ver firestore.rules, match /tables). Chamada tanto pelo
+// próprio jogador salvando a ficha (js/editor-save.js) quanto pelo Mestre
+// movendo uma ficha pelo Painel (js/master.js).
+// oldFolderId/newFolderId: '' ou null tratados como "sem pasta".
+async function syncFolderMembership(ownerUid, oldFolderId, newFolderId) {
+  oldFolderId = oldFolderId || null;
+  newFolderId = newFolderId || null;
+  if (oldFolderId === newFolderId) return;
+  try {
+    if (newFolderId) {
+      await db.collection('folders').doc(newFolderId).collection('members').doc(ownerUid).set({
+        uid: ownerUid,
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+    }
+    if (oldFolderId) {
+      // Só apaga a marca da pasta antiga se este dono não tiver mais
+      // NENHUMA outra ficha lá — ele pode ter mais de uma ficha na mesma
+      // campanha, e a marca é por dono+pasta, não por ficha.
+      const stillThere = await db.collection('sheets')
+        .where('ownerId', '==', ownerUid)
+        .where('folderId', '==', oldFolderId)
+        .limit(1).get();
+      if (stillThere.empty) {
+        await db.collection('folders').doc(oldFolderId).collection('members').doc(ownerUid).delete();
+      }
+    }
+  } catch (err) {
+    // Nunca bloqueia o salvamento da ficha/movimentação por causa disso —
+    // só loga; na pior hipótese a visibilidade da mesa fica desatualizada
+    // até a próxima sincronização bem-sucedida.
+    console.warn('Não foi possível atualizar a marca de pasta/mesa:', err);
+  }
+}
+
 function escapeHtml(str) {
   if (str === null || str === undefined) return '';
   return String(str)

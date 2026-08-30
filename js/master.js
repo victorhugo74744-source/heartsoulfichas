@@ -80,6 +80,14 @@ function renderGroups(groups, filter, folderId) {
 // próprio jogador escolhe a campanha na criação da ficha).
 async function moveSheetToFolder(sheetId, folderId) {
   const folder = folderId ? allFolders.find(f => f.id === folderId) : null;
+  // Precisa do dono e da pasta ANTIGA da ficha antes de sobrescrever, pra
+  // atualizar a marca de pasta certa depois (ver syncFolderMembership).
+  let ownerUid = null, oldFolderId = '';
+  allGroups.forEach(g => {
+    g.sheets.forEach(s => {
+      if (s.id === sheetId) { ownerUid = g.player.uid; oldFolderId = s.folderId || ''; }
+    });
+  });
   try {
     await db.collection('sheets').doc(sheetId).update({
       folderId: folderId || null,
@@ -96,6 +104,7 @@ async function moveSheetToFolder(sheetId, folderId) {
       });
     });
     renderGroups(allGroups, currentSearch, currentFolderFilter);
+    if (ownerUid) await syncFolderMembership(ownerUid, oldFolderId, folderId || '');
   } catch (err) {
     alert('Erro ao mover a ficha de pasta: ' + err.message);
   }
@@ -177,6 +186,15 @@ async function deleteFolder(folderId) {
       const batch = db.batch();
       sheetsSnap.forEach(doc => batch.update(doc.ref, { folderId: null, folderName: null, masterId: null }));
       await batch.commit();
+    }
+    // Limpa as marcas de "tenho ficha nesta pasta" (ver syncFolderMembership)
+    // — a pasta vai deixar de existir, então nenhuma mesa pode mais estar
+    // afiliada a ela, mas as marcas ficariam órfãs se não apagadas aqui.
+    const membersSnap = await db.collection('folders').doc(folderId).collection('members').get();
+    if (!membersSnap.empty) {
+      const memberBatch = db.batch();
+      membersSnap.forEach(doc => memberBatch.delete(doc.ref));
+      await memberBatch.commit();
     }
     await db.collection('folders').doc(folderId).delete();
     await loadFolders();

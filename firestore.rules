@@ -53,6 +53,27 @@ service cloud.firestore {
       allow read: if isSignedIn();
       allow create: if isMaster() && request.resource.data.createdBy == request.auth.uid;
       allow update, delete: if isSignedIn() && resource.data.createdBy == request.auth.uid;
+
+      // Marca "este jogador tem uma ficha nesta pasta/campanha" — um doc
+      // por jogador (id = uid dele), sem outro conteúdo além de existir.
+      // É essa marca (e só ela) que decide quem enxerga as mesas afiliadas
+      // a esta pasta (ver isso usado em /tables acima). Toda vez que uma
+      // ficha entra ou sai de uma pasta — seja o próprio jogador mudando
+      // no ficha-editor, seja o Mestre movendo pelo Painel — o cliente
+      // grava/apaga esta marca (ver syncFolderMembership em
+      // js/firebase-init.js). O próprio jogador pode escrever a própria
+      // marca; o Mestre DONO desta pasta também pode escrever em nome de
+      // um jogador (é o que acontece quando ele move a ficha pelo Painel,
+      // executando a ação com a própria conta de Mestre, não a do
+      // jogador) — mas nenhum outro Mestre.
+      match /members/{uid} {
+        allow read: if isSignedIn();
+        allow write: if isSignedIn() && (
+          request.auth.uid == uid ||
+          (isMaster() &&
+            get(/databases/$(database)/documents/folders/$(folderId)).data.createdBy == request.auth.uid)
+        );
+      }
     }
 
     // Fichas de personagem. Cada ficha carrega um campo "masterId" —
@@ -107,14 +128,23 @@ service cloud.firestore {
       );
     }
 
-    // Mesas de tabletop (tabuleiro). Qualquer jogador logado pode ver e
-    // entrar nelas; qualquer Mestre pode criar uma mesa nova (virando dono
-    // dela), mas só o Mestre DONO desta mesa específica pode editá-la
-    // (ex.: gerar um novo mapa) ou excluí-la — outro Mestre não mexe na
-    // mesa alheia.
+    // Mesas de tabletop (tabuleiro). Toda mesa é afiliada a uma pasta de
+    // campanha (campo "folderId", obrigatório) e só é vista por quem tem
+    // uma ficha nessa pasta — jogador sem ficha ali nem sabe que a mesa
+    // existe. Continua vendo, além disso: o Mestre DONO da mesa (sempre,
+    // mesmo que ele mesmo não tenha ficha na pasta) e, criando, só um
+    // Mestre pode, e só afiliando a uma pasta que ELE MESMO criou (a mesa
+    // não pode "pertencer" à campanha de outro Mestre) — só ele (dono da
+    // mesa) edita ou exclui depois.
     match /tables/{tableId} {
-      allow read: if isSignedIn();
-      allow create: if isMaster() && request.resource.data.createdBy == request.auth.uid;
+      allow read: if isSignedIn() && (
+        resource.data.createdBy == request.auth.uid ||
+        (resource.data.folderId != null &&
+          exists(/databases/$(database)/documents/folders/$(resource.data.folderId)/members/$(request.auth.uid)))
+      );
+      allow create: if isMaster() && request.resource.data.createdBy == request.auth.uid &&
+        request.resource.data.folderId is string && request.resource.data.folderId.size() > 0 &&
+        get(/databases/$(database)/documents/folders/$(request.resource.data.folderId)).data.createdBy == request.auth.uid;
       allow update, delete: if isTableMaster(tableId);
 
       // Tokens sobre o tabuleiro. Cada jogador só cria/move/remove o

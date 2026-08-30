@@ -41,6 +41,8 @@ function chatRoster() {
 }
 
 function resetChatState() {
+  const titleEl = document.getElementById('chatPopupTitle');
+  if (titleEl) titleEl.textContent = (curTable && curTable.name) ? curTable.name : 'Chat da mesa';
   chatChannel = 'general';
   chatTargetUid = null;
   chatUnread = { general: 0, whisper: 0 };
@@ -270,10 +272,45 @@ function fmtChatTime(ts) {
   return ts.toDate().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
 }
 
+// "Hoje" / "Ontem" / dd/mm(/aaaa) — usado no divisor de dia entre grupos de
+// mensagens de sessões diferentes (ver renderChatMessages).
+function fmtChatDayLabel(date) {
+  const now = new Date();
+  const startOfDay = (d) => { const x = new Date(d); x.setHours(0, 0, 0, 0); return x.getTime(); };
+  const diffDays = Math.round((startOfDay(now) - startOfDay(date)) / 86400000);
+  if (diffDays === 0) return 'Hoje';
+  if (diffDays === 1) return 'Ontem';
+  return date.toLocaleDateString('pt-BR', {
+    day: '2-digit', month: '2-digit',
+    year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined
+  });
+}
+
+// Cor determinística do avatar por pessoa (mesmo uid = sempre a mesma cor,
+// sem precisar guardar nada) — paleta de tons que combinam com o resto do
+// visual (dourado/selo escuro), mas distintos o bastante entre si.
+const CHAT_AVATAR_PALETTE = ['#8f5a3c', '#5b8fa8', '#6f8f6a', '#8a6fae', '#a8763f', '#4a9e91', '#b3577a', '#7a8a4a', '#5a6faa', '#b08a3c'];
+function chatAvatarColor(uid) {
+  const str = uid || '?';
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) hash = (hash * 31 + str.charCodeAt(i)) >>> 0;
+  return CHAT_AVATAR_PALETTE[hash % CHAT_AVATAR_PALETTE.length];
+}
+function chatAvatarInitial(name) {
+  const trimmed = (name || '?').trim();
+  return trimmed ? trimmed[0].toUpperCase() : '?';
+}
+
 function scrollChatToBottom() {
   const box = document.getElementById('chatMessages');
   if (box) box.scrollTop = box.scrollHeight;
 }
+
+// Duas mensagens seguidas da MESMA pessoa, mandadas a menos de 5 minutos
+// uma da outra, viram uma "fileira" só (agrupadas): nome/hora/avatar só na
+// primeira, as de baixo vêm coladas — menos repetição visual numa conversa
+// corrida, igual apps de chat comuns.
+const CHAT_GROUP_WINDOW_MS = 5 * 60 * 1000;
 
 function renderChatMessages() {
   const box = document.getElementById('chatMessages');
@@ -307,28 +344,66 @@ function renderChatMessages() {
     return;
   }
 
-  box.innerHTML = list.map(m => {
+  let html = '';
+  let lastDayKey = null;
+  let lastGroupKey = null; // uid de quem mandou a última mensagem, pra saber se agrupa com esta
+  let lastTimeMs = null;
+
+  list.forEach(m => {
     const mine = m.fromUserId === curUser.uid;
     const isMasterMsg = !!curTable && m.fromUserId === curTable.createdBy;
     const masterTag = isMasterMsg ? '<span class="chat-msg-master-tag">Mestre</span>' : '';
-    let who;
+    const msgDate = (m.timestamp && m.timestamp.toDate) ? m.timestamp.toDate() : null;
+    const timeMs = msgDate ? msgDate.getTime() : null;
+
+    if (msgDate) {
+      const dayKey = msgDate.toDateString();
+      if (dayKey !== lastDayKey) {
+        html += `<div class="chat-day-divider"><span>${escapeHtml(fmtChatDayLabel(msgDate))}</span></div>`;
+        lastDayKey = dayKey;
+        lastGroupKey = null; // cada dia começa uma fileira nova, mesmo que seja a mesma pessoa
+      }
+    }
+
+    let who, rowClasses, avatarHtml;
     if (masterObserving) {
       // Cada nome é clicável na sua própria pessoa: o Mestre entra direto
       // numa conversa de sussurro com quem ele clicar, remetente ou
-      // destinatário, sem precisar usar o seletor.
+      // destinatário, sem precisar usar o seletor. Sem avatar nem
+      // agrupamento aqui — cada linha já mostra remetente → destinatário,
+      // então junto com um avatar de qual dos dois seria ambíguo.
       const fromClick = m.fromUserId === curTable.createdBy ? '' : ` clickable" data-jump-uid="${m.fromUserId}`;
       const toClick = m.toUserId === curTable.createdBy ? '' : ` clickable" data-jump-uid="${m.toUserId}`;
       who = `<span class="chat-msg-who${fromClick}">${escapeHtml(m.fromName || '?')}</span>${masterTag} → ` +
             `<span class="chat-msg-who${toClick}">${escapeHtml(m.toName || '?')}</span>`;
+      rowClasses = 'chat-msg-row observing whisper';
+      avatarHtml = '';
+      lastGroupKey = null;
     } else {
-      who = `<span class="chat-msg-who">${escapeHtml(mine ? 'Você' : (m.fromName || '?'))}${masterTag}</span>`;
+      const groupKey = m.fromUserId;
+      const grouped = groupKey === lastGroupKey && timeMs !== null && lastTimeMs !== null &&
+        (timeMs - lastTimeMs) < CHAT_GROUP_WINDOW_MS;
+      who = grouped ? '' : `<span class="chat-msg-who">${escapeHtml(mine ? 'Você' : (m.fromName || '?'))}</span>${masterTag}`;
+      rowClasses = `chat-msg-row${mine ? ' mine' : ''}${chatChannel === 'whisper' ? ' whisper' : ''}${grouped ? ' grouped' : ''}`;
+      avatarHtml = grouped
+        ? `<div class="chat-avatar spacer"></div>`
+        : `<div class="chat-avatar" style="background:${chatAvatarColor(m.fromUserId)};">${escapeHtml(chatAvatarInitial(mine ? 'Você' : (m.fromName || '?')))}</div>`;
+      lastGroupKey = groupKey;
     }
-    return `
-      <div class="chat-msg${mine ? ' mine' : ''}${chatChannel === 'whisper' ? ' whisper' : ''}">
-        <div class="chat-msg-head">${who}<span class="chat-msg-time">${fmtChatTime(m.timestamp)}</span></div>
-        <div class="chat-msg-body">${escapeHtml(m.content)}</div>
+    lastTimeMs = timeMs;
+
+    const headHtml = who ? `<div class="chat-msg-head">${who}<span class="chat-msg-time">${fmtChatTime(m.timestamp)}</span></div>` : '';
+    html += `
+      <div class="${rowClasses}">
+        ${avatarHtml}
+        <div class="chat-msg-col">
+          ${headHtml}
+          <div class="chat-msg"><div class="chat-msg-body">${escapeHtml(m.content)}</div></div>
+        </div>
       </div>`;
-  }).join('');
+  });
+
+  box.innerHTML = html;
   scrollChatToBottom();
 }
 

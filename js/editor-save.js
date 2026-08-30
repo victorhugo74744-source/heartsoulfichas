@@ -170,9 +170,12 @@ async function saveSheet(user) {
   saveBtn.disabled = true;
   saveBtn.textContent = 'Salvando…';
   try {
+    let sheetOwnerUid = user.uid;
     if (editingSheetId) {
       // Não sobrescreve ownerId ao editar — preserva o dono original da
       // ficha mesmo quando quem está salvando é o Mestre.
+      const existing = await db.collection('sheets').doc(editingSheetId).get();
+      if (existing.exists && existing.data().ownerId) sheetOwnerUid = existing.data().ownerId;
       await db.collection('sheets').doc(editingSheetId).update(payload);
     } else {
       payload.ownerId = user.uid;
@@ -180,6 +183,10 @@ async function saveSheet(user) {
       const ref = await db.collection('sheets').add(payload);
       editingSheetId = ref.id;
     }
+    // Mantém a marca de "tenho ficha nesta pasta" em dia — é o que decide
+    // quem vê as mesas afiliadas a ela (ver syncFolderMembership).
+    await syncFolderMembership(sheetOwnerUid, state.loadedFolderId || '', state.folderId || '');
+    state.loadedFolderId = state.folderId || '';
     await syncSheetAppearanceToTokens(user, editingSheetId, payload.characterName, payload.appearanceImage, payload.resources && payload.resources.hp);
     location.href = 'ficha-view.html?id=' + editingSheetId;
   } catch (err) {
@@ -276,6 +283,9 @@ async function loadExistingSheet(id, user, profile) {
   state.folderId = s.folderId || '';
   state.folderName = s.folderName || '';
   state.masterId = s.masterId || null;
+  // Guarda a pasta com que a ficha foi carregada, pra saber se ela mudou
+  // de pasta ao salvar (ver syncFolderMembership em saveSheet()).
+  state.loadedFolderId = s.folderId || '';
 
   populateFormFromState();
   renderAttrs(); updateAttrPoolDisplay();

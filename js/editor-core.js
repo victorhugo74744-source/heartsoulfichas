@@ -141,7 +141,7 @@ let state = {
   resources: emptyResources(),
   inspirationPoints: 0, traitBonusFromInspiration: 0,
   history: '', appearanceImage: '', inventoryItems: [{ name: '', weight: 0, qty: 1 }], notes: [''],
-  folderId: '', folderName: '', masterId: null
+  folderId: '', folderName: '', masterId: null, loadedFolderId: ''
 };
 
 // ================= BÔNUS DE ATRIBUTO VINDOS DE TRAÇOS =================
