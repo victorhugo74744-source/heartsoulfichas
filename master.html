@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Painel do Mestre — Heartsoul</title>
+<link rel="icon" href="assets/favicon-32.png" type="image/png">
+<link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#120F0C">
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').catch(() => {});
+  });
+}
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,600;1,400&family=Cinzel:wght@500;600&family=JetBrains+Mono&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+<style>
+  .player-group{ margin-bottom:28px; }
+  .player-group-head{
+    display:flex; align-items:center; gap:10px; margin-bottom:10px; padding-bottom:8px;
+    border-bottom:1px solid var(--hairline);
+  }
+  .player-group-head h3{ font-family:'Cinzel',serif; color:var(--gold); font-size:17px; margin:0; }
+  .player-group-head .count{ font-size:12.5px; color:var(--ink-mute); }
+  .folder-chip{
+    display:inline-flex; align-items:center; gap:8px; background:var(--panel-2); border:1px solid var(--hairline);
+    border-radius:20px; padding:6px 8px 6px 14px; font-size:13.5px; color:var(--ink-dim);
+  }
+  .folder-chip button{ background:none; border:none; color:var(--ink-mute); cursor:pointer; font-size:13px; }
+  .folder-badge{
+    display:inline-block; background:rgba(201,161,92,.12); border:1px solid var(--gold-dim); color:var(--gold);
+    font-size:11.5px; padding:2px 9px; border-radius:20px; margin-top:6px;
+  }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="brand">
+    <svg class="seal-icon" viewBox="0 0 120 120" fill="none">
+      <circle cx="60" cy="60" r="54" stroke="#C9A15C" stroke-width="2" opacity="0.5"/>
+      <circle cx="60" cy="60" r="4" fill="#C9A15C"/>
+      <path d="M60 24 L84 60 L60 96 L36 60 Z" stroke="#9C2B2B" stroke-width="2" opacity="0.55" fill="none"/>
+    </svg>
+    <div>
+      <div class="brand-title">HEARTSOUL</div>
+      <div class="brand-sub">Painel do Mestre</div>
+    </div>
+  </div>
+  <div class="topbar-right" id="topbarRight"></div>
+</div>
+
+<div class="shell wide">
+  <div class="page-head">
+    <div class="eyebrow">Visão do Mestre</div>
+    <h1>Fichas dos Jogadores</h1>
+    <p>Todas as fichas criadas pelos jogadores da mesa, organizadas por jogador.</p>
+  </div>
+
+  <div class="panel" style="margin-bottom:26px;">
+    <h2 style="margin-top:0;">Pastas de Campanha</h2>
+    <p class="hint" style="margin-top:-6px;">Crie uma pasta para cada campanha/mesa. Seus jogadores poderão escolher a pasta certa ao salvar a ficha deles.</p>
+    <div class="toolbar-row">
+      <div class="field">
+        <input type="text" id="newFolderName" placeholder="Nome da campanha (ex.: Águas Negras)">
+      </div>
+      <button class="btn" id="createFolderBtn" type="button" style="width:auto;">Criar pasta</button>
+    </div>
+    <div id="folderMsg"></div>
+    <div id="folderList" style="display:flex; flex-wrap:wrap; gap:10px; margin-top:14px;"></div>
+  </div>
+
+  <div class="toolbar-row" style="margin-bottom:26px;">
+    <div class="field" style="max-width:400px;">
+      <input type="text" id="searchBox" placeholder="Buscar por nome de jogador ou personagem…">
+    </div>
+    <div class="field" style="max-width:280px;">
+      <select id="folderFilter">
+        <option value="">Todas as pastas</option>
+      </select>
+    </div>
+  </div>
+
+  <div id="masterList" class="center-loading">Carregando fichas…</div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+<script src="js/firebase-config.js"></script>
+<script src="js/firebase-init.js"></script>
+<script src="js/master.js"></script>
+</body>
+</html>

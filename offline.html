@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sem conexão — Heartsoul</title>
+<link rel="icon" href="assets/favicon-32.png" type="image/png">
+<style>
+  :root{ --bg:#120F0C; --panel:#1B1712; --ink:#E9E1D3; --ink-dim:#B8AD98; --gold:#C9A15C; }
+  *{ box-sizing:border-box; }
+  body{
+    margin:0; min-height:100vh; display:flex; align-items:center; justify-content:center;
+    background:var(--bg); color:var(--ink); font-family:'EB Garamond', Georgia, serif;
+    padding:24px; text-align:center;
+  }
+  .card{
+    max-width:420px; background:var(--panel); border:1px solid rgba(201,161,92,.25);
+    border-radius:6px; padding:40px 30px;
+  }
+  h1{ font-family:'Cinzel', serif; color:var(--gold); font-size:22px; letter-spacing:.04em; margin:0 0 12px; }
+  p{ color:var(--ink-dim); line-height:1.5; margin:0 0 22px; }
+  button{
+    font-family:'Cinzel', serif; background:var(--gold); color:#1a1510; border:none;
+    padding:10px 22px; border-radius:4px; cursor:pointer; font-size:14px; letter-spacing:.03em;
+  }
+  button:hover{ opacity:.9; }
+</style>
+</head>
+<body>
+  <div class="card">
+    <h1>Sem conexão</h1>
+    <p>Esta página ainda não tinha sido aberta antes, então não está disponível offline. Assim que a internet voltar, tente novamente.</p>
+    <button onclick="location.reload()">Tentar de novo</button>
+  </div>
+</body>
+</html>

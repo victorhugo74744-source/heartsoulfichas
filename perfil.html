@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Meu Perfil — Heartsoul</title>
+<link rel="icon" href="assets/favicon-32.png" type="image/png">
+<link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#120F0C">
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').catch(() => {});
+  });
+}
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,600;1,400&family=Cinzel:wght@500;600&family=JetBrains+Mono&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+<style>
+  .profile-head{ display:flex; align-items:center; gap:22px; margin-bottom:22px; flex-wrap:wrap; }
+  .profile-avatar{
+    width:110px; height:110px; border-radius:50%; object-fit:cover;
+    border:2px solid var(--gold-dim); background:var(--bg-alt); flex-shrink:0;
+  }
+  .profile-avatar-placeholder{
+    width:110px; height:110px; border-radius:50%; flex-shrink:0;
+    border:2px solid var(--hairline); background:var(--bg-alt);
+    display:flex; align-items:center; justify-content:center;
+    font-size:42px; color:var(--ink-mute);
+  }
+  .profile-id h2{ margin:0 0 4px; }
+  .profile-id .pi-email{ color:var(--ink-mute); font-size:14px; }
+  .profile-actions{ display:flex; gap:10px; align-items:center; margin-top:14px; flex-wrap:wrap; }
+  .profile-actions .btn{ width:auto; padding:10px 20px; }
+
+  /* ===== Mobile =====
+     Duas coisas aqui pensadas pra tela de celular:
+     1) O cabeçalho (avatar + nome/e-mail) com flex-wrap:wrap sozinho ficava
+        com o avatar boiando à esquerda e o texto quebrando pra uma segunda
+        linha alinhada à esquerda também — não lê como um "cartão de perfil".
+        Empilhado e centralizado (avatar em cima, nome/e-mail embaixo) é o
+        padrão mais reconhecível em telas de perfil no celular.
+     2) Os botões de ação (Salvar/Remover foto, Sair/Excluir conta) tinham
+        width:auto forçado — em telas estreitas isso ou aperta os dois botões
+        lado a lado, ou deixa muito espaço vazio quando só um deles quebra
+        linha. Empilhados e ocupando a largura toda (mesmo padrão já usado
+        nos botões finais do editor de ficha) dá um alvo de toque maior e
+        visual mais organizado. */
+  @media (max-width:560px){
+    .profile-head{ flex-direction:column; text-align:center; gap:14px; }
+    .profile-avatar, .profile-avatar-placeholder{ width:96px; height:96px; }
+    .profile-actions{ flex-direction:column; align-items:stretch; gap:10px; }
+    .profile-actions .btn{ width:100%; padding:13px 20px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="brand">
+    <svg class="seal-icon" viewBox="0 0 120 120" fill="none">
+      <circle cx="60" cy="60" r="54" stroke="#C9A15C" stroke-width="2" opacity="0.5"/>
+      <circle cx="60" cy="60" r="4" fill="#C9A15C"/>
+      <path d="M60 24 L84 60 L60 96 L36 60 Z" stroke="#9C2B2B" stroke-width="2" opacity="0.55" fill="none"/>
+    </svg>
+    <div>
+      <div class="brand-title">HEARTSOUL</div>
+      <div class="brand-sub">Meu Perfil</div>
+    </div>
+  </div>
+  <div class="topbar-right" id="topbarRight"></div>
+</div>
+
+<div class="shell">
+  <div class="page-head">
+    <div class="eyebrow">Sua conta</div>
+    <h1>Meu Perfil</h1>
+    <p>Sua foto de perfil aparece para o Mestre quando ele consulta suas fichas.</p>
+  </div>
+
+  <div class="panel">
+    <div class="profile-head">
+      <div id="avatarPreviewBox"></div>
+      <div class="profile-id">
+        <h2 id="profileName">—</h2>
+        <div class="pi-email" id="profileEmail">—</div>
+        <div class="pi-email" id="profileRole"></div>
+      </div>
+    </div>
+
+    <div class="sheet-section-title" style="margin-top:0;">Foto de perfil</div>
+    <input type="file" id="avatarInput" accept="image/*">
+    <p class="hint" id="avatarMsg">Envie uma imagem quadrada de preferência — ela é redimensionada automaticamente antes de salvar.</p>
+    <div class="error-msg" id="profileError" style="display:none;"></div>
+
+    <div class="profile-actions">
+      <button class="btn" id="saveAvatarBtn" type="button">Salvar foto</button>
+      <button class="btn secondary" id="removeAvatarBtn" type="button">Remover foto</button>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="sheet-section-title" style="margin-top:0;">Gerenciar conta</div>
+    <p class="hint">Sair encerra sua sessão neste dispositivo. Excluir conta apaga seu perfil e TODAS as suas fichas salvas, permanentemente.</p>
+    <div class="profile-actions">
+      <button class="btn secondary" id="profileLogoutBtn" type="button">Sair da conta</button>
+      <button class="btn secondary" id="profileDeleteAccountBtn" type="button" style="border-color:var(--seal); color:#e0a5a5;">Excluir conta</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+<script src="js/firebase-config.js"></script>
+<script src="js/firebase-init.js"></script>
+<script src="js/perfil.js"></script>
+</body>
+</html>

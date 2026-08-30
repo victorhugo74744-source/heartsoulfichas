@@ -1,0 +1,14 @@
+{
+  "name": "heartsoul-fichas",
+  "private": true,
+  "description": "Site de fichas/mesa do sistema Heartsoul. Este package.json existe só para os testes automatizados (regras do Firestore + parser de traços do editor de ficha) — o site em si continua sendo HTML/CSS/JS puro, sem build.",
+  "scripts": {
+    "test": "npm run test:client",
+    "test:client": "node --test tests/client/*.test.js",
+    "test:rules": "firebase emulators:exec --only firestore \"node --test tests/\""
+  },
+  "devDependencies": {
+    "@firebase/rules-unit-testing": "^3.0.4",
+    "firebase-tools": "^13.29.1"
+  }
+}

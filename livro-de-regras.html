@@ -1,0 +1,1260 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Heartsoul — Sistema de RPG</title>
+<link rel="icon" href="assets/favicon-32.png" type="image/png">
+<link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#120F0C">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,600;1,400&family=Cinzel:wght@500;600&family=Cinzel+Decorative:wght@700;900&family=JetBrains+Mono&display=swap" rel="stylesheet">
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').catch(() => {});
+  });
+}
+</script>
+<style>
+:root{
+  --bg: #120F0C;
+  --bg-alt: #17130F;
+  --panel: #1B1611;
+  --panel-2: #201A14;
+  --hairline: #3A2E22;
+  --hairline-soft: #2a2119;
+  --ink: #E9DFC7;
+  --ink-dim: #b4a688;
+  --ink-mute: #82735c;
+  --seal: #9C2B2B;
+  --seal-bright: #C4433C;
+  --gold: #C9A15C;
+  --gold-dim: #8f7a4c;
+  --benign: #6f8f6a;
+  --malign: #8a3f3f;
+  --radius: 2px;
+  --content-max: 940px;
+  --sidebar-w: 258px;
+}
+
+*{box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+
+body{
+  margin:0;
+  background:
+    radial-gradient(ellipse 1200px 800px at 15% -10%, rgba(156,43,43,0.08), transparent 60%),
+    radial-gradient(ellipse 900px 700px at 100% 10%, rgba(201,161,92,0.06), transparent 55%),
+    var(--bg);
+  color:var(--ink);
+  font-family:'EB Garamond', Georgia, serif;
+  font-size:18px;
+  line-height:1.65;
+  -webkit-font-smoothing:antialiased;
+}
+
+::selection{ background:var(--seal); color:#fff; }
+
+/* Scrollbar */
+::-webkit-scrollbar{ width:10px; }
+::-webkit-scrollbar-track{ background:var(--bg); }
+::-webkit-scrollbar-thumb{ background:var(--hairline); border-radius:6px; }
+::-webkit-scrollbar-thumb:hover{ background:var(--gold-dim); }
+
+a{ color:inherit; }
+
+.h-font{ font-family:'Cinzel', serif; letter-spacing:.02em; }
+
+/* ===== Layout shell ===== */
+.app{
+  display:grid;
+  grid-template-columns: var(--sidebar-w) 1fr;
+  min-height:100vh;
+  min-height:100dvh;
+  transition: grid-template-columns .28s ease;
+}
+/* .scrim é usado só como overlay no mobile (posição fixa). Sem essa regra
+   base, no PC ele ficava sem display:none e virava um item comum dentro do
+   grid .app — como é o 1º filho, ocupava a coluna da sidebar (258px) e
+   empurrava a sidebar pra coluna larga e o conteúdo pra coluna estreita,
+   trocando os dois de lugar. Precisa ficar fora do fluxo do grid por padrão. */
+.scrim{ display:none; }
+/* ===== Sidebar ===== */
+.sidebar{
+  background:linear-gradient(180deg, var(--panel), var(--bg-alt));
+  border-right:1px solid var(--hairline);
+  display:flex; flex-direction:column;
+  height:100vh; height:100dvh; position:sticky; top:0;
+  overflow:hidden;
+  transition: opacity .2s ease;
+}
+/* Colapsar a sidebar no desktop (botão de toggle) */
+.app.collapsed{ grid-template-columns: 0px 1fr; }
+.app.collapsed .sidebar{ opacity:0; pointer-events:none; }
+
+.sidebar-toggle{
+  display:none;
+  position:fixed; top:50%; left:var(--sidebar-w); transform:translate(-50%,-50%);
+  width:26px; height:46px; align-items:center; justify-content:center;
+  background:var(--panel-2); border:1px solid var(--hairline); border-left:none;
+  border-radius:0 6px 6px 0; color:var(--gold); cursor:pointer; z-index:30;
+  transition: left .28s ease, background .15s ease;
+}
+.sidebar-toggle:hover{ background:var(--panel); }
+.sidebar-toggle svg{ transition: transform .28s ease; }
+.app.collapsed .sidebar-toggle{ left:0; border-left:1px solid var(--hairline); border-radius:0 6px 6px 0; }
+@media (min-width:1001px){ .sidebar-toggle{ display:flex; } }
+.sidebar-head{
+  padding:24px 16px 14px;
+  border-bottom:1px solid var(--hairline-soft);
+  flex-shrink:0;
+}
+.brand{
+  display:flex; align-items:center; gap:12px;
+  text-decoration:none; color:var(--ink);
+  cursor:pointer;
+}
+.brand svg{ flex-shrink:0; }
+.brand-text{ display:flex; flex-direction:column; line-height:1.15; }
+.brand-title{ font-family:'Cinzel Decorative', serif; font-size:19px; color:var(--gold); }
+.brand-sub{ font-size:12px; letter-spacing:.16em; text-transform:uppercase; color:var(--ink-mute); margin-top:3px; }
+
+.search-wrap{ margin-top:16px; position:relative; }
+.search-wrap input{
+  width:100%; background:var(--panel-2); border:1px solid var(--hairline);
+  color:var(--ink); padding:9px 12px 9px 32px; font-family:'EB Garamond', serif;
+  font-size:15px; border-radius:var(--radius); outline:none;
+}
+.search-wrap input:focus{ border-color:var(--gold-dim); }
+.search-wrap svg{ position:absolute; left:10px; top:50%; transform:translateY(-50%); opacity:.5; }
+.search-wrap input::placeholder{ color:var(--ink-mute); font-style:italic; }
+
+.sidebar-nav{
+  overflow-y:auto; padding:10px 8px 30px; flex:1;
+}
+.nav-group{ margin-bottom:2px; }
+.nav-chapter{
+  display:flex; align-items:center; gap:8px;
+  padding:8px 8px; cursor:pointer; border-radius:var(--radius);
+  font-size:14.5px; color:var(--ink-dim); line-height:1.3;
+  border-left:2px solid transparent;
+  transition:background .15s, color .15s, border-color .15s;
+}
+.nav-chapter:hover{ background:var(--panel-2); color:var(--ink); }
+.nav-chapter.active{ color:var(--gold); border-left-color:var(--seal); background:var(--panel-2); }
+.nav-num{ font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--ink-mute); width:18px; flex-shrink:0; }
+.nav-chapter.active .nav-num{ color:var(--seal-bright); }
+.nav-caret{ margin-left:auto; opacity:.5; transition:transform .18s; font-size:11px; }
+.nav-group.expanded .nav-caret{ transform:rotate(90deg); }
+
+.nav-sub{
+  max-height:0; overflow:hidden; transition:max-height .25s ease;
+  padding-left:16px; border-left:1px dotted var(--hairline);
+  margin-left:14px;
+}
+.nav-group.expanded .nav-sub{ max-height:1400px; }
+.nav-sub-item{
+  padding:6px 8px; font-size:13px; color:var(--ink-mute); cursor:pointer;
+  border-radius:var(--radius); transition:color .15s; line-height:1.35;
+}
+.nav-sub-item:hover{ color:var(--ink); }
+.nav-sub-item.active{ color:var(--gold); }
+
+.sidebar-foot{
+  padding:12px 22px; border-top:1px solid var(--hairline-soft);
+  font-size:11.5px; color:var(--ink-mute); flex-shrink:0; letter-spacing:.03em;
+}
+
+/* ===== Main ===== */
+.main{ min-height:100vh; min-height:100dvh; position:relative; }
+.topbar{
+  display:none; align-items:center; gap:14px;
+  padding:14px 20px; border-bottom:1px solid var(--hairline);
+  background:var(--bg-alt); position:sticky; top:0; z-index:20;
+}
+@media (max-width:1000px){ .topbar{ display:flex; } }
+.menu-btn{
+  display:none; width:34px; height:34px; align-items:center; justify-content:center;
+  background:var(--panel-2); border:1px solid var(--hairline); border-radius:var(--radius);
+  color:var(--gold); cursor:pointer;
+}
+.topbar-title{ font-family:'Cinzel', serif; color:var(--gold); font-size:16px; }
+
+/* Regras responsivas do shell — precisam vir DEPOIS das regras base acima
+   (.app, .sidebar, .menu-btn), pois têm a mesma especificidade e, em caso de
+   empate, o CSS aplica a que aparece por último no arquivo. Antes, este bloco
+   vinha antes das regras base, então o "position:sticky" do .sidebar base
+   sobrescrevia o "position:fixed" daqui — a sidebar nunca saía do fluxo normal
+   da página e, no mobile, cobria a tela inteira no lugar do conteúdo. */
+@media (max-width:1000px){
+  .app{ grid-template-columns: 1fr; }
+  .sidebar{ position:fixed; inset:0 22% 0 0; z-index:40; transform:translateX(-100%); transition:transform .3s ease; }
+  .sidebar.open{ transform:translateX(0); }
+  .scrim{ display:none; position:fixed; inset:0; background:rgba(0,0,0,.55); z-index:35; }
+  .scrim.show{ display:block; }
+  .menu-btn{ display:flex !important; }
+}
+
+.content{
+  max-width:var(--content-max);
+  margin:0 auto;
+  padding:64px 56px 140px;
+}
+@media (max-width:1000px){ .content{ padding:48px 32px 120px; } }
+@media (max-width:600px){ .content{ padding:34px 18px 100px; } }
+
+/* Home hero */
+.hero{ position:relative; padding-bottom:20px; }
+.hero-seal{ display:block; margin:0 auto 28px; opacity:.92; }
+.hero-eyebrow{
+  text-align:center; font-size:12.5px; letter-spacing:.32em; text-transform:uppercase;
+  color:var(--seal-bright); margin-bottom:14px;
+}
+.hero h1{
+  text-align:center; font-family:'Cinzel Decorative', serif; font-size:clamp(38px,6vw,60px);
+  color:var(--gold); margin:0 0 18px; line-height:1.05;
+}
+.hero p.lede{
+  text-align:center; color:var(--ink-dim); font-size:19px; font-style:italic;
+  max-width:560px; margin:0 auto 6px; line-height:1.7;
+}
+.hero p.tagline{
+  text-align:center; color:var(--gold); font-family:'Cinzel', serif; font-weight:600;
+  font-size:16px; letter-spacing:.03em; margin:18px auto 0; max-width:520px;
+}
+.hero p.tagline .sep{ color:var(--seal-bright); margin:0 10px; }
+.hero-divider{
+  display:flex; align-items:center; gap:14px; justify-content:center; margin:38px 0 40px; color:var(--hairline);
+}
+.hero-divider .line{ height:1px; width:70px; background:linear-gradient(90deg, transparent, var(--hairline), transparent); }
+.hero-divider svg{ opacity:.6; }
+
+.stats-row{
+  display:flex; justify-content:center; gap:46px; margin:30px 0 46px; flex-wrap:wrap;
+}
+.stat{ text-align:center; }
+.stat b{ display:block; font-family:'Cinzel', serif; font-size:28px; color:var(--gold); }
+.stat span{ font-size:12px; letter-spacing:.1em; text-transform:uppercase; color:var(--ink-mute); }
+
+.chapter-grid{
+  display:grid; grid-template-columns:repeat(2,1fr); gap:14px; margin-top:10px;
+}
+@media (max-width:640px){ .chapter-grid{ grid-template-columns:1fr; } }
+.chapter-card{
+  border:1px solid var(--hairline); background:var(--panel); padding:18px 18px 16px;
+  cursor:pointer; border-radius:var(--radius); transition:border-color .15s, transform .15s, background .15s;
+  position:relative; overflow:hidden;
+}
+.chapter-card:hover{ border-color:var(--gold-dim); background:var(--panel-2); transform:translateY(-2px); }
+.chapter-card .cc-num{ font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--seal-bright); }
+.chapter-card h3{ font-family:'Cinzel', serif; font-size:16.5px; margin:8px 0 6px; color:var(--ink); font-weight:600; }
+.chapter-card p{ font-size:14px; color:var(--ink-mute); margin:0; line-height:1.5; }
+
+/* Chapter view */
+.crumb{ font-size:12.5px; color:var(--ink-mute); letter-spacing:.05em; margin-bottom:16px; text-transform:uppercase; }
+.crumb a{ text-decoration:none; color:var(--ink-mute); cursor:pointer; }
+.crumb a:hover{ color:var(--gold); }
+
+.chapter-header{ margin-bottom:38px; border-bottom:1px solid var(--hairline); padding-bottom:26px; }
+.chapter-number{ font-family:'JetBrains Mono',monospace; color:var(--seal-bright); font-size:13px; letter-spacing:.1em; }
+.chapter-header h1{
+  font-family:'Cinzel', serif; color:var(--gold); font-size:clamp(28px,4vw,40px);
+  margin:10px 0 8px; line-height:1.15;
+}
+.chapter-header .subtitle{ color:var(--ink-dim); font-style:italic; font-size:17px; }
+
+.prose p{ margin:0 0 20px; color:var(--ink); }
+.prose p.label-line{
+  font-family:'Cinzel', serif; font-size:13.5px; letter-spacing:.08em; text-transform:uppercase;
+  color:var(--gold-dim); margin:32px 0 14px; padding-bottom:6px; border-bottom:1px dotted var(--hairline);
+}
+.prose h4.mini-heading{
+  font-family:'Cinzel', serif; color:var(--gold); font-size:18px; letter-spacing:.02em;
+  margin:34px 0 14px; padding-bottom:6px; border-bottom:1px solid var(--hairline);
+}
+.prose h4.mini-heading:first-child{ margin-top:0; }
+.prose p:first-of-type::first-letter{
+  font-family:'Cinzel Decorative', serif;
+  font-size:52px; color:var(--seal-bright); float:left; line-height:.8;
+  padding:6px 8px 0 0;
+}
+
+/* Trait / race entry styling */
+.entry{
+  border-left:2px solid var(--hairline); padding:4px 0 4px 18px; margin:0 0 22px;
+}
+.entry.cost{ border-left-color: var(--gold-dim); }
+.entry-name{ font-family:'Cinzel', serif; font-weight:600; color:var(--ink); }
+.entry-cost{
+  font-family:'JetBrains Mono',monospace; font-size:11.5px; color:var(--bg);
+  background:var(--gold); padding:1px 7px; border-radius:10px; margin-left:8px; letter-spacing:.02em;
+  white-space:nowrap;
+}
+.entry-body{ color:var(--ink-dim); }
+
+.subsection-title{
+  font-family:'Cinzel', serif; color:var(--gold); font-size:22px; margin:46px 0 18px;
+  padding-top:10px;
+  display:flex; align-items:center; gap:10px;
+}
+.subsection-title:first-child{ margin-top:0; }
+.subsection-title .tag{
+  font-size:10.5px; letter-spacing:.1em; text-transform:uppercase; font-family:'JetBrains Mono',monospace;
+  padding:2px 8px; border-radius:10px; border:1px solid currentColor; opacity:.75;
+}
+.tag.benign{ color:var(--benign); }
+.tag.malign{ color:var(--malign); }
+
+.race-subnav{
+  display:flex; flex-wrap:wrap; gap:8px; margin:0 0 40px;
+}
+.race-chip{
+  font-size:13px; padding:6px 12px; border:1px solid var(--hairline); border-radius:20px;
+  color:var(--ink-mute); cursor:pointer; transition:all .15s;
+}
+.race-chip:hover, .race-chip.active{ color:var(--gold); border-color:var(--gold-dim); }
+
+.chapter-nav-footer{
+  display:flex; justify-content:space-between; margin-top:60px; padding-top:24px; border-top:1px solid var(--hairline);
+  gap:20px;
+}
+.nav-footer-btn{
+  border:1px solid var(--hairline); padding:12px 16px; cursor:pointer; flex:1;
+  border-radius:var(--radius); transition:border-color .15s, background .15s;
+}
+.nav-footer-btn:hover{ border-color:var(--gold-dim); background:var(--panel); }
+.nav-footer-btn .fk{ font-size:10.5px; letter-spacing:.12em; text-transform:uppercase; color:var(--ink-mute); }
+.nav-footer-btn .ft{ font-family:'Cinzel', serif; color:var(--gold); font-size:15px; margin-top:4px; }
+.nav-footer-btn.next{ text-align:right; }
+
+/* Antecedentes (backgrounds) */
+.ante-card{
+  border:1px solid var(--hairline); background:var(--panel); border-radius:var(--radius);
+  padding:26px 28px 28px; margin:0 0 34px;
+}
+.ante-head{ display:flex; align-items:center; gap:12px; margin-bottom:14px; }
+.ante-icon{ font-size:26px; line-height:1; }
+.ante-head h3{ font-family:'Cinzel', serif; color:var(--gold); font-size:21px; margin:0; font-weight:600; }
+.ante-desc{ color:var(--ink); margin:0 0 16px; line-height:1.65; }
+.ante-quote{
+  font-style:italic; color:var(--ink-dim); border-left:2px solid var(--gold-dim);
+  padding:2px 0 2px 16px; margin:0 0 20px;
+}
+.ante-meta{
+  display:grid; grid-template-columns:repeat(2,1fr); gap:12px 24px; margin:0 0 22px;
+}
+@media (max-width:560px){ .ante-meta{ grid-template-columns:1fr; } }
+.ante-meta-item .mk{
+  font-family:'Cinzel', serif; font-size:11px; letter-spacing:.1em; text-transform:uppercase;
+  color:var(--gold-dim); margin-bottom:4px;
+}
+.ante-meta-item .mv{ color:var(--ink-dim); font-size:15px; line-height:1.5; }
+.ante-skills-label{
+  font-family:'Cinzel', serif; font-size:12px; letter-spacing:.1em; text-transform:uppercase;
+  color:var(--gold-dim); margin-bottom:10px;
+}
+.ante-skills{ display:flex; flex-wrap:wrap; gap:7px; }
+.ante-skill-chip{
+  font-size:12.5px; padding:5px 11px; border:1px solid var(--hairline); border-radius:20px;
+  color:var(--ink-dim); background:var(--panel-2);
+}
+
+/* ===== Lore do Mundo — Panteão & Reinos ===== */
+strong{ color:var(--ink); font-weight:700; }
+.ante-quote strong, .kingdom-section p strong, .deity-card-body p strong{ color:var(--gold-dim); }
+.lore-continent-head{
+  display:flex; align-items:baseline; gap:10px; flex-wrap:wrap;
+  font-family:'Cinzel', serif; color:var(--gold); font-size:24px; margin:52px 0 6px;
+}
+.lore-continent-head:first-of-type{ margin-top:20px; }
+.lore-continent-head .lc-icon{ font-size:22px; }
+.lore-continent-head .lc-epithet{ font-size:14.5px; font-style:italic; color:var(--ink-dim); font-family:'EB Garamond', Georgia, serif; letter-spacing:0; }
+
+.deity-grid, .kingdom-grid{
+  display:flex; flex-direction:column; gap:16px; margin:22px 0 44px;
+}
+
+.deity-card{
+  border:1px solid var(--hairline); background:var(--panel); border-radius:var(--radius);
+  overflow:hidden; transition:border-color .18s ease, box-shadow .18s ease;
+}
+.deity-card:hover{ border-color:var(--gold-dim); }
+.deity-card.divine:hover{ box-shadow:0 0 0 1px rgba(201,161,92,0.25); }
+.deity-card.infernal:hover{ box-shadow:0 0 0 1px rgba(156,43,43,0.3); }
+.deity-card.infernal{ border-color:var(--hairline); }
+.deity-card.infernal .deity-epithet{ color:var(--seal-bright); }
+.deity-card.divine .deity-epithet{ color:var(--gold-dim); }
+
+.deity-card-head{
+  display:flex; align-items:center; gap:12px; padding:16px 16px 16px 14px; cursor:pointer;
+  user-select:none;
+}
+.deity-icon{ font-size:26px; line-height:1; flex-shrink:0; }
+.deity-name-wrap{ flex:1; min-width:0; }
+.deity-name{ font-family:'Cinzel', serif; font-weight:600; color:var(--ink); font-size:16.5px; }
+.deity-epithet{ font-size:12.5px; font-style:italic; margin-top:2px; }
+.deity-caret{ color:var(--ink-mute); font-size:13px; transition:transform .2s ease; flex-shrink:0; }
+.deity-card.expanded .deity-caret{ transform:rotate(180deg); color:var(--gold); }
+
+.deity-card-body{
+  display:grid; grid-template-rows:0fr; transition:grid-template-rows .25s ease;
+}
+.deity-card.expanded .deity-card-body{ grid-template-rows:1fr; }
+.deity-card-body > div{ overflow:hidden; }
+.deity-card-body p{
+  margin:0; padding:0 18px 20px 52px; color:var(--ink-dim); font-size:15px; line-height:1.6;
+  border-top:1px dotted var(--hairline-soft); padding-top:16px;
+}
+
+/* Kingdom cards — same accordion mechanic, richer body with sub-sections */
+.kingdom-card{
+  border:1px solid var(--hairline); background:var(--panel); border-radius:var(--radius);
+  overflow:hidden; transition:border-color .18s ease;
+}
+.kingdom-card:hover{ border-color:var(--gold-dim); }
+.kingdom-card-head{
+  display:flex; align-items:center; gap:12px; padding:18px 18px 18px 16px; cursor:pointer; user-select:none;
+}
+.kingdom-icon{ font-size:28px; line-height:1; flex-shrink:0; }
+.kingdom-name-wrap{ flex:1; min-width:0; }
+.kingdom-name{ font-family:'Cinzel', serif; font-weight:600; color:var(--gold); font-size:18px; }
+.kingdom-epithet{ font-size:13px; font-style:italic; color:var(--ink-dim); margin-top:2px; }
+.kingdom-card .deity-caret{ font-size:14px; }
+.kingdom-card.expanded .deity-caret{ transform:rotate(180deg); color:var(--gold); }
+.kingdom-card-body{
+  display:grid; grid-template-rows:0fr; transition:grid-template-rows .28s ease;
+}
+.kingdom-card.expanded .kingdom-card-body{ grid-template-rows:1fr; }
+.kingdom-card-body > div{ overflow:hidden; }
+.kingdom-section{
+  padding:0 20px 22px 20px; border-top:1px dotted var(--hairline-soft); padding-top:16px; margin-top:0;
+}
+.kingdom-section:first-child{ padding-top:18px; }
+.kingdom-section .ks-label{
+  font-family:'Cinzel', serif; font-size:11.5px; letter-spacing:.12em; text-transform:uppercase;
+  color:var(--seal-bright); margin-bottom:8px;
+}
+.kingdom-section p{ margin:0 0 10px; color:var(--ink-dim); font-size:14.5px; line-height:1.62; }
+.kingdom-section p:last-child{ margin-bottom:0; }
+
+/* search results */
+.search-results{ padding:8px; }
+.search-hit{
+  padding:9px 10px; cursor:pointer; border-radius:var(--radius); font-size:14px;
+}
+.search-hit:hover{ background:var(--panel-2); }
+.search-hit .sh-chapter{ font-size:11px; color:var(--seal-bright); text-transform:uppercase; letter-spacing:.06em; }
+.search-hit .sh-snip{ color:var(--ink-dim); }
+.no-results{ padding:12px 10px; color:var(--ink-mute); font-style:italic; font-size:14px; }
+mark{ background:var(--seal); color:#fff; padding:0 1px; border-radius:2px; }
+
+@media print{
+  .sidebar, .topbar, .chapter-nav-footer, .reading-progress, .back-to-top, .page-toc{ display:none; }
+}
+
+/* ===== Nesta melhoria: agrupamento em Partes (sidebar + início) ===== */
+.nav-part-label{
+  padding:18px 10px 6px; font-family:'Cinzel', serif; font-size:10.5px; letter-spacing:.14em;
+  text-transform:uppercase; color:var(--seal-bright); opacity:.85;
+}
+.nav-part-label:first-child{ padding-top:2px; }
+
+.home-part{ margin-top:46px; }
+.home-part:first-child{ margin-top:6px; }
+.home-part-head{ display:flex; align-items:center; gap:14px; margin-bottom:16px; }
+.home-part-head h2{
+  font-family:'Cinzel', serif; font-size:13px; letter-spacing:.16em; text-transform:uppercase;
+  color:var(--gold-dim); white-space:nowrap; margin:0;
+}
+.home-part-line{ height:1px; flex:1; background:linear-gradient(90deg, transparent, var(--hairline), transparent); }
+
+/* ===== Leitura: controle de tamanho de fonte ===== */
+.font-ctrl{ display:flex; align-items:center; gap:6px; margin-top:14px; }
+.font-ctrl button{
+  width:26px; height:26px; border:1px solid var(--hairline); background:var(--panel-2);
+  color:var(--ink-dim); border-radius:var(--radius); cursor:pointer; font-family:'JetBrains Mono',monospace;
+  font-size:12px; line-height:1; transition:border-color .15s, color .15s;
+}
+.font-ctrl button:hover{ border-color:var(--gold-dim); color:var(--gold); }
+.font-ctrl span{ font-size:10.5px; color:var(--ink-mute); text-transform:uppercase; letter-spacing:.08em; }
+.content{ font-size:calc(18px * var(--font-scale, 1)); }
+
+/* ===== Barra de progresso de leitura ===== */
+.reading-progress{
+  position:fixed; top:0; left:0; height:3px; width:0%; z-index:50;
+  background:linear-gradient(90deg, var(--seal), var(--gold)); transition:width .1s linear;
+  pointer-events:none;
+}
+
+/* ===== Botão voltar ao topo ===== */
+.back-to-top{
+  position:fixed; right:22px; bottom:22px; width:42px; height:42px; border-radius:50%;
+  background:var(--panel-2); border:1px solid var(--hairline); color:var(--gold);
+  display:flex; align-items:center; justify-content:center; cursor:pointer;
+  opacity:0; pointer-events:none; transform:translateY(6px);
+  transition:opacity .2s ease, transform .2s ease, border-color .15s ease; z-index:25;
+}
+.back-to-top.show{ opacity:1; pointer-events:auto; transform:translateY(0); }
+.back-to-top:hover{ border-color:var(--gold-dim); }
+
+/* ===== Sumário "Nesta página" (âncoras dentro do capítulo) ===== */
+.page-toc{
+  border:1px solid var(--hairline); background:var(--panel); border-radius:var(--radius);
+  padding:16px 20px 18px; margin:0 0 40px;
+}
+.page-toc-label{
+  font-family:'Cinzel', serif; font-size:11px; letter-spacing:.12em; text-transform:uppercase;
+  color:var(--gold-dim); margin-bottom:10px;
+}
+.page-toc-list{ display:flex; flex-wrap:wrap; gap:7px 22px; column-count:2; }
+.page-toc-list a{
+  font-size:14px; color:var(--ink-dim); text-decoration:none; cursor:pointer;
+  border-bottom:1px dotted transparent; transition:color .15s, border-color .15s;
+}
+.page-toc-list a:hover{ color:var(--gold); border-bottom-color:var(--gold-dim); }
+.prose h4.mini-heading, .subsection-title, .ante-card, [id^="sub-"]{ scroll-margin-top:26px; }
+@media (max-width:1000px){ .prose h4.mini-heading, .subsection-title, .ante-card, [id^="sub-"]{ scroll-margin-top:76px; } }
+
+/* ===== Busca aprimorada ===== */
+.search-wrap input{ padding-right:30px; }
+.search-clear{
+  position:absolute; right:9px; top:50%; transform:translateY(-50%); width:18px; height:18px;
+  display:none; align-items:center; justify-content:center; color:var(--ink-mute); cursor:pointer;
+  font-size:15px; line-height:1;
+}
+.search-clear.show{ display:flex; }
+.search-clear:hover{ color:var(--gold); }
+.search-meta{
+  padding:10px 10px 2px; font-size:11px; letter-spacing:.06em; text-transform:uppercase; color:var(--ink-mute);
+}
+.search-group-label{
+  padding:14px 10px 4px; font-size:10.5px; text-transform:uppercase; letter-spacing:.08em; color:var(--seal-bright);
+}
+.search-group-label:first-of-type{ padding-top:8px; }
+.search-hit.kbd-active{ background:var(--panel-2); box-shadow:inset 2px 0 0 var(--seal); }
+.search-hint{ padding:6px 10px 2px; font-size:11px; color:var(--ink-mute); font-style:italic; }
+
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="scrim" id="scrim"></div>
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-head">
+      <a class="brand" id="brandHome">
+        <svg width="30" height="30" viewBox="0 0 30 30" fill="none">
+          <circle cx="15" cy="15" r="13" stroke="#C9A15C" stroke-width="1"/>
+          <path d="M15 5 L23 15 L15 25 L7 15 Z" stroke="#9C2B2B" stroke-width="1"/>
+          <circle cx="15" cy="15" r="2.2" fill="#C9A15C"/>
+        </svg>
+        <div class="brand-text">
+          <span class="brand-title">Heartsoul</span>
+          <span class="brand-sub">Compêndio de Regras</span>
+        </div>
+      </a>
+      <div class="search-wrap">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#82735c" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+        <input id="searchInput" type="text" placeholder="Buscar traços, raças, regras… (/)" autocomplete="off">
+        <span class="search-clear" id="searchClear" title="Limpar busca">×</span>
+      </div>
+      <div class="font-ctrl">
+        <button id="fontDown" title="Diminuir fonte" aria-label="Diminuir fonte">A−</button>
+        <button id="fontReset" title="Tamanho padrão" aria-label="Tamanho padrão de fonte">•</button>
+        <button id="fontUp" title="Aumentar fonte" aria-label="Aumentar fonte">A+</button>
+        <span>Leitura</span>
+      </div>
+    </div>
+    <nav class="sidebar-nav" id="sidebarNav"></nav>
+    <div class="sidebar-foot">
+      <a href="index.html" style="color:var(--gold-dim); text-decoration:none;">🧾 Ir para as Fichas</a>
+      <div style="margin-top:4px;">Sistema de RPG de mesa · uso na campanha</div>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="reading-progress" id="readingProgress"></div>
+    <div class="topbar">
+      <button class="menu-btn" id="menuBtn" aria-label="Menu">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+      </button>
+      <span class="topbar-title" id="topbarTitle">Heartsoul</span>
+    </div>
+    <div class="content" id="content"></div>
+    <button class="back-to-top" id="backToTop" title="Voltar ao topo" aria-label="Voltar ao topo">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
+    </button>
+  </main>
+  <button class="sidebar-toggle" id="sidebarToggle" title="Mostrar/ocultar menu" aria-label="Mostrar/ocultar menu">
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M15 5l-7 7 7 7"/></svg>
+  </button>
+</div>
+
+
+
+<script>
+/* Heartsoul RPG — site logic. Expects global CHAPTERS array (injected). */
+(async function(){
+  // O conteúdo das regras (antes ~300KB embutidos direto no HTML) agora
+  // mora em regras.json, carregado à parte — assim o navegador (e o
+  // service worker) conseguem cachear esse arquivo isoladamente, sem
+  // inflar o peso do HTML nem bloquear a primeira renderização da página.
+  let CH = [];
+  try {
+    const resp = await fetch('regras.json');
+    if(!resp.ok) throw new Error('regras.json: HTTP ' + resp.status);
+    CH = await resp.json();
+  } catch(err) {
+    console.error('Não foi possível carregar regras.json', err);
+    document.getElementById('content').innerHTML =
+      '<div class="chat-empty">Não foi possível carregar o livro de regras. Verifique sua conexão e recarregue a página.</div>';
+    return;
+  }
+  const RACE_ICON = '⚚';
+
+  // Agrupamento temático dos capítulos em "Partes" — puramente uma camada de
+  // navegação sobre a ordem já existente em CH (que já vem organizada nessa
+  // sequência em regras.json); não reordena nada em tempo de execução, só
+  // decide onde inserir os rótulos de parte na sidebar e no início.
+  const PARTS = [
+    { label: 'Fundamentos das Regras', ids: ['mecanicas-gerais','atributos-pericias','sorte-inspiracao','furtividade'] },
+    { label: 'Combate e Poder', ids: ['mecanicas-combate','estamina','mao-peso','tecnicas','tracos-conceito','tracos-catalogo','habilidades-criacao'] },
+    { label: 'Progressão do Personagem', ids: ['energias-classes','niveis','experiencia','treinamento','pericias-criacao'] },
+    { label: 'Vida na Campanha', ids: ['economia','descanso','sanidade','oficios'] },
+    { label: 'Criação de Personagem', ids: ['antecedentes','racas'] },
+    { label: 'O Mundo', ids: ['lore-mundo'] },
+  ];
+  const PART_OF = {};
+  PARTS.forEach(p => p.ids.forEach(id => { PART_OF[id] = p.label; }));
+
+  const sidebarNav = document.getElementById('sidebarNav');
+  const content = document.getElementById('content');
+  const searchInput = document.getElementById('searchInput');
+  const searchClear = document.getElementById('searchClear');
+  const sidebar = document.getElementById('sidebar');
+  const scrim = document.getElementById('scrim');
+  const menuBtn = document.getElementById('menuBtn');
+  const topbarTitle = document.getElementById('topbarTitle');
+  const readingProgress = document.getElementById('readingProgress');
+  const backToTop = document.getElementById('backToTop');
+
+  function slugify(s){ return s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/(^-|-$)/g,''); }
+
+  // ---------- Tempo de leitura ----------
+  function wordCount(arr){
+    let n = 0;
+    (arr||[]).forEach(p => { if(typeof p === 'string') n += (p.match(/\S+/g)||[]).length; });
+    return n;
+  }
+  function chapterWords(c){
+    let n = wordCount(c.paragraphs) + wordCount(c.intro);
+    (c.subsections||[]).forEach(s => {
+      n += wordCount(s.paragraphs);
+      if(s.desc) n += wordCount([s.desc]);
+      if(s.quote) n += wordCount([s.quote]);
+    });
+    (c.subsections_search||[]).forEach(s => { n += wordCount(s.paragraphs); });
+    return n;
+  }
+  function readMinutes(c){ return Math.max(1, Math.round(chapterWords(c) / 200)); }
+
+  // ---------- Build sidebar ----------
+  function buildSidebar(){
+    sidebarNav.innerHTML = '';
+    let lastPart = null;
+    CH.forEach((c, i) => {
+      const part = PART_OF[c.id];
+      if(part && part !== lastPart){
+        const label = document.createElement('div');
+        label.className = 'nav-part-label';
+        label.textContent = part;
+        sidebarNav.appendChild(label);
+        lastPart = part;
+      }
+      const hasSub = !!c.subsections;
+      const group = document.createElement('div');
+      group.className = 'nav-group';
+      group.id = 'navgroup-' + c.id;
+
+      const row = document.createElement('div');
+      row.className = 'nav-chapter';
+      row.dataset.chapter = c.id;
+      row.innerHTML = `<span class="nav-num">${String(i+1).padStart(2,'0')}</span><span>${c.title}</span>${hasSub ? '<span class="nav-caret">▸</span>' : ''}`;
+      row.addEventListener('click', () => {
+        if(hasSub){
+          const wasExpanded = group.classList.contains('expanded');
+          document.querySelectorAll('.nav-group').forEach(g => g.classList.remove('expanded'));
+          if(!wasExpanded) group.classList.add('expanded');
+        }
+        navigate(c.id);
+        closeSidebarMobile();
+      });
+      group.appendChild(row);
+
+      if(hasSub){
+        const subWrap = document.createElement('div');
+        subWrap.className = 'nav-sub';
+        c.subsections.forEach(s => {
+          const item = document.createElement('div');
+          item.className = 'nav-sub-item';
+          item.dataset.chapter = c.id;
+          item.dataset.sub = s.id;
+          item.textContent = s.title;
+          item.addEventListener('click', (e) => {
+            e.stopPropagation();
+            navigate(c.id, s.id);
+            closeSidebarMobile();
+          });
+          subWrap.appendChild(item);
+        });
+        group.appendChild(subWrap);
+      }
+      sidebarNav.appendChild(group);
+    });
+  }
+
+  function closeSidebarMobile(){
+    sidebar.classList.remove('open');
+    scrim.classList.remove('show');
+  }
+  menuBtn && menuBtn.addEventListener('click', () => {
+    sidebar.classList.toggle('open');
+    scrim.classList.toggle('show');
+  });
+  scrim && scrim.addEventListener('click', closeSidebarMobile);
+
+  // ---------- Toggle da sidebar no desktop ----------
+  const appEl = document.querySelector('.app');
+  const sidebarToggle = document.getElementById('sidebarToggle');
+  if(localStorage.getItem('livroSidebarCollapsed') === '1'){ appEl.classList.add('collapsed'); }
+  sidebarToggle && sidebarToggle.addEventListener('click', () => {
+    const collapsed = appEl.classList.toggle('collapsed');
+    localStorage.setItem('livroSidebarCollapsed', collapsed ? '1' : '0');
+    sidebarToggle.querySelector('svg').style.transform = collapsed ? 'rotate(180deg)' : 'rotate(0deg)';
+  });
+  if(appEl.classList.contains('collapsed') && sidebarToggle){
+    sidebarToggle.querySelector('svg').style.transform = 'rotate(180deg)';
+  }
+
+  // ---------- Controle de tamanho de fonte (leitura) ----------
+  const FONT_STEPS = [0.88, 1, 1.12, 1.26, 1.4];
+  const storedFontStep = localStorage.getItem('livroFontStep');
+  let fontStepIdx = storedFontStep === null ? 1 : Number(storedFontStep);
+  if(!Number.isInteger(fontStepIdx) || fontStepIdx < 0 || fontStepIdx >= FONT_STEPS.length) fontStepIdx = 1;
+  function applyFontStep(){
+    document.documentElement.style.setProperty('--font-scale', FONT_STEPS[fontStepIdx]);
+    localStorage.setItem('livroFontStep', String(fontStepIdx));
+  }
+  applyFontStep();
+  document.getElementById('fontUp')?.addEventListener('click', () => {
+    fontStepIdx = Math.min(FONT_STEPS.length - 1, fontStepIdx + 1);
+    applyFontStep();
+  });
+  document.getElementById('fontDown')?.addEventListener('click', () => {
+    fontStepIdx = Math.max(0, fontStepIdx - 1);
+    applyFontStep();
+  });
+  document.getElementById('fontReset')?.addEventListener('click', () => {
+    fontStepIdx = 1;
+    applyFontStep();
+  });
+
+  // ---------- Barra de progresso de leitura + botão voltar ao topo ----------
+  function updateScrollUI(){
+    const doc = document.documentElement;
+    const scrollTop = window.scrollY || doc.scrollTop;
+    const height = doc.scrollHeight - doc.clientHeight;
+    const pct = height > 0 ? Math.min(100, (scrollTop / height) * 100) : 0;
+    if(readingProgress) readingProgress.style.width = pct + '%';
+    if(backToTop) backToTop.classList.toggle('show', scrollTop > 600);
+  }
+  window.addEventListener('scroll', updateScrollUI, { passive:true });
+  backToTop && backToTop.addEventListener('click', () => window.scrollTo({ top:0, behavior:'smooth' }));
+
+  function setActiveNav(chapterId, subId){
+    document.querySelectorAll('.nav-chapter').forEach(el => el.classList.toggle('active', el.dataset.chapter === chapterId && !subId));
+    document.querySelectorAll('.nav-sub-item').forEach(el => el.classList.toggle('active', el.dataset.chapter === chapterId && el.dataset.sub === subId));
+    const group = document.getElementById('navgroup-' + chapterId);
+    if(group && subId){
+      document.querySelectorAll('.nav-group').forEach(g => g.classList.remove('expanded'));
+      group.classList.add('expanded');
+      const activeEl = group.querySelector('.nav-sub-item.active');
+      if(activeEl) activeEl.scrollIntoView({block:'nearest'});
+    }
+  }
+
+  // ---------- Rendering helpers ----------
+  function paraIsLabel(p){
+    return p.length < 60 && /[:：]$/.test(p.trim());
+  }
+
+  function renderEntryParagraphs(paragraphs, headingsOut){
+    // Detect "Name (Custo: N): description" pattern to style as stat entries
+    let html = '';
+    const usedIds = new Set();
+    paragraphs.forEach(p => {
+      const heading = p.match(/^##\s*(.+)$/) ||
+        (p.trim().length <= 60 && /^[A-ZÀ-Ý][\wÀ-ÿ'\-]*(?:\s+(?:(?:de|da|do|das|dos|e|em|a|o|ou|com|para|por|no|na|ao|à|às)\s+)?[A-ZÀ-Ý][\wÀ-ÿ'\-]*){0,5}$/.test(p.trim())
+          ? [null, p.trim()] : null);
+      const m = p.match(/^([A-ZÀ-Ý][^():]{2,60}?)\s*\((Custo|Custo aproximado)[:\s]*([^)]*)\)\s*[:\-–]?\s*(.*)$/s);
+      const n = p.match(/^([A-ZÀ-Ý][^():]{1,40}?)\s*:\s+(.+)$/s);
+      if(heading){
+        const text = heading[1].trim();
+        let id = 'h-' + slugify(text);
+        let uniq = id, i2 = 2;
+        while(usedIds.has(uniq)){ uniq = id + '-' + (i2++); }
+        usedIds.add(uniq);
+        if(headingsOut) headingsOut.push({ id: uniq, text });
+        html += `<h4 class="mini-heading" id="${uniq}">${escapeHtml(text)}</h4>`;
+      } else if(m){
+        const [, name, , cost, rest] = m;
+        html += `<div class="entry cost"><span class="entry-name">${escapeHtml(name.trim())}</span><span class="entry-cost">${escapeHtml(cost.trim())}</span><div class="entry-body">${mdBold(rest.trim())}</div></div>`;
+      } else if(paraIsLabel(p)){
+        html += `<p class="label-line">${mdBold(p)}</p>`;
+      } else if(n){
+        const [, name, rest] = n;
+        html += `<div class="entry"><span class="entry-name">${escapeHtml(name.trim())}</span><div class="entry-body">${mdBold(rest.trim())}</div></div>`;
+      } else {
+        html += `<p>${mdBold(p)}</p>`;
+      }
+    });
+    return html;
+  }
+
+  function renderAntecedenteCard(s){
+    const meta = [
+      ['Estilo de jogo', s.estilo],
+      ['Vantagens', s.vantagens],
+      ['Desvantagens', s.desvantagens],
+      ['Atributos', s.atributos],
+    ].filter(([,v]) => v);
+    const metaHtml = meta.map(([k,v]) => `<div class="ante-meta-item"><div class="mk">${escapeHtml(k)}</div><div class="mv">${escapeHtml(v)}</div></div>`).join('');
+    const skillsHtml = (s.skills||[]).map(sk => `<span class="ante-skill-chip">${escapeHtml(sk)}</span>`).join('');
+    return `<div class="ante-card" id="sub-${s.id}">
+      <div class="ante-head"><span class="ante-icon">${escapeHtml(s.icon||'📜')}</span><h3>${escapeHtml(s.title)}</h3></div>
+      <p class="ante-desc">${mdBold(s.desc||'')}</p>
+      ${s.quote ? `<p class="ante-quote">“${mdBold(s.quote)}”</p>` : ''}
+      <div class="ante-meta">${metaHtml}</div>
+      <div class="ante-skills-label">Perícias disponíveis</div>
+      <div class="ante-skills">${skillsHtml}</div>
+    </div>`;
+  }
+
+  function renderDeityCard(d, kind){
+    const prefix = kind === 'divine' ? 'deus' : 'demonio';
+    return `<div class="deity-card ${kind}" data-accordion id="sub-${prefix}-${d.id}">
+      <div class="deity-card-head" data-toggle>
+        <span class="deity-icon">${escapeHtml(d.icon)}</span>
+        <div class="deity-name-wrap">
+          <div class="deity-name">${escapeHtml(d.name)}</div>
+          <div class="deity-epithet">${escapeHtml(d.epithet)}</div>
+        </div>
+        <span class="deity-caret">▾</span>
+      </div>
+      <div class="deity-card-body"><div><p>${mdBold(d.desc)}</p></div></div>
+    </div>`;
+  }
+
+  function renderKingdomCard(k){
+    const sectionsHtml = k.sections.map(s =>
+      `<div class="kingdom-section"><div class="ks-label">${escapeHtml(s.label)}</div>${s.paragraphs.map(p => `<p>${mdBold(p)}</p>`).join('')}</div>`
+    ).join('');
+    return `<div class="kingdom-card" data-accordion id="sub-${k.id}">
+      <div class="kingdom-card-head" data-toggle>
+        <span class="kingdom-icon">${escapeHtml(k.icon)}</span>
+        <div class="kingdom-name-wrap">
+          <div class="kingdom-name">${escapeHtml(k.name)}</div>
+          <div class="kingdom-epithet">${escapeHtml(k.epithet)}</div>
+        </div>
+        <span class="deity-caret">▾</span>
+      </div>
+      <div class="kingdom-card-body"><div>${sectionsHtml}</div></div>
+    </div>`;
+  }
+
+  function renderLoreChapter(chapter){
+    let html = '';
+    if(chapter.intro && chapter.intro.length) html += renderEntryParagraphs(chapter.intro);
+
+    html += `<div class="subsection-title" id="sub-panteao-deuses">🌟 Os Doze Deuses da Alma</div>`;
+    if(chapter.pantheon.gods_intro) html += renderEntryParagraphs(chapter.pantheon.gods_intro);
+    html += `<div class="deity-grid">${chapter.pantheon.gods.map(g => renderDeityCard(g,'divine')).join('')}</div>`;
+
+    html += `<div class="subsection-title" id="sub-panteao-demonios">💀 Os Doze Demônios do Coração</div>`;
+    if(chapter.pantheon.demons_intro) html += renderEntryParagraphs(chapter.pantheon.demons_intro);
+    html += `<div class="deity-grid">${chapter.pantheon.demons.map(d => renderDeityCard(d,'infernal')).join('')}</div>`;
+
+    chapter.continents.forEach(c => {
+      html += `<div class="lore-continent-head" id="sub-continente-${c.id}"><span class="lc-icon">${escapeHtml(c.icon)}</span> ${escapeHtml(c.name)} <span class="lc-epithet">— ${escapeHtml(c.epithet)}</span></div>`;
+      if(c.intro && c.intro.length) html += renderEntryParagraphs(c.intro);
+      html += `<div class="kingdom-grid">${c.kingdoms.map(k => renderKingdomCard(k)).join('')}</div>`;
+    });
+
+    return html;
+  }
+
+  function escapeHtml(s){
+    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  // Como o texto dos livros (regras.json) às vezes usa **negrito** no estilo
+  // Markdown pra destacar um nome ou termo dentro de um parágrafo corrido
+  // (ex.: "o Rei da Montanha, **Thorin Barba-de-Bronze**, é..."), esta
+  // função escapa o HTML primeiro (nada do texto original consegue injetar
+  // marcação) e só depois troca os pares de ** por <strong> — as únicas
+  // tags que entram no HTML final são as que ela mesma insere.
+  function mdBold(s){
+    // O .replace(/\*\*/g,'') final limpa qualquer ** que tenha sobrado sem
+    // par (ex.: texto cortado no meio pra virar prévia/resumo) — assim
+    // nunca aparecem asteriscos soltos na tela, só o negrito de verdade.
+    return escapeHtml(s).replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>').replace(/\*\*/g, '');
+  }
+
+  function chapterMeta(chapterId){
+    const idx = CH.findIndex(c => c.id === chapterId);
+    return { chapter: CH[idx], idx };
+  }
+
+  // ---------- Views ----------
+  function renderHome(){
+    document.title = 'Heartsoul — Sistema de RPG';
+    topbarTitle.textContent = 'Heartsoul';
+    setActiveNav(null, null);
+    function cardFor(c){
+      const i = CH.indexOf(c);
+      const desc = c.subtitle || (c.paragraphs && c.paragraphs[0] ? c.paragraphs[0].slice(0,90)+'…' : (c.intro && c.intro[0] ? c.intro[0].slice(0,90)+'…' : ''));
+      return `<div class="chapter-card" data-nav="${c.id}">
+        <div class="cc-num">${String(i+1).padStart(2,'0')} ${c.subsections ? '· '+c.subsections.length+' entradas' : ''} · ${readMinutes(c)} min</div>
+        <h3>${escapeHtml(c.title)}</h3>
+        <p>${mdBold(desc)}</p>
+      </div>`;
+    }
+    // Cartões agrupados por Parte, na mesma ordem/tema usado na sidebar —
+    // funciona como um sumário visual logo na página inicial.
+    let partsHtml = '';
+    const seen = new Set();
+    PARTS.forEach(part => {
+      const chapters = part.ids.map(id => CH.find(c => c.id === id)).filter(Boolean);
+      if(!chapters.length) return;
+      chapters.forEach(c => seen.add(c.id));
+      partsHtml += `<div class="home-part">
+        <div class="home-part-head"><span class="home-part-line"></span><h2>${escapeHtml(part.label)}</h2><span class="home-part-line"></span></div>
+        <div class="chapter-grid">${chapters.map(cardFor).join('')}</div>
+      </div>`;
+    });
+    const leftover = CH.filter(c => !seen.has(c.id));
+    if(leftover.length){
+      partsHtml += `<div class="home-part">
+        <div class="home-part-head"><span class="home-part-line"></span><h2>Outros</h2><span class="home-part-line"></span></div>
+        <div class="chapter-grid">${leftover.map(cardFor).join('')}</div>
+      </div>`;
+    }
+
+    content.innerHTML = `
+      <div class="hero">
+        ${sealSVG()}
+        <h1>HEARTSOUL</h1>
+        <p class="tagline">Sua alma escolhe o caminho<span class="sep">·</span>seu coração os meios</p>
+        <div class="hero-divider"><span class="line"></span>${diamondSVG()}<span class="line"></span></div>
+        <div class="stats-row">
+          <div class="stat"><b>${CH.length}</b><span>Capítulos</span></div>
+          <div class="stat"><b>20</b><span>Raças</span></div>
+          <div class="stat"><b>${(CH.find(c=>c.id==='antecedentes')||{subsections:[]}).subsections.length}</b><span>Antecedentes</span></div>
+          <div class="stat"><b>${(CH.find(c=>c.id==='tracos-catalogo')||{subsections:[]}).subsections.length}</b><span>Categorias de Traços</span></div>
+          <div class="stat"><b>150+</b><span>Traços catalogados</span></div>
+        </div>
+      </div>
+      ${partsHtml}
+    `;
+    content.querySelectorAll('[data-nav]').forEach(el => el.addEventListener('click', () => navigate(el.dataset.nav)));
+    window.scrollTo(0,0);
+    updateScrollUI();
+  }
+
+  function renderChapter(chapterId, subId){
+    const { chapter, idx } = chapterMeta(chapterId);
+    if(!chapter){ renderHome(); return; }
+    document.title = chapter.title + ' — Heartsoul';
+    topbarTitle.textContent = chapter.title;
+    setActiveNav(chapterId, subId);
+
+    const subList = chapter.subsections || chapter.subsections_search;
+    const subTitle = subId && subList ? (subList.find(s=>s.id===subId)||{}).title||'' : '';
+    let html = `<div class="crumb"><a data-nav-home>Heartsoul</a> / ${escapeHtml(chapter.title)}${subTitle ? ' / ' + escapeHtml(subTitle) : ''}</div>`;
+
+    html += `<div class="chapter-header">
+      <div class="chapter-number">Capítulo ${String(idx+1).padStart(2,'0')} · ~${readMinutes(chapter)} min de leitura</div>
+      <h1>${escapeHtml(chapter.title)}</h1>
+      ${chapter.subtitle ? `<div class="subtitle">${escapeHtml(chapter.subtitle)}</div>` : ''}
+    </div>`;
+
+    html += `<div class="prose">`;
+
+    // "Nesta página" — sumário interno gerado a partir dos títulos (##)
+    // detectados no texto corrido. Só aparece quando há headings suficientes
+    // pra valer a pena (capítulos curtos não precisam).
+    const pageHeadings = [];
+
+    if(chapter.intro && chapter.intro.length){
+      html += renderEntryParagraphs(chapter.intro, pageHeadings);
+    }
+
+    let bodyHtml = '';
+    if(chapter.id === 'lore-mundo'){
+      bodyHtml += renderLoreChapter(chapter);
+    } else if(chapter.id === 'antecedentes' && chapter.subsections){
+      bodyHtml += `<div class="race-subnav">${chapter.subsections.map(s => `<span class="race-chip${s.id===subId?' active':''}" data-jump="${s.id}">${escapeHtml(s.title)}</span>`).join('')}</div>`;
+      chapter.subsections.forEach(s => { bodyHtml += renderAntecedenteCard(s); });
+    } else if(chapter.subsections){
+      // race chips or category chips
+      const isRaces = chapter.id === 'racas';
+      bodyHtml += `<div class="race-subnav">${chapter.subsections.map(s => `<span class="race-chip${s.id===subId?' active':''}" data-jump="${s.id}">${isRaces?'':''}${escapeHtml(s.title)}</span>`).join('')}</div>`;
+
+      chapter.subsections.forEach(s => {
+        const isBenign = /benign/i.test(s.title);
+        const isMalign = /malign/i.test(s.title);
+        let tag = '';
+        if(isBenign) tag = '<span class="tag benign">Benigno</span>';
+        if(isMalign) tag = '<span class="tag malign">Maligno</span>';
+        bodyHtml += `<div class="subsection-title" id="sub-${s.id}">${escapeHtml(s.title)} ${tag}</div>`;
+        bodyHtml += renderEntryParagraphs(s.paragraphs, pageHeadings);
+      });
+    } else {
+      bodyHtml += renderEntryParagraphs(chapter.paragraphs || [], pageHeadings);
+    }
+
+    if(pageHeadings.length >= 3){
+      html += `<div class="page-toc"><div class="page-toc-label">Nesta página</div><div class="page-toc-list">${
+        pageHeadings.map(h => `<a data-jump-anchor="${h.id}">${escapeHtml(h.text)}</a>`).join('')
+      }</div></div>`;
+    }
+
+    html += bodyHtml;
+
+    html += `</div>`;
+
+    // prev/next footer
+    const prev = CH[idx-1];
+    const next = CH[idx+1];
+    html += `<div class="chapter-nav-footer">
+      ${prev ? `<div class="nav-footer-btn prev" data-nav="${prev.id}"><div class="fk">← Anterior</div><div class="ft">${escapeHtml(prev.title)}</div></div>` : `<div></div>`}
+      ${next ? `<div class="nav-footer-btn next" data-nav="${next.id}"><div class="fk">Próximo →</div><div class="ft">${escapeHtml(next.title)}</div></div>` : `<div></div>`}
+    </div>`;
+
+    content.innerHTML = html;
+    content.querySelectorAll('[data-nav]').forEach(el => el.addEventListener('click', () => navigate(el.dataset.nav)));
+    content.querySelector('[data-nav-home]')?.addEventListener('click', () => navigate(null));
+    content.querySelectorAll('[data-jump]').forEach(el => el.addEventListener('click', () => {
+      navigate(chapterId, el.dataset.jump, true);
+    }));
+    content.querySelectorAll('[data-jump-anchor]').forEach(el => el.addEventListener('click', () => {
+      document.getElementById(el.dataset.jumpAnchor)?.scrollIntoView({ behavior:'smooth', block:'start' });
+    }));
+    content.querySelectorAll('[data-toggle]').forEach(el => el.addEventListener('click', () => {
+      el.closest('[data-accordion]').classList.toggle('expanded');
+    }));
+
+    if(subId){
+      const target = document.getElementById('sub-' + subId);
+      if(target){
+        if(target.hasAttribute('data-accordion')) target.classList.add('expanded');
+        target.scrollIntoView({behavior:'smooth', block:'start'});
+      }
+    } else {
+      window.scrollTo(0,0);
+    }
+    updateScrollUI();
+  }
+
+  function navigate(chapterId, subId, skipHash){
+    if(!chapterId){
+      location.hash = '';
+      renderHome();
+      return;
+    }
+    const hash = '#/' + chapterId + (subId ? '/' + subId : '');
+    if(location.hash !== hash) location.hash = hash;
+    else renderChapter(chapterId, subId);
+  }
+
+  function routeFromHash(){
+    const h = location.hash.replace(/^#\/?/, '');
+    if(!h){ renderHome(); return; }
+    const [chapterId, subId] = h.split('/');
+    renderChapter(chapterId, subId);
+  }
+
+  window.addEventListener('hashchange', routeFromHash);
+
+  // ---------- Search ----------
+  // Melhorias: (1) aceita várias palavras (todas precisam aparecer, em
+  // qualquer ordem — não só a frase exata); (2) agora também varre o
+  // texto de introdução dos capítulos (chapter.intro), que antes nunca
+  // entrava na busca; (3) resultados agrupados por capítulo com contagem;
+  // (4) navegação por teclado (↑/↓/Enter) e atalho "/" pra focar a busca;
+  // (5) botão de limpar (×) dentro do campo.
+  let searchTimer;
+  let activeHitIndex = -1;
+
+  searchInput.addEventListener('input', () => {
+    searchClear.classList.toggle('show', searchInput.value.length > 0);
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(doSearch, 120);
+  });
+  searchClear.addEventListener('click', () => {
+    searchInput.value = '';
+    searchClear.classList.remove('show');
+    buildSidebar();
+    searchInput.focus();
+  });
+  searchInput.addEventListener('keydown', (e) => {
+    const hitEls = () => Array.from(sidebarNav.querySelectorAll('.search-hit'));
+    if(e.key === 'Escape'){
+      if(searchInput.value){ searchInput.value=''; searchClear.classList.remove('show'); buildSidebar(); }
+      else searchInput.blur();
+      return;
+    }
+    if(e.key === 'ArrowDown' || e.key === 'ArrowUp'){
+      const els = hitEls();
+      if(!els.length) return;
+      e.preventDefault();
+      els.forEach(el => el.classList.remove('kbd-active'));
+      activeHitIndex += (e.key === 'ArrowDown' ? 1 : -1);
+      if(activeHitIndex < 0) activeHitIndex = els.length - 1;
+      if(activeHitIndex >= els.length) activeHitIndex = 0;
+      els[activeHitIndex].classList.add('kbd-active');
+      els[activeHitIndex].scrollIntoView({ block:'nearest' });
+    } else if(e.key === 'Enter'){
+      const els = hitEls();
+      if(!els.length) return;
+      e.preventDefault();
+      (els[activeHitIndex] || els[0]).click();
+    }
+  });
+  window.addEventListener('keydown', (e) => {
+    if(e.key === '/' && document.activeElement !== searchInput && !['INPUT','TEXTAREA'].includes(document.activeElement.tagName)){
+      e.preventDefault();
+      searchInput.focus();
+    }
+  });
+
+  function doSearch(){
+    activeHitIndex = -1;
+    const tokens = searchInput.value.trim().toLowerCase().split(/\s+/).filter(t => t.length >= 2);
+    if(tokens.length === 0){ buildSidebar(); return; }
+
+    function matchesAll(textLower){
+      return tokens.every(t => textLower.includes(t));
+    }
+
+    const hits = [];
+    CH.forEach(c => {
+      let scanList = c.subsections ? c.subsections : (c.subsections_search ? c.subsections_search : [{id:null, title:null, paragraphs:c.paragraphs||[]}]);
+      if(c.intro && c.intro.length){
+        scanList = [{ id:null, title:null, paragraphs:c.intro }, ...scanList];
+      }
+      if(matchesAll(c.title.toLowerCase())){
+        hits.push({ chapterId: c.id, subId: null, chapterTitle: c.title, snippet: markTokens(escapeHtml(c.title), tokens), isTitle:true });
+      }
+      scanList.forEach(block => {
+        if(block.title && matchesAll(block.title.toLowerCase())){
+          hits.push({ chapterId: c.id, subId: block.id, chapterTitle: c.title, snippet: markTokens(escapeHtml(block.title), tokens), isTitle:true });
+        }
+        (block.paragraphs||[]).forEach(p => {
+          const pLower = p.toLowerCase();
+          if(matchesAll(pLower)){
+            const firstIdx = pLower.indexOf(tokens[0]);
+            hits.push({
+              chapterId: c.id, subId: block.id, chapterTitle: c.title,
+              snippet: makeSnippet(p, firstIdx === -1 ? 0 : firstIdx, tokens[0].length, tokens)
+            });
+          }
+        });
+      });
+    });
+
+    sidebarNav.innerHTML = '';
+    const wrap = document.createElement('div');
+    wrap.className = 'search-results';
+    if(hits.length === 0){
+      wrap.innerHTML = `<div class="no-results">Nenhum resultado para "${escapeHtml(searchInput.value)}"</div>`;
+    } else {
+      const shown = hits.slice(0, 80);
+      wrap.innerHTML = `<div class="search-meta">${hits.length} resultado${hits.length===1?'':'s'} para "${escapeHtml(searchInput.value.trim())}"</div>`;
+      let lastChapter = null;
+      shown.forEach(h => {
+        if(h.chapterId !== lastChapter){
+          const groupLabel = document.createElement('div');
+          groupLabel.className = 'search-group-label';
+          groupLabel.textContent = h.chapterTitle;
+          wrap.appendChild(groupLabel);
+          lastChapter = h.chapterId;
+        }
+        const el = document.createElement('div');
+        el.className = 'search-hit';
+        el.innerHTML = `<div class="sh-snip">${h.snippet}</div>`;
+        el.addEventListener('click', () => { navigate(h.chapterId, h.subId); closeSidebarMobile(); });
+        wrap.appendChild(el);
+      });
+      if(hits.length > shown.length){
+        const hint = document.createElement('div');
+        hint.className = 'search-hint';
+        hint.textContent = `Mostrando os ${shown.length} primeiros — refine a busca para ver mais.`;
+        wrap.appendChild(hint);
+      }
+    }
+    sidebarNav.appendChild(wrap);
+  }
+
+  function markTokens(escapedText, tokens){
+    let out = escapedText;
+    tokens.forEach(t => {
+      const re = new RegExp('(' + escapeRegex(t) + ')', 'ig');
+      out = out.replace(re, '<mark>$1</mark>');
+    });
+    return out;
+  }
+
+  function makeSnippet(text, idx, len, tokens){
+    const start = Math.max(0, idx - 40);
+    const end = Math.min(text.length, idx + len + 60);
+    let snip = (start>0?'…':'') + text.slice(start,end) + (end<text.length?'…':'');
+    let marked = markTokens(escapeHtml(snip), tokens || []);
+    // Mesma troca de **negrito** que o resto do livro usa — a prévia da
+    // busca não deve mostrar os asteriscos crus.
+    return marked.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>').replace(/\*\*/g, '');
+  }
+  function escapeRegex(s){ return s.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'); }
+
+  // ---------- Decorative SVGs ----------
+  function sealSVG(){
+    return `<svg class="hero-seal" width="120" height="120" viewBox="0 0 120 120" fill="none">
+      <circle cx="60" cy="60" r="54" stroke="#C9A15C" stroke-width="1" opacity="0.5"/>
+      <circle cx="60" cy="60" r="44" stroke="#9C2B2B" stroke-width="1" opacity="0.6"/>
+      <circle cx="60" cy="60" r="4" fill="#C9A15C"/>
+      <g stroke="#C9A15C" stroke-width="1" opacity="0.7">
+        <path d="M60 16 L60 34"/><path d="M60 86 L60 104"/>
+        <path d="M16 60 L34 60"/><path d="M86 60 L104 60"/>
+        <path d="M27 27 L38 38"/><path d="M82 82 L93 93"/>
+        <path d="M93 27 L82 38"/><path d="M38 82 L27 93"/>
+      </g>
+      <path d="M60 24 L84 60 L60 96 L36 60 Z" stroke="#9C2B2B" stroke-width="1" opacity="0.55" fill="none"/>
+    </svg>`;
+  }
+  function diamondSVG(){
+    return `<svg width="10" height="10" viewBox="0 0 10 10"><path d="M5 0L10 5L5 10L0 5Z" fill="#9C2B2B"/></svg>`;
+  }
+
+  // ---------- Init ----------
+  buildSidebar();
+  routeFromHash();
+})();
+
+</script>
+<script>
+document.getElementById('brandHome').addEventListener('click', () => { location.hash=''; window.dispatchEvent(new HashChangeEvent('hashchange')); });
+</script>
+</body>
+</html>
