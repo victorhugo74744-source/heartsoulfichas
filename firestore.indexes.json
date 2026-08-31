@@ -21,7 +21,7 @@
       "queryScope": "COLLECTION",
       "fields": [
         { "fieldPath": "type", "order": "ASCENDING" },
-        { "fieldPath": "timestamp", "order": "ASCENDING" }
+        { "fieldPath": "timestamp", "order": "DESCENDING" }
       ]
     },
     {
@@ -30,7 +30,7 @@
       "fields": [
         { "fieldPath": "type", "order": "ASCENDING" },
         { "fieldPath": "fromUserId", "order": "ASCENDING" },
-        { "fieldPath": "timestamp", "order": "ASCENDING" }
+        { "fieldPath": "timestamp", "order": "DESCENDING" }
       ]
     },
     {
@@ -39,7 +39,7 @@
       "fields": [
         { "fieldPath": "type", "order": "ASCENDING" },
         { "fieldPath": "toUserId", "order": "ASCENDING" },
-        { "fieldPath": "timestamp", "order": "ASCENDING" }
+        { "fieldPath": "timestamp", "order": "DESCENDING" }
       ]
     }
   ],
