@@ -27,16 +27,20 @@ function renderToolToolbar() {
   if (!bar) return;
   const isMaster = isTableOwner();
   bar.innerHTML = `
+    <div class="tool-toolbar-label">Navegação</div>
     <button type="button" data-tool="pan" title="Mover o mapa (padrão) — atalho: V"><span class="tool-label">✋ Mover</span><kbd class="tool-key">V</kbd></button>
     <button type="button" data-tool="ruler" title="Medir distância em casas da grade (segure Alt/Option para medir livre, sem encaixar) — atalho: R"><span class="tool-label">📏 Régua</span><kbd class="tool-key">R</kbd></button>
     <button type="button" data-tool="ping" title="Marcar um ponto para todos verem, na sua cor — atalho: P"><span class="tool-label">📍 Marcar</span><kbd class="tool-key">P</kbd></button>
     <button type="button" data-tool="select" title="Seleção múltipla: clique em cada token pra marcar/desmarcar (os que você pode mexer), depois arraste qualquer um dos marcados para mover o grupo inteiro junto — clique em uma área vazia do mapa para limpar a seleção — atalho: M"><span class="tool-label">🔲 Seleção múltipla</span><kbd class="tool-key">M</kbd></button>
     <button type="button" id="cursorLockBtn"><span class="tool-label">🧭 Girar c/ cursor</span><kbd class="tool-key">T</kbd></button>
-    <div class="tt-sep"></div>
+
+    <div class="tool-toolbar-label">Áreas de efeito</div>
     <button type="button" data-tool="template" data-shape="circle" title="Área circular (ex.: bola de fogo) — arraste do centro até a borda, na sua cor — atalho: 1"><span class="tool-label">⭕ Círculo</span><kbd class="tool-key">1</kbd></button>
     <button type="button" data-tool="template" data-shape="cone" title="Área em cone (ex.: sopro de dragão) — arraste da origem até a ponta — atalho: 2"><span class="tool-label">🔺 Cone</span><kbd class="tool-key">2</kbd></button>
     <button type="button" data-tool="template" data-shape="line" title="Área em linha (ex.: raio) — arraste do início até o fim — atalho: 3"><span class="tool-label">▭ Linha</span><kbd class="tool-key">3</kbd></button>
     <button type="button" id="clearTemplatesBtn" title="Apagar suas áreas nesta cena (o Mestre apaga todas) — dica: com a ferramenta de área ativa, clique numa área pra apagar só ela — atalho: C"><span class="tool-label">🧹 Limpar áreas</span><kbd class="tool-key">C</kbd></button>
+
+    <div class="tool-toolbar-label">Grade</div>
     <button type="button" id="snapToggleBtn" title="Ao soltar um token, encaixar automaticamente na célula mais próxima da grade (segure Alt/Option para soltar livre mesmo com isto ligado) — atalho: G"><span class="tool-label">🧲 Encaixar na grade</span><kbd class="tool-key">G</kbd></button>
     <label class="cell-unit-label" title="Quantos metros equivalem a uma casa da grade — usado nos números da régua e das áreas de ataque">
       <span>m/casa</span>
@@ -44,24 +48,27 @@ function renderToolToolbar() {
     </label>
     ${isMaster ? `
       <div class="tt-sep"></div>
-      <button type="button" data-tool="draw" title="Desenhar sobre o mapa — atalho: D"><span class="tool-label">✏️ Desenhar</span><kbd class="tool-key">D</kbd></button>
-      <button type="button" class="color-swatch" id="drawWheelBtn" style="background:${drawColor};" title="Cor do desenho (roda cromática)"></button>
-      <button type="button" id="undoDrawBtn" title="Desfazer o último traço — atalho: Ctrl/Cmd+Z"><span class="tool-label">↩️ Desfazer</span><kbd class="tool-key">Ctrl+Z</kbd></button>
-      <button type="button" id="clearDrawBtn" title="Apagar todos os desenhos desta cena — dica: com a ferramenta de desenho ativa, clique num traço pra apagar só ele — atalho: X"><span class="tool-label">🧹 Limpar desenhos</span><kbd class="tool-key">X</kbd></button>
-      <div class="tt-sep"></div>
-      <button type="button" data-tool="wall" title="Desenhar paredes que bloqueiam a visão dos tokens: clique ponto a ponto contornando o obstáculo e clique no ponto inicial (ou dê 2 cliques / Enter) para terminar — a névoa de guerra é revelada automaticamente pela visão de cada token (👁 na lista de tokens), bloqueada por estas paredes; botão direito (ou Backspace) desfaz o último ponto, Esc cancela o traço atual; com a ferramenta ativa (e nenhum traço em andamento), arraste um ponto já existente de uma parede salva para reposicioná-lo — atalho: W"><span class="tool-label">🧱 Parede</span><kbd class="tool-key">W</kbd></button>
-      <button type="button" data-tool="room" title="Contornar um retângulo/sala inteira com paredes de uma vez: arraste de um canto ao outro e solte — nasce como um contorno fechado, sem precisar clicar ponto a ponto — atalho: B"><span class="tool-label">▭ Sala</span><kbd class="tool-key">B</kbd></button>
-      <button type="button" id="clearWallsBtn" title="Apagar todas as paredes desta cena — atalho: Shift+W"><span class="tool-label">🧹 Limpar paredes</span><kbd class="tool-key">⇧W</kbd></button>
-      <button type="button" data-tool="door" title="Colocar uma porta: arraste de um lado ao outro do vão — porta nasce fechada (bloqueia a visão igual a uma parede); qualquer pessoa na mesa clica no ícone 🚪 no mapa para abrir/fechar, revelando a névoa do outro lado; botão direito (Mestre) tranca/destranca — porta trancada só o Mestre abre; com a ferramenta 🚪 ativa, clicar numa porta já existente a apaga — atalho: O"><span class="tool-label">🚪 Porta</span><kbd class="tool-key">O</kbd></button>
-      <button type="button" id="clearDoorsBtn" title="Apagar todas as portas desta cena — atalho: Shift+O"><span class="tool-label">🧹 Limpar portas</span><kbd class="tool-key">⇧O</kbd></button>
-      <div class="tt-sep"></div>
-      <button type="button" data-tool="light" title="Colocar uma fonte de luz (tocha): clique no mapa para acender uma — ela revela sua área sempre, independente de onde os tokens estão, bloqueada pelas paredes; role a roda do mouse sobre uma luz já acesa pra ajustar o raio; com a ferramenta ativa, clique numa luz já existente pra apagá-la — atalho: L"><span class="tool-label">🔥 Luz</span><kbd class="tool-key">L</kbd></button>
-      <button type="button" id="clearLightsBtn" title="Apagar todas as fontes de luz desta cena — atalho: Shift+L"><span class="tool-label">🧹 Limpar luzes</span><kbd class="tool-key">⇧L</kbd></button>
-      <button type="button" id="darknessToggleBtn" title="Escuridão real: liga/desliga pra esta cena. Ligada, cada token só enxerga bem perto de si (mais o alcance da própria visão no escuro, ajustável no painel do token) — exceto onde uma fonte de luz (🔥) estiver acesa. Desligada (padrão), os tokens enxergam normalmente até o alcance de visão de cada um, como sempre — atalho: N"><span class="tool-label">🌑 Escuridão</span><kbd class="tool-key">N</kbd></button>
-      <div class="tt-sep"></div>
-      <button type="button" id="resetExploredBtn" title="Resetar a memória de exploração desta cena: a névoa volta a cobrir tudo que já foi visto até agora — as paredes e o mapa em si não são afetados">
-        <span class="tool-label">🌫 Resetar memória</span>
-      </button>
+      <div class="tool-toolbar-master">
+        <div class="tool-toolbar-label">Mestre</div>
+        <button type="button" data-tool="draw" title="Desenhar sobre o mapa — atalho: D"><span class="tool-label">✏️ Desenhar</span><kbd class="tool-key">D</kbd></button>
+        <button type="button" class="color-swatch" id="drawWheelBtn" style="background:${drawColor};" title="Cor do desenho (roda cromática)"></button>
+        <button type="button" id="undoDrawBtn" title="Desfazer o último traço — atalho: Ctrl/Cmd+Z"><span class="tool-label">↩️ Desfazer</span><kbd class="tool-key">Ctrl+Z</kbd></button>
+        <button type="button" id="clearDrawBtn" title="Apagar todos os desenhos desta cena — dica: com a ferramenta de desenho ativa, clique num traço pra apagar só ele — atalho: X"><span class="tool-label">🧹 Limpar desenhos</span><kbd class="tool-key">X</kbd></button>
+        <div class="tt-sep"></div>
+        <button type="button" data-tool="wall" title="Desenhar paredes que bloqueiam a visão dos tokens: clique ponto a ponto contornando o obstáculo e clique no ponto inicial (ou dê 2 cliques / Enter) para terminar — a névoa de guerra é revelada automaticamente pela visão de cada token (👁 na lista de tokens), bloqueada por estas paredes; botão direito (ou Backspace) desfaz o último ponto, Esc cancela o traço atual; com a ferramenta ativa (e nenhum traço em andamento), arraste um ponto já existente de uma parede salva para reposicioná-lo — atalho: W"><span class="tool-label">🧱 Parede</span><kbd class="tool-key">W</kbd></button>
+        <button type="button" data-tool="room" title="Contornar um retângulo/sala inteira com paredes de uma vez: arraste de um canto ao outro e solte — nasce como um contorno fechado, sem precisar clicar ponto a ponto — atalho: B"><span class="tool-label">▭ Sala</span><kbd class="tool-key">B</kbd></button>
+        <button type="button" id="clearWallsBtn" title="Apagar todas as paredes desta cena — atalho: Shift+W"><span class="tool-label">🧹 Limpar paredes</span><kbd class="tool-key">⇧W</kbd></button>
+        <button type="button" data-tool="door" title="Colocar uma porta: arraste de um lado ao outro do vão — porta nasce fechada (bloqueia a visão igual a uma parede); qualquer pessoa na mesa clica no ícone 🚪 no mapa para abrir/fechar, revelando a névoa do outro lado; botão direito (Mestre) tranca/destranca — porta trancada só o Mestre abre; com a ferramenta 🚪 ativa, clicar numa porta já existente a apaga — atalho: O"><span class="tool-label">🚪 Porta</span><kbd class="tool-key">O</kbd></button>
+        <button type="button" id="clearDoorsBtn" title="Apagar todas as portas desta cena — atalho: Shift+O"><span class="tool-label">🧹 Limpar portas</span><kbd class="tool-key">⇧O</kbd></button>
+        <div class="tt-sep"></div>
+        <button type="button" data-tool="light" title="Colocar uma fonte de luz (tocha): clique no mapa para acender uma — ela revela sua área sempre, independente de onde os tokens estão, bloqueada pelas paredes; role a roda do mouse sobre uma luz já acesa pra ajustar o raio; com a ferramenta ativa, clique numa luz já existente pra apagá-la — atalho: L"><span class="tool-label">🔥 Luz</span><kbd class="tool-key">L</kbd></button>
+        <button type="button" id="clearLightsBtn" title="Apagar todas as fontes de luz desta cena — atalho: Shift+L"><span class="tool-label">🧹 Limpar luzes</span><kbd class="tool-key">⇧L</kbd></button>
+        <button type="button" id="darknessToggleBtn" title="Escuridão real: liga/desliga pra esta cena. Ligada, cada token só enxerga bem perto de si (mais o alcance da própria visão no escuro, ajustável no painel do token) — exceto onde uma fonte de luz (🔥) estiver acesa. Desligada (padrão), os tokens enxergam normalmente até o alcance de visão de cada um, como sempre — atalho: N"><span class="tool-label">🌑 Escuridão</span><kbd class="tool-key">N</kbd></button>
+        <div class="tt-sep"></div>
+        <button type="button" id="resetExploredBtn" title="Resetar a memória de exploração desta cena: a névoa volta a cobrir tudo que já foi visto até agora — as paredes e o mapa em si não são afetados">
+          <span class="tool-label">🌫 Resetar memória</span>
+        </button>
+      </div>
     ` : ''}`;
 
   bar.querySelectorAll('[data-tool]').forEach(btn => btn.addEventListener('click', () => {
