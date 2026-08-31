@@ -376,11 +376,42 @@ function openColorWheel(anchorEl, initialColor, onApply) {
 }
 
 // ---------------------------------------------------------------- LOBBY --
+// Não dá pra simplesmente fazer db.collection('tables').orderBy(...).get()
+// sem where nenhum: a regra de leitura de /tables (ver firestore.rules) só
+// libera mesa por mesa (createdBy == você OU você tem ficha na pasta dela),
+// e pra uma QUERY (lista) o Firestore exige que a regra valha pra TODO o
+// conjunto de resultados só olhando a própria query — sem where nenhum ele
+// nem tenta filtrar, recusa a busca inteira ("Missing or insufficient
+// permissions"), mesmo que você tivesse acesso a algumas mesas. Por isso
+// aqui buscamos em duas partes, cada uma com where que casa com a regra:
+// 1) mesas que você mesmo criou (cobre o Mestre) e 2) mesas das pastas
+// onde você tem ficha (cobre o jogador) — descobertas via collectionGroup
+// em /folders/*/members, que tem leitura liberada pra qualquer logado.
+async function fetchOwnAndMemberFolderIds(uid) {
+  const memberSnap = await db.collectionGroup('members').where('uid', '==', uid).get();
+  return memberSnap.docs.map(d => d.ref.parent.parent.id);
+}
+
 async function loadTables() {
   const listEl = document.getElementById('tablesList');
   try {
-    const snap = await db.collection('tables').orderBy('createdAt', 'desc').get();
-    const tables = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    const byMe = await db.collection('tables').where('createdBy', '==', curUser.uid).get();
+    const byIdMap = new Map(byMe.docs.map(d => [d.id, { id: d.id, ...d.data() }]));
+
+    const folderIds = await fetchOwnAndMemberFolderIds(curUser.uid);
+    // 'in' aceita no máximo 10 valores por consulta — quebra em blocos.
+    for (let i = 0; i < folderIds.length; i += 10) {
+      const chunk = folderIds.slice(i, i + 10);
+      if (chunk.length === 0) continue;
+      const snap = await db.collection('tables').where('folderId', 'in', chunk).get();
+      snap.docs.forEach(d => byIdMap.set(d.id, { id: d.id, ...d.data() }));
+    }
+
+    const tables = Array.from(byIdMap.values()).sort((a, b) => {
+      const ta = a.createdAt?.toMillis ? a.createdAt.toMillis() : 0;
+      const tb = b.createdAt?.toMillis ? b.createdAt.toMillis() : 0;
+      return tb - ta;
+    });
     listEl.classList.remove('center-loading');
     if (tables.length === 0) {
       listEl.innerHTML = `<div class="empty-state"><div class="es-icon">🗺</div><p>Nenhuma mesa criada ainda.</p></div>`;
