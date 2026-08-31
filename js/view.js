@@ -58,6 +58,20 @@ function traitAttrBonusesV(s) {
   return total;
 }
 
+// ================= BARRAS DE RECURSO (visualização) =================
+// Pequena barra horizontal sob HP/Sanidade/Estamina/Energia — em mesa, o
+// que importa num relance é "está bem, apertado ou crítico", não fazer
+// conta de cabeça com a fração. Cor neutra (dourada) até 50%, âmbar até
+// 25%, e vermelho (mesma cor de "maligno") abaixo disso.
+function resourceBarHtml(cur, max) {
+  const ratio = max > 0 ? Math.max(0, Math.min(1, cur / max)) : 0;
+  const state = ratio <= 0.25 ? 'crit' : (ratio <= 0.5 ? 'low' : '');
+  return `<div class="resource-bar ${state}"><div class="rb-fill" style="width:${Math.round(ratio * 100)}%;"></div></div>`;
+}
+function resourceLineHtml(cur, max) {
+  return `<div class="resource-row">${cur} / ${max}</div>${resourceBarHtml(cur, max)}`;
+}
+
 function renderLineListView(items) {
   const cleaned = (items || []).map(s => (s || '').trim()).filter(Boolean);
   if (!cleaned.length) return '<p class="hint" style="margin:0;">Nada registrado ainda.</p>';
@@ -355,30 +369,41 @@ function renderSheet(s, ownerProfile, canManage, sheetId, isMaster, activeTab) {
        <div class="extra-skills-row">${s.backgroundSkills.map(n => `<span class="extra-skill-chip">${escapeHtml(n)}</span>`).join('')}</div>`
     : '';
 
+  // ---- Cartões de item (perícia/traço/habilidade/técnica) ----
+  // Antes era uma lista de texto corrido com sublinhado pontilhado (mesmo
+  // componente .li usado pra "Anotações"/inventário); nomes, custos e
+  // descrições ficavam todos misturados na mesma linha. Isso troca por um
+  // pequeno cartão por item (mesma linguagem visual do .trait-pick usado no
+  // editor: nome em destaque + metadado alinhado à direita + descrição
+  // abaixo), com um friso colorido à esquerda pra identificar a natureza do
+  // traço (racial = dourado, benigno/maligno = verde/vermelho) num relance.
   const skillsHtml = (s.skills || []).length
-    ? s.skills.map(sk => `<div class="li"><b>${escapeHtml(sk.name)}</b> — +${sk.points}</div>`).join('')
+    ? s.skills.map(sk => `<div class="sheet-item"><div class="si-head"><span class="si-name">${escapeHtml(sk.name)}</span><span class="si-meta">+${sk.points}</span></div></div>`).join('')
     : '<p class="hint" style="margin:0;">Nenhuma perícia registrada.</p>';
 
   const raceTraitCardHtml = (t) => {
     const { name, desc } = raceTraitNameDesc(t);
-    return `<div class="li"><b>${escapeHtml(name)}</b>${desc ? formatTraitBody(desc) : ''}</div>`;
+    return `<div class="sheet-item race"><div class="si-head"><span class="si-name">${escapeHtml(name)}</span></div>${desc ? formatTraitBody(desc) : ''}</div>`;
   };
   const raceOptHtml = (s.raceOptionalTraits || []).map(raceTraitCardHtml).join('');
   const raceBoughtHtml = (s.raceTraitsBought || []).map(raceTraitCardHtml).join('');
 
   const traitsHtml = (s.extraTraits || []).length
-    ? s.extraTraits.map(t => `<div class="li"><b>${escapeHtml(t.name)}</b> ${t.cat.endsWith('_malign') ? '<span class="tag malign">Maligno</span>' : '<span class="tag benign">Benigno</span>'} — ${escapeHtml(t.desc)}</div>`).join('')
+    ? s.extraTraits.map(t => {
+        const malign = t.cat.endsWith('_malign');
+        return `<div class="sheet-item ${malign ? 'malign' : 'benign'}"><div class="si-head"><span class="si-name">${escapeHtml(t.name)}</span><span class="tag ${malign ? 'malign' : 'benign'}">${malign ? 'Maligno' : 'Benigno'}</span></div><div class="si-desc">${escapeHtml(t.desc)}</div></div>`;
+      }).join('')
     : '<p class="hint" style="margin:0;">Nenhum traço adicional.</p>';
 
   const traitLimit = 6 + (s.traitBonusFromInspiration || 0);
 
   const abilitiesHtml = (s.abilities || []).length
-    ? s.abilities.map(a => `<div class="li"><b>${escapeHtml(a.name)}</b>${a.actionType ? ` <span class="atype">${escapeHtml(a.actionType)}</span>` : ''}${abilityCostLabelV(a) ? ` — <span style="color:var(--ink-mute);">${escapeHtml(abilityCostLabelV(a))}</span>` : ''}${a.desc ? `<div style="margin-top:2px;">${escapeHtml(a.desc)}</div>` : ''}</div>`).join('')
+    ? s.abilities.map(a => `<div class="sheet-item"><div class="si-head"><span class="si-name">${escapeHtml(a.name)}</span>${a.actionType ? `<span class="atype">${escapeHtml(a.actionType)}</span>` : ''}${abilityCostLabelV(a) ? `<span class="si-meta">${escapeHtml(abilityCostLabelV(a))}</span>` : ''}</div>${a.desc ? `<div class="si-desc">${escapeHtml(a.desc)}</div>` : ''}</div>`).join('')
     : '<p class="hint" style="margin:0;">Nenhuma habilidade registrada.</p>';
 
   const techniqueCostLabelV = (t) => t.cost || (t.costAmount && t.costType ? `${t.costAmount} ${t.costType}` : '');
   const techniquesHtml = (s.techniques || []).length
-    ? s.techniques.map(t => `<div class="li"><b>${escapeHtml(t.name)}</b>${t.actionType ? ` <span class="atype">${escapeHtml(t.actionType)}</span>` : ''}${techniqueCostLabelV(t) ? ` — <span style="color:var(--ink-mute);">${escapeHtml(techniqueCostLabelV(t))}</span>` : ''}${t.desc ? `<div style="margin-top:2px;">${escapeHtml(t.desc)}</div>` : ''}</div>`).join('')
+    ? s.techniques.map(t => `<div class="sheet-item"><div class="si-head"><span class="si-name">${escapeHtml(t.name)}</span>${t.actionType ? `<span class="atype">${escapeHtml(t.actionType)}</span>` : ''}${techniqueCostLabelV(t) ? `<span class="si-meta">${escapeHtml(techniqueCostLabelV(t))}</span>` : ''}</div>${t.desc ? `<div class="si-desc">${escapeHtml(t.desc)}</div>` : ''}</div>`).join('')
     : '<p class="hint" style="margin:0;">Nenhuma técnica registrada.</p>';
 
   const res = s.resources || {};
@@ -394,7 +419,7 @@ function renderSheet(s, ownerProfile, canManage, sheetId, isMaster, activeTab) {
   }
   const hpHtml = BODY_PARTS_V.map(([k, label]) => {
     const part = hp[k] || { max: 0, cur: 0 };
-    return `<div class="sum-attr"><div class="sa-name">${label}</div><div class="sa-val" style="font-size:15px;">${part.cur}/${part.max}</div></div>`;
+    return `<div class="sum-attr"><div class="sa-name">${label}</div><div class="sa-val" style="font-size:15px;">${part.cur}/${part.max}</div>${resourceBarHtml(part.cur, part.max)}</div>`;
   }).join('');
   const econ = res.economy || { bronze: 0, prata: 0, ouro: 0, platina: 0 };
   const sanityMaxV = 10 + attrModV((s.attributes.vontade || 0) + (traitBonuses.vontade || 0) + (manualBonus.vontade || 0));
@@ -415,11 +440,11 @@ function renderSheet(s, ownerProfile, canManage, sheetId, isMaster, activeTab) {
       <div class="sheet-section-title" style="margin-top:0;">HP por partes do corpo</div>
       <div class="sheet-summary-grid">${hpHtml}</div>
       <div class="sheet-section-title">Sanidade</div>
-      <p class="sheet-list">${sanityCurV} / ${sanityMaxV}</p>
+      ${resourceLineHtml(sanityCurV, sanityMaxV)}
       <div class="sheet-section-title">Estamina</div>
-      <p class="sheet-list">${res.estaminaCur || 0} / ${res.estaminaMax || 0}</p>
+      ${resourceLineHtml(res.estaminaCur || 0, res.estaminaMax || 0)}
       <div class="sheet-section-title">Energia</div>
-      <p class="sheet-list">${res.vigorCur || 0} / ${res.vigorMax || 0}</p>
+      ${resourceLineHtml(res.vigorCur || 0, res.vigorMax || 0)}
       <div class="sheet-section-title">Economia</div>
       <div class="sheet-summary-grid">${COIN_TYPES_V.map(([k, label]) => `<div class="sum-attr"><div class="sa-name">${label}</div><div class="sa-val" style="font-size:15px;">${(econ[k] || 0)}</div></div>`).join('')}</div>
       <p class="hint" style="margin:8px 0 0;">Total equivalente: ${economyTotalInBronzeV(econ)} Bronzes.</p>
@@ -435,14 +460,14 @@ function renderSheet(s, ownerProfile, canManage, sheetId, isMaster, activeTab) {
     <div class="panel">
       <h2>Perícias</h2>
       ${bgSkillsHtml}
-      <div class="sheet-list">${skillsHtml}</div>
+      <div class="sheet-item-list">${skillsHtml}</div>
     </div>
 
     <div class="panel">
       <h2>Habilidades e Técnicas</h2>
-      <div class="sheet-list">${abilitiesHtml}</div>
+      <div class="sheet-item-list">${abilitiesHtml}</div>
       <div class="sheet-section-title">Técnicas</div>
-      <div class="sheet-list">${techniquesHtml}</div>
+      <div class="sheet-item-list">${techniquesHtml}</div>
     </div>
 
     <div class="panel">
@@ -450,18 +475,18 @@ function renderSheet(s, ownerProfile, canManage, sheetId, isMaster, activeTab) {
       <div class="sheet-section-title">Traço Fixo</div>
       ${(() => {
         const { name: fixedName, desc: fixedBody } = raceTraitNameDesc(s.raceFixedTrait);
-        return `<div class="sheet-list"><div class="li"><b>${escapeHtml(fixedName)}</b>${fixedBody ? formatTraitBody(fixedBody) : ''}</div></div>`;
+        return `<div class="sheet-item-list"><div class="sheet-item race"><div class="si-head"><span class="si-name">${escapeHtml(fixedName)}</span></div>${fixedBody ? formatTraitBody(fixedBody) : ''}</div></div>`;
       })()}
       ${s.raceVariantTrait ? `<div class="sheet-section-title">Variação</div><p class="sheet-list">${escapeHtml(s.raceVariantTrait)}</p>` : ''}
       <div class="sheet-section-title">Traços Opcionais Escolhidos</div>
-      <div class="sheet-list">${raceOptHtml}</div>
-      ${raceBoughtHtml ? `<div class="sheet-section-title">Traços Extras Comprados (Pontos de Traço)</div><div class="sheet-list">${raceBoughtHtml}</div>` : ''}
+      <div class="sheet-item-list">${raceOptHtml}</div>
+      ${raceBoughtHtml ? `<div class="sheet-section-title">Traços Extras Comprados (Pontos de Traço)</div><div class="sheet-item-list">${raceBoughtHtml}</div>` : ''}
     </div>
 
     <div class="panel">
       <h2>Traços Adicionais</h2>
       <p class="hint" style="margin:-4px 0 12px;">Pontos de Inspiração: <b style="color:var(--gold)">${s.inspirationPoints || 0}</b> · Limite de traço atual: <b style="color:var(--gold)">${traitLimit}</b> (3 Inspiração = 1 Ponto de Traço)</p>
-      <div class="sheet-list">${traitsHtml}</div>
+      <div class="sheet-item-list">${traitsHtml}</div>
     </div>
 
     ${s.backgroundName ? `<div class="panel">

@@ -425,6 +425,45 @@ textarea{ resize:vertical; min-height:70px; }
 .sheet-list .li:last-child{ border-bottom:none; }
 .sheet-list .li b{ color:var(--ink); }
 
+/* ---- Cartões de item (perícia/traço/habilidade/técnica) ----
+   Substitui a lista de texto corrido (.sheet-list .li, sublinhado
+   pontilhado) por um pequeno cartão por item — mesma linguagem visual do
+   .trait-pick usado no editor de ficha (nome em destaque, metadado
+   alinhado à direita, descrição abaixo), com friso colorido à esquerda
+   pra identificar a natureza do traço num relance: dourado para traços
+   raciais, verde/vermelho para traço adicional benigno/maligno. */
+.sheet-item-list{ display:flex; flex-direction:column; gap:8px; }
+.sheet-item{
+  background:var(--bg-alt); border:1px solid var(--hairline-soft); border-left:3px solid var(--hairline);
+  border-radius:var(--radius); padding:10px 14px;
+  transition:border-color .15s, transform .15s, box-shadow .15s;
+}
+.sheet-item:hover{ border-color:var(--gold-dim); transform:translateX(2px); box-shadow:0 6px 14px -10px rgba(0,0,0,.55); }
+.sheet-item.race{ border-left-color:var(--gold-dim); }
+.sheet-item.benign{ border-left-color:var(--benign); }
+.sheet-item.malign{ border-left-color:var(--malign); }
+.sheet-item .si-head{ display:flex; align-items:center; justify-content:space-between; gap:8px 12px; flex-wrap:wrap; }
+.sheet-item .si-name{ color:var(--gold); font-weight:600; font-size:15px; }
+.sheet-item .si-meta{ font-family:'JetBrains Mono', monospace; font-size:12.5px; color:var(--ink-mute); }
+.sheet-item .si-desc{ font-size:14px; color:var(--ink-dim); margin-top:6px; line-height:1.55; }
+.sheet-item .trait-rich-body, .sheet-item .trait-rich-list{ margin-top:6px; }
+.sheet-item .trait-rich-body:first-of-type{ margin-top:6px; }
+
+/* ---- Barras de recurso (HP/Sanidade/Estamina/Energia) ----
+   Antes só o número "cur/max" — útil pra conferência exata, mas exige
+   fazer conta de cabeça pra saber "está crítico?" num relance rápido de
+   mesa. A barra dá essa leitura instantânea: dourada normalmente, âmbar
+   abaixo de 50%, vermelha (mesma cor de "maligno") abaixo de 25%. */
+.resource-row{ font-size:14.5px; color:var(--ink); }
+.resource-bar{
+  height:6px; background:var(--bg); border:1px solid var(--hairline-soft);
+  border-radius:20px; overflow:hidden; margin-top:5px;
+}
+.resource-bar .rb-fill{ height:100%; border-radius:20px; background:var(--gold-dim); transition:width .3s; }
+.resource-bar.low .rb-fill{ background:#b08a3f; }
+.resource-bar.crit .rb-fill{ background:var(--malign); }
+.sum-attr .resource-bar{ margin-top:6px; height:4px; }
+
 .empty-state{ text-align:center; padding:60px 20px; color:var(--ink-mute); }
 .empty-state .es-icon{ font-size:34px; margin-bottom:12px; opacity:.6; }
 
@@ -787,8 +826,9 @@ textarea.auto-expand{
 .sheet-main{ min-width:0; }
 .sheet-main .panel:first-child{ margin-top:0; }
 .sheet-portrait{
-  border-radius:var(--radius); border:1px solid var(--hairline); overflow:hidden;
+  border-radius:var(--radius); border:1px solid var(--gold-dim); overflow:hidden;
   background:var(--bg-alt); flex-shrink:0;
+  box-shadow:0 14px 30px -18px rgba(0,0,0,.65), 0 0 26px -10px rgba(201,161,92,.16);
 }
 .sheet-portrait img{ width:100%; aspect-ratio:3/4; object-fit:cover; display:block; }
 .sheet-portrait .no-img{
