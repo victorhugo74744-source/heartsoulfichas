@@ -49,6 +49,21 @@ service cloud.firestore {
     // pra escolher em qual campanha a própria ficha entra), mas só o Mestre
     // que criou uma pasta específica pode renomeá-la ou excluí-la — outro
     // Mestre, mesmo logado, não mexe na pasta de campanha alheia.
+    // Regra "collection group" pra /members: uma regra só ANINHADA dentro
+    // de /folders/{folderId} (ver abaixo) vale pra ler um membro de UMA
+    // pasta específica, mas NÃO vale pra consultas collectionGroup, que
+    // buscam a coleção "members" atravessando todas as pastas de uma vez
+    // (é exatamente o que fetchOwnAndMemberFolderIds, em js/mesa-board.js,
+    // faz pra descobrir em quais mesas um jogador tem acesso). Sem este
+    // bloco aqui, essa consulta específica sempre falha com "Missing or
+    // insufficient permissions", mesmo a regra aninhada logo abaixo sendo
+    // idêntica em conteúdo — é uma exigência própria do Firestore pra
+    // collection group queries (ver "Securing collection group queries"
+    // na doc do Firebase).
+    match /{path=**}/members/{uid} {
+      allow read: if isSignedIn();
+    }
+
     match /folders/{folderId} {
       allow read: if isSignedIn();
       allow create: if isMaster() && request.resource.data.createdBy == request.auth.uid;
