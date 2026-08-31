@@ -410,8 +410,41 @@ service cloud.firestore {
               request.resource.data.toUserId != request.auth.uid
             )
           );
-        allow update: if false; // mensagens são um registro imutável, igual às rolagens
-        allow delete: if isTableMaster(tableId); // moderação básica: só o Mestre desta mesa pode apagar uma mensagem problemática
+        // Edição: só quem mandou, e só pode mexer no texto (+ marcar
+        // editedAt) — não dá pra "reatribuir" a mensagem trocando
+        // remetente/destinatário/tipo/horário original por essa via.
+        allow update: if isSignedIn() &&
+          resource.data.fromUserId == request.auth.uid &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['content', 'editedAt']) &&
+          request.resource.data.content is string &&
+          request.resource.data.content.size() > 0 &&
+          request.resource.data.content.size() <= 1000 &&
+          request.resource.data.editedAt == request.time;
+        // Apagar: o próprio autor (se se arrependeu/errou) ou o Mestre desta
+        // mesa (moderação básica de uma mensagem problemática).
+        allow delete: if isTableMaster(tableId) ||
+          (isSignedIn() && resource.data.fromUserId == request.auth.uid);
+      }
+
+      // "Está digitando…": um documento por pessoa (id = seu uid) com o
+      // canal atual (geral/sussurro) e, no caso de sussurro, pra quem — pra
+      // não vazar nem esse metadado de "quem sussurra com quem" para outros
+      // jogadores, só o próprio par (ou o Mestre desta mesa) enxerga um
+      // indicador de sussurro; o indicador do canal geral é visível a
+      // qualquer um sinalizado na mesa. Cada cliente escreve/apaga só o
+      // próprio documento; o indicador expira sozinho no cliente (ver
+      // CHAT_TYPING_TTL_MS em mesa-chat.js) caso o "apagar ao parar" falhe
+      // (ex.: aba fechada de forma abrupta).
+      match /typing/{uid} {
+        allow read: if isSignedIn() && (
+          resource.data.channel == 'general' ||
+          uid == request.auth.uid ||
+          resource.data.toUserId == request.auth.uid ||
+          (resource.data.channel == 'whisper' && isTableMaster(tableId))
+        );
+        allow create, update: if isSignedIn() && uid == request.auth.uid &&
+          request.resource.data.channel in ['general', 'whisper'];
+        allow delete: if isSignedIn() && uid == request.auth.uid;
       }
     }
   }

@@ -177,6 +177,16 @@ let chatPopupOpen = false;
 let chatMinimized = false;
 let chatUnread = { general: 0, whisper: 0 }; // não lidas por aba, além do total no botão flutuante
 let chatSnapshotPrimed = false;  // evita contar o histórico inicial como "não lida"
+let chatEditingId = null;        // id da mensagem sendo editada agora (null = nenhuma)
+let chatAudioCtx = null;         // AudioContext reaproveitado para o som de notificação
+let chatTypingUnsub = null;
+let chatTypingTickTimer = null;  // reavalia o TTL do indicador "digitando" mesmo sem nova escrita chegando
+let chatTypingOthers = {};       // uid -> {uid, name, channel, toUserId, updatedAt} de quem mais está digitando
+let chatMyTypingActive = false;  // evita escrever no Firestore a cada tecla — só ao começar/parar
+let chatTypingStopTimer = null;
+let chatMentionActive = false;   // menção "@" sendo digitada agora (dropdown aberto)
+let chatMentionCandidates = [];  // opções filtradas do dropdown de menção no momento
+let chatMentionSelectedIndex = 0;
 
 // Tamanho da célula da grade, em px "naturais" (sem zoom). Os mapas gerados
 // por js/mapgen.js sempre usam MAPGEN_CELL_PX (constante compartilhada, já
@@ -790,6 +800,7 @@ async function openTable(tableId) {
   attachBoardInteractionHandlers();
   resetChatState();
   listenChat();
+  listenChatTyping();
   showChatFab();
   requestAnimationFrame(() => requestAnimationFrame(fitBoardToScreen));
 }
@@ -819,9 +830,15 @@ function closeTable() {
   if (presenceUnsub) { presenceUnsub(); presenceUnsub = null; }
   if (initiativeUnsub) { initiativeUnsub(); initiativeUnsub = null; }
   if (chatUnsub) { chatUnsub(); chatUnsub = null; }
+  if (chatTypingUnsub) { chatTypingUnsub(); chatTypingUnsub = null; }
+  clearMyChatTyping();
+  window.removeEventListener('beforeunload', chatTypingBeforeUnload);
   stopPresenceHeartbeat();
   hideChatUi();
   chatMessagesCache = [];
+  chatTypingOthers = {};
+  chatEditingId = null;
+  chatActionsForId = null;
   liveDrawings = {}; liveFog = {}; livePings = {}; liveWalls = {}; liveDoors = {}; liveLights = {}; exploredCells = {};
   if (typeof invalidateCollisionSegmentsCache === 'function') invalidateCollisionSegmentsCache();
   if (typeof lastVisionTokenState !== 'undefined') { lastVisionTokenState = {}; visionFullRedrawNeeded = true; }

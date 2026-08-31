@@ -75,13 +75,25 @@ guardPage(null, (user, profile) => {
   });
   document.getElementById('chatTargetSelect').addEventListener('change', (e) => {
     chatTargetUid = e.target.value || null;
+    clearMyChatTyping(); // trocou de conversa: o "digitando" antigo não faz mais sentido aqui
     renderChatTargetOptions();
     renderChatMessages();
     updateChatInputState();
+    renderChatTypingIndicator();
   });
   // Clicar no nome de um par observado (Mestre em "ver todos") entra direto
-  // na conversa com aquela pessoa, em vez de precisar usar o seletor.
+  // na conversa com aquela pessoa, em vez de precisar usar o seletor. Os
+  // outros data-* abaixo são os botões de editar/apagar/salvar/cancelar de
+  // cada mensagem (ver renderChatMessages em mesa-chat.js) — tudo por
+  // delegação de evento, já que o conteúdo é reconstruído a cada snapshot.
   document.getElementById('chatMessages').addEventListener('click', (e) => {
+    const editBtn = e.target.closest('[data-edit-id]');
+    if (editBtn) { startEditChatMessage(editBtn.dataset.editId); return; }
+    const delBtn = e.target.closest('[data-delete-id]');
+    if (delBtn) { deleteChatMessage(delBtn.dataset.deleteId); return; }
+    const saveBtn = e.target.closest('[data-save-id]');
+    if (saveBtn) { saveEditChatMessage(saveBtn.dataset.saveId); return; }
+    if (e.target.closest('.chat-edit-cancel')) { cancelEditChatMessage(); return; }
     const el = e.target.closest('[data-jump-uid]');
     if (!el) return;
     chatTargetUid = el.dataset.jumpUid;
@@ -91,9 +103,51 @@ guardPage(null, (user, profile) => {
     updateChatInputState();
     document.getElementById('chatInput').focus();
   });
+  // Enter/Esc dentro do campo de edição inline de uma mensagem (o campo é
+  // recriado a cada render, então também por delegação).
+  document.getElementById('chatMessages').addEventListener('keydown', (e) => {
+    if (!e.target.classList || !e.target.classList.contains('chat-edit-input')) return;
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      const row = e.target.closest('[data-msg-id]');
+      if (row) saveEditChatMessage(row.dataset.msgId);
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      cancelEditChatMessage();
+    }
+  });
   document.getElementById('chatSendBtn').addEventListener('click', sendChatMessage);
   document.getElementById('chatInput').addEventListener('keydown', (e) => {
+    // Com o dropdown de menção "@Nome" aberto, as setas/Enter/Esc navegam
+    // nele em vez de mover o cursor/mandar a mensagem (ver
+    // handleChatInputForMention em mesa-chat.js).
+    if (chatMentionActive) {
+      if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); chatMentionMoveSelection(e.key === 'ArrowDown' ? 1 : -1); return; }
+      if (e.key === 'Enter' || e.key === 'Tab') { e.preventDefault(); chatMentionConfirmSelection(); return; }
+      if (e.key === 'Escape') { e.preventDefault(); closeChatMentionMenu(); return; }
+    }
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendChatMessage(); }
+  });
+  document.getElementById('chatInput').addEventListener('input', () => {
+    markChatTyping();
+    handleChatInputForMention();
+  });
+  // Sem o pequeno atraso aqui, o blur do input (foco saindo pro botão)
+  // fecharia o menu antes do clique nele terminar de registrar.
+  document.getElementById('chatInput').addEventListener('blur', () => {
+    setTimeout(() => { closeChatMentionMenu(); closeChatEmojiMenu(); }, 150);
+  });
+  document.getElementById('chatEmojiBtn').addEventListener('click', toggleChatEmojiMenu);
+  // mousedown (não click) + preventDefault: dispara ANTES do blur do
+  // input, então o texto some do campo antes que o clique no emoji/menção
+  // consiga registrar — sem isso, às vezes o clique "erra" a mão.
+  document.getElementById('chatEmojiMenu').addEventListener('mousedown', (e) => {
+    const btn = e.target.closest('[data-emoji]');
+    if (btn) { e.preventDefault(); insertChatEmoji(btn.dataset.emoji); }
+  });
+  document.getElementById('chatMentionMenu').addEventListener('mousedown', (e) => {
+    const btn = e.target.closest('[data-mention-name]');
+    if (btn) { e.preventDefault(); selectChatMention(btn.dataset.mentionName); }
   });
 });
 

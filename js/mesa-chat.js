@@ -19,6 +19,12 @@
 //    de escrita em firestore.rules já sempre permitiu isso (qualquer membro
 //    da mesa pode criar uma mensagem "whisper" contanto que não seja pra si
 //    mesmo); só o cliente bloqueava o Mestre antes.
+//    Do lado do jogador, o seletor agora sempre tem uma opção fixa "🎭
+//    Mestre da mesa" no topo (separada, por optgroup, dos outros jogadores
+//    presentes) — dá pra sussurrar direto pro Mestre mesmo que ele não
+//    tenha nenhum token na mesa, e mesmo numa mesa onde nenhum outro
+//    jogador tem ficha presente ainda (antes disso o seletor ficava vazio
+//    e ninguém dava pra chamar). Ver chatMasterEntry().
 // O canal "Privado" (DM) que existia aqui antes foi removido do projeto
 // (junto com js/dm.js e as coleções userDirectory/dmThreads do Firestore) —
 // a mesa só tem os dois canais acima agora: Geral e Sussurro.
@@ -26,6 +32,25 @@
 // então firestore.rules faz o papel de "validação no servidor" citado no
 // requisito — tanto na escrita (não dá pra fingir ser outro remetente) como
 // na leitura (uma mensagem que não é sua nem chega a este cliente).
+//
+// Além do que já existia, este arquivo também cobre:
+//  - Som + notificação do navegador quando chega um sussurro (ou uma menção
+//    "@Nome") e o popup não está aberto/visível nessa aba — ver
+//    chatNotifyIncoming/chatPlayNotifSound/chatShowDesktopNotif.
+//  - Editar e apagar a própria mensagem (o Mestre também pode apagar
+//    qualquer uma, moderação básica) — ver startEditChatMessage/
+//    saveEditChatMessage/deleteChatMessage; a regra em firestore.rules só
+//    deixa mudar o campo "content" (+ editedAt), nunca remetente/tipo/hora.
+//  - Emojis (seletor simples, sem depender de nenhuma lib externa) — ver
+//    toggleChatEmojiMenu/insertChatEmoji.
+//  - Menções "@Nome": autocompleta com quem está na mesa (jogadores com
+//    ficha presente + o Mestre), destaca no texto renderizado e soma ao
+//    campo "mentions" da mensagem (lista de uids) pra quem foi citado
+//    receber a mesma notificação de um sussurro, mesmo no chat Geral — ver
+//    chatDetectMentions/handleChatInputForMention.
+//  - "Fulano está digitando…": tables/{id}/typing/{uid}, um heartbeat leve
+//    (só escreve ao começar/parar de digitar, não a cada tecla) — ver
+//    listenChatTyping/setMyChatTyping/renderChatTypingIndicator.
 
 function chatRoster() {
   // Quem dá pra chamar em Privado/Sussurro: donos dos tokens presentes na
@@ -40,6 +65,35 @@ function chatRoster() {
   return rows;
 }
 
+// Entrada fixa do Mestre no seletor de sussurro, do ponto de vista de quem
+// está olhando agora: null se o próprio usuário já É o Mestre desta mesa
+// (não faz sentido sussurrar consigo mesmo), senão sempre disponível —
+// diferente de chatRoster(), não depende de token nenhum estar na mesa.
+function chatMasterEntry() {
+  if (!curTable || isTableOwner()) return null;
+  return { uid: curTable.createdBy, name: 'Mestre', isMaster: true };
+}
+
+// Quem dá pra @mencionar: mesma lista de chatRoster() (jogadores com ficha
+// presente, exceto você mesmo) + o Mestre da mesa quando você não é ele —
+// reaproveita exatamente as mesmas regras do seletor de sussurro.
+function chatMentionAllCandidates() {
+  const master = chatMasterEntry();
+  return master ? [...chatRoster(), master] : chatRoster();
+}
+
+// Varre o texto em busca de "@NomeExato" batendo com alguém mencionável
+// agora, e devolve os uids encontrados (sem duplicar) — usado ao enviar,
+// pra saber quem precisa ser avisado com a mesma notificação de sussurro
+// (ver chatNotifyIncoming), mesmo estando no chat Geral.
+function chatDetectMentions(content) {
+  const found = new Set();
+  chatMentionAllCandidates().forEach(c => {
+    if (c.name && content.includes('@' + c.name)) found.add(c.uid);
+  });
+  return Array.from(found);
+}
+
 function resetChatState() {
   const titleEl = document.getElementById('chatPopupTitle');
   if (titleEl) titleEl.textContent = (curTable && curTable.name) ? curTable.name : 'Chat da mesa';
@@ -49,6 +103,13 @@ function resetChatState() {
   chatSnapshotPrimed = false;
   chatPopupOpen = false;
   chatMinimized = false;
+  chatEditingId = null;
+  chatTypingOthers = {};
+  chatMyTypingActive = false;
+  clearTimeout(chatTypingStopTimer);
+  chatTypingStopTimer = null;
+  closeChatEmojiMenu();
+  closeChatMentionMenu();
   const popup = document.getElementById('chatPopup');
   if (popup) { popup.classList.add('hidden'); popup.classList.remove('minimized'); }
   document.querySelectorAll('#chatTabs .chat-tab').forEach(b => b.classList.toggle('active', b.dataset.chatType === 'general'));
@@ -138,6 +199,15 @@ function listenChat() {
             if (m.type === 'general') chatUnread.general++;
             else if (canSeeWhisper) chatUnread.whisper++;
           }
+          // Som + notificação do navegador: todo sussurro que este cliente
+          // tem permissão de ver (inclui o Mestre "vendo todos"), e
+          // qualquer menção "@Nome" a mim mesmo em qualquer canal — só
+          // quando a conversa não está literalmente na tela agora (mesmo
+          // critério do "não lida" acima).
+          if (!isMine && !tabVisible) {
+            if (m.type === 'whisper' && canSeeWhisper) chatNotifyIncoming(m, 'whisper');
+            else if (Array.isArray(m.mentions) && m.mentions.includes(curUser.uid)) chatNotifyIncoming(m, 'mention');
+          }
         }
       });
 
@@ -167,6 +237,54 @@ function listenChat() {
   chatUnsub = () => unsubs.forEach(u => u());
 }
 
+// -------------------------------------------------------- SOM/NOTIFICAÇÃO --
+function chatRequestNotifPermission() {
+  if (!('Notification' in window)) return; // navegador sem suporte (ex.: alguns navegadores mobile) — ignora
+  if (Notification.permission === 'default') Notification.requestPermission().catch(() => {});
+}
+
+// Toca um "ping" de duas notas sintetizado na hora com Web Audio API — sem
+// depender de nenhum arquivo de áudio externo (funciona igual offline, já
+// que o site é um PWA). Alguns navegadores só deixam tocar som depois de
+// alguma interação do usuário na página; o try/catch cobre esse caso raro
+// (ex.: a própria primeiríssima notificação, antes de qualquer clique).
+function chatPlayNotifSound() {
+  try {
+    if (!chatAudioCtx) chatAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if (chatAudioCtx.state === 'suspended') chatAudioCtx.resume();
+    const ctx = chatAudioCtx;
+    const now = ctx.currentTime;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(740, now);
+    osc.frequency.setValueAtTime(988, now + 0.09);
+    gain.gain.setValueAtTime(0.0001, now);
+    gain.gain.exponentialRampToValueAtTime(0.22, now + 0.015);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.32);
+    osc.connect(gain).connect(ctx.destination);
+    osc.start(now);
+    osc.stop(now + 0.34);
+  } catch (e) { /* silencioso */ }
+}
+
+function chatShowDesktopNotif(title, body) {
+  if (!('Notification' in window) || Notification.permission !== 'granted') return;
+  try {
+    const n = new Notification(title, { body, tag: 'heartsoul-chat-' + Date.now() });
+    n.onclick = () => { window.focus(); openChatPopup(); n.close(); };
+  } catch (e) { /* alguns navegadores mobile não suportam "new Notification()" direto */ }
+}
+
+// Chamado ao chegar uma mensagem ao vivo que o cliente não está vendo na
+// tela agora (ver listenChat) — toca o som sempre, e soma a notificação do
+// sistema quando a permissão do navegador já foi concedida.
+function chatNotifyIncoming(m, kind) {
+  chatPlayNotifSound();
+  const title = kind === 'whisper' ? `🤫 Sussurro de ${m.fromName || '?'}` : `📣 ${m.fromName || '?'} mencionou você`;
+  chatShowDesktopNotif(title, (m.content || '').slice(0, 120));
+}
+
 function toggleChatPopup() {
   const popup = document.getElementById('chatPopup');
   if (!popup) return;
@@ -181,6 +299,7 @@ function openChatPopup() {
   chatPopupOpen = true;
   chatMinimized = false;
   chatUnread[chatChannel] = 0;
+  chatRequestNotifPermission(); // ponto discreto pra pedir: já é uma ação ativa de "quero usar o chat"
   updateChatFabBadge();
   renderChatTargetOptions();
   renderChatMessages();
@@ -193,6 +312,9 @@ function minimizeChatPopup() {
   if (!popup) return;
   popup.classList.add('minimized');
   chatMinimized = true;
+  clearMyChatTyping();
+  closeChatEmojiMenu();
+  closeChatMentionMenu();
 }
 
 function closeChatPopup() {
@@ -202,6 +324,10 @@ function closeChatPopup() {
   popup.classList.remove('minimized');
   chatPopupOpen = false;
   chatMinimized = false;
+  chatEditingId = null;
+  clearMyChatTyping();
+  closeChatEmojiMenu();
+  closeChatMentionMenu();
 }
 
 function switchChatChannel(type) {
@@ -211,6 +337,10 @@ function switchChatChannel(type) {
   // estado "escolha alguém" (ver renderChatTargetOptions/renderChatMessages).
   chatChannel = type;
   chatTargetUid = null;
+  chatEditingId = null;
+  clearMyChatTyping();
+  closeChatEmojiMenu();
+  closeChatMentionMenu();
   if (chatPopupOpen && !chatMinimized) { chatUnread[type] = 0; updateChatFabBadge(); }
   document.querySelectorAll('#chatTabs .chat-tab').forEach(b => b.classList.toggle('active', b.dataset.chatType === type));
   const errEl = document.getElementById('chatErr');
@@ -218,6 +348,7 @@ function switchChatChannel(type) {
   renderChatTargetOptions();
   renderChatMessages();
   updateChatInputState();
+  renderChatTypingIndicator();
 }
 
 async function renderChatTargetOptions() {
@@ -229,37 +360,57 @@ async function renderChatTargetOptions() {
   if (chatChannel === 'general') { row.classList.add('hidden'); if (hint) hint.classList.add('hidden'); return; }
 
   const isMaster = isTableOwner();
-  const options = chatRoster();
+  const players = chatRoster();
   row.classList.remove('hidden');
 
-  if (options.length === 0) {
-    // Pro Mestre isso só significa "ninguém pra sussurrar com" — ele ainda
-    // consegue acompanhar sussurros que já existam (masterObserving não
-    // depende do roster). Pro jogador, não tem com quem sussurrar mesmo.
-    select.innerHTML = isMaster
-      ? `<option value="">👁️ Ver todos os sussurros</option>`
-      : `<option value="">Ninguém disponível ainda</option>`;
-    chatTargetUid = null;
-    if (hint) hint.classList.add('hidden');
+  if (isMaster) {
+    // Mestre: acompanha tudo por padrão, ou escolhe um jogador com ficha
+    // presente na mesa pra falar diretamente com ele (comportamento igual
+    // a antes — o Mestre não precisa de uma opção "Mestre" pra si mesmo).
+    if (players.length === 0) {
+      select.innerHTML = `<option value="">👁️ Ver todos os sussurros</option>`;
+      chatTargetUid = null;
+      if (hint) hint.classList.add('hidden');
+      return;
+    }
+    const prevValue = chatTargetUid;
+    select.innerHTML = `<option value="">👁️ Ver todos os sussurros</option>` +
+      players.map(o => `<option value="${o.uid}">Sussurrar com ${escapeHtml(o.name)}</option>`).join('');
+    select.value = (prevValue && players.some(o => o.uid === prevValue)) ? prevValue : '';
+    if (select.value !== prevValue) chatTargetUid = select.value || null;
+    if (hint) {
+      if (!chatTargetUid) {
+        hint.textContent = '👁️ Acompanhando todos os sussurros da mesa. Clique num nome numa mensagem, ou escolha alguém acima, para sussurrar diretamente com essa pessoa.';
+        hint.classList.remove('hidden');
+      } else {
+        const targetName = (players.find(o => o.uid === chatTargetUid) || {}).name || 'esta pessoa';
+        hint.textContent = `🤫 Só você e ${targetName} veem estas mensagens (além de você, que acompanha tudo).`;
+        hint.classList.remove('hidden');
+      }
+    }
     return;
   }
 
+  // Jogador: sempre pode sussurrar direto com o Mestre da mesa (opção fixa,
+  // não depende de token nenhum), além de qualquer outro jogador com ficha
+  // presente — os dois grupos ficam separados no seletor.
+  const masterEntry = chatMasterEntry();
+  const options = masterEntry ? [masterEntry, ...players] : players;
   const prevValue = chatTargetUid;
-  const watchAllOpt = isMaster ? `<option value="">👁️ Ver todos os sussurros</option>` : `<option value="">Selecione…</option>`;
-  select.innerHTML = watchAllOpt +
-    options.map(o => `<option value="${o.uid}">${isMaster ? 'Sussurrar com ' : ''}${escapeHtml(o.name)}</option>`).join('');
+  select.innerHTML = `<option value="">Selecione…</option>` +
+    (masterEntry ? `<option value="${masterEntry.uid}">🎭 Mestre da mesa</option>` : '') +
+    (players.length
+      ? `<optgroup label="Jogadores">${players.map(o => `<option value="${o.uid}">${escapeHtml(o.name)}</option>`).join('')}</optgroup>`
+      : '');
   select.value = (prevValue && options.some(o => o.uid === prevValue)) ? prevValue : '';
   if (select.value !== prevValue) chatTargetUid = select.value || null;
 
   if (hint) {
-    if (isMaster && !chatTargetUid) {
-      hint.textContent = '👁️ Acompanhando todos os sussurros da mesa. Clique num nome numa mensagem, ou escolha alguém acima, para sussurrar diretamente com essa pessoa.';
-      hint.classList.remove('hidden');
-    } else if (chatTargetUid) {
-      const targetName = (options.find(o => o.uid === chatTargetUid) || {}).name || 'esta pessoa';
-      hint.textContent = isMaster
-        ? `🤫 Só você e ${targetName} veem estas mensagens (além de você, que acompanha tudo).`
-        : `🤫 Só você, ${targetName} e o Mestre da mesa veem estas mensagens.`;
+    if (chatTargetUid) {
+      const target = options.find(o => o.uid === chatTargetUid);
+      hint.textContent = (target && target.isMaster)
+        ? '🤫 Só você e o Mestre da mesa veem estas mensagens.'
+        : `🤫 Só você, ${(target && target.name) || 'esta pessoa'} e o Mestre da mesa veem estas mensagens.`;
       hint.classList.remove('hidden');
     } else {
       hint.classList.add('hidden');
@@ -393,18 +544,357 @@ function renderChatMessages() {
     lastTimeMs = timeMs;
 
     const headHtml = who ? `<div class="chat-msg-head">${who}<span class="chat-msg-time">${fmtChatTime(m.timestamp)}</span></div>` : '';
+
+    // Editar: só o próprio autor, e só o campo "content" (regra do
+    // Firestore não deixa mudar mais nada). Apagar: o autor, ou o Mestre
+    // desta mesa (moderação básica) — em qualquer canal, mesmo no modo
+    // "vendo todos" de um sussurro alheio.
+    const canEdit = mine;
+    const canDelete = mine || isTableOwner();
+    const editedTag = m.editedAt ? '<span class="chat-msg-edited-tag">(editado)</span>' : '';
+
+    let bodyHtml;
+    if (chatEditingId === m.id) {
+      bodyHtml = `
+        <div class="chat-msg-body chat-msg-editing">
+          <input type="text" class="chat-edit-input" maxlength="1000" value="${escapeHtml(m.content)}">
+          <div class="chat-edit-actions">
+            <button type="button" class="chat-edit-save" data-save-id="${m.id}" title="Salvar">✓</button>
+            <button type="button" class="chat-edit-cancel" title="Cancelar">✕</button>
+          </div>
+        </div>`;
+    } else {
+      bodyHtml = `<div class="chat-msg-body">${chatRenderContent(m.content)}${editedTag}</div>`;
+    }
+
+    const actionsHtml = (chatEditingId !== m.id && (canEdit || canDelete)) ? `
+      <div class="chat-msg-actions">
+        ${canEdit ? `<button type="button" class="chat-edit-btn" data-edit-id="${m.id}" title="Editar">✏️</button>` : ''}
+        ${canDelete ? `<button type="button" class="chat-delete-btn" data-delete-id="${m.id}" title="Apagar">🗑️</button>` : ''}
+      </div>` : '';
+
     html += `
-      <div class="${rowClasses}">
+      <div class="${rowClasses}" data-msg-id="${m.id}">
         ${avatarHtml}
         <div class="chat-msg-col">
           ${headHtml}
-          <div class="chat-msg"><div class="chat-msg-body">${escapeHtml(m.content)}</div></div>
+          <div class="chat-msg">${bodyHtml}${actionsHtml}</div>
         </div>
       </div>`;
   });
 
   box.innerHTML = html;
-  scrollChatToBottom();
+  if (chatEditingId) {
+    // Não rola pro fim enquanto edita: a mensagem sendo editada pode não
+    // ser a última, e perder ela de vista no meio da edição é ruim.
+    const editBox = box.querySelector('.chat-edit-input');
+    if (editBox) { editBox.focus(); editBox.setSelectionRange(editBox.value.length, editBox.value.length); }
+  } else {
+    scrollChatToBottom();
+  }
+}
+
+// Todo mundo que pode aparecer citado numa mensagem já enviada — diferente
+// de chatMentionAllCandidates() (usado no autocompletar), este NÃO exclui
+// você mesmo, senão "@SeuNome" escrito por outra pessoa nunca seria
+// reconhecido/destacado na sua própria tela.
+function chatAllRenderCandidates() {
+  const rows = [];
+  const seen = new Set();
+  Object.values(liveTokens).forEach(t => {
+    if (!t.ownerId || seen.has(t.ownerId)) return;
+    seen.add(t.ownerId);
+    rows.push({ uid: t.ownerId, name: t.name || 'Jogador' });
+  });
+  if (curTable && !seen.has(curTable.createdBy)) rows.push({ uid: curTable.createdBy, name: 'Mestre' });
+  return rows;
+}
+
+// Destaca "@Nome" dentro do texto (já escapado) de uma mensagem, quando o
+// nome bate exatamente com alguém mencionável agora — melhor esforço: quem
+// já saiu da mesa (perdeu o token) não é reconhecido mais, mas o "@Nome"
+// digitado continua ali, só sem o destaque.
+function chatRenderContent(content) {
+  let html = escapeHtml(content);
+  chatAllRenderCandidates()
+    .slice()
+    .sort((a, b) => (b.name || '').length - (a.name || '').length) // nomes maiores primeiro, senão "Ana" "rouba" parte de "Ana Paula"
+    .forEach(c => {
+      if (!c.name) return;
+      const token = escapeHtml('@' + c.name);
+      if (!html.includes(token)) return;
+      const cls = c.uid === curUser.uid ? 'chat-mention me' : 'chat-mention';
+      html = html.split(token).join(`<span class="${cls}">${token}</span>`);
+    });
+  return html;
+}
+
+// -------------------------------------------------------- EDITAR/APAGAR --
+function startEditChatMessage(id) {
+  const m = chatMessagesCache.find(x => x.id === id);
+  if (!m || m.fromUserId !== curUser.uid) return; // regra do Firestore só deixa o autor editar
+  chatEditingId = id;
+  closeChatEmojiMenu();
+  closeChatMentionMenu();
+  renderChatMessages();
+}
+
+function cancelEditChatMessage() {
+  chatEditingId = null;
+  renderChatMessages();
+}
+
+async function saveEditChatMessage(id) {
+  const row = document.querySelector(`.chat-msg-row[data-msg-id="${id}"]`);
+  const box = row && row.querySelector('.chat-edit-input');
+  if (!box) return;
+  const content = box.value.trim();
+  if (!content) { cancelEditChatMessage(); return; }
+  chatEditingId = null;
+  try {
+    await db.collection('tables').doc(curTable.id).collection('chatMessages').doc(id).update({
+      content: content.slice(0, 1000),
+      editedAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+  } catch (err) {
+    console.error('Erro ao editar mensagem:', err);
+  }
+  renderChatMessages();
+}
+
+async function deleteChatMessage(id) {
+  const m = chatMessagesCache.find(x => x.id === id);
+  if (!m) return;
+  if (!confirm('Apagar esta mensagem? Isso não pode ser desfeito.')) return;
+  try {
+    await db.collection('tables').doc(curTable.id).collection('chatMessages').doc(id).delete();
+  } catch (err) {
+    console.error('Erro ao apagar mensagem:', err);
+  }
+}
+
+// ------------------------------------------------------------- EMOJIS --
+const CHAT_EMOJI_LIST = [
+  '😀', '😂', '😅', '😉', '😊', '😍', '😘', '😜', '🤔', '😐', '😢', '😭', '😡', '😱', '🥳', '😴',
+  '👍', '👎', '👏', '🙏', '💪', '🤝', '✌️', '👋',
+  '❤️', '💔', '⭐', '✨', '🔥', '💀', '⚔️', '🛡️', '🎲', '🐉', '🍺', '☕'
+];
+
+function toggleChatEmojiMenu() {
+  const menu = document.getElementById('chatEmojiMenu');
+  if (!menu) return;
+  const willOpen = menu.classList.contains('hidden');
+  closeChatMentionMenu();
+  if (willOpen) { renderChatEmojiMenu(); menu.classList.remove('hidden'); }
+  else menu.classList.add('hidden');
+}
+
+function closeChatEmojiMenu() {
+  const menu = document.getElementById('chatEmojiMenu');
+  if (menu) menu.classList.add('hidden');
+}
+
+function renderChatEmojiMenu() {
+  const menu = document.getElementById('chatEmojiMenu');
+  if (!menu) return;
+  menu.innerHTML = CHAT_EMOJI_LIST.map(e => `<button type="button" class="chat-emoji-opt" data-emoji="${e}">${e}</button>`).join('');
+}
+
+function insertChatEmoji(emoji) {
+  const input = document.getElementById('chatInput');
+  if (!input) return;
+  const start = input.selectionStart != null ? input.selectionStart : input.value.length;
+  const end = input.selectionEnd != null ? input.selectionEnd : input.value.length;
+  input.value = input.value.slice(0, start) + emoji + input.value.slice(end);
+  const pos = start + emoji.length;
+  closeChatEmojiMenu();
+  input.focus();
+  input.setSelectionRange(pos, pos);
+  markChatTyping();
+}
+
+// ------------------------------------------------------------ MENÇÕES --
+// Digitar "@" seguido de letras abre um dropdown com quem está mencionável
+// agora (chatMentionAllCandidates), filtrado pelo que já foi digitado
+// depois do "@" até o cursor — igual ao autocompletar de apps de chat
+// comuns. Ver handleChatInputForMention (chamado a cada tecla do input,
+// junto de markChatTyping — ver wiring em mesa-init.js).
+function handleChatInputForMention() {
+  const input = document.getElementById('chatInput');
+  if (!input) return;
+  const pos = input.selectionStart != null ? input.selectionStart : input.value.length;
+  const uptoCursor = input.value.slice(0, pos);
+  const match = uptoCursor.match(/(?:^|\s)@([^\s@]*)$/);
+  if (!match) { closeChatMentionMenu(); return; }
+  const typed = match[1].toLowerCase();
+  const filtered = chatMentionAllCandidates().filter(c => c.name.toLowerCase().includes(typed));
+  if (!filtered.length) { closeChatMentionMenu(); return; }
+  chatMentionCandidates = filtered;
+  chatMentionSelectedIndex = 0;
+  chatMentionActive = true;
+  renderChatMentionMenu();
+}
+
+function renderChatMentionMenu() {
+  const menu = document.getElementById('chatMentionMenu');
+  if (!menu) return;
+  closeChatEmojiMenu();
+  menu.innerHTML = chatMentionCandidates.map((c, i) =>
+    `<button type="button" class="chat-mention-opt${i === chatMentionSelectedIndex ? ' active' : ''}" data-mention-name="${escapeHtml(c.name)}">${c.isMaster ? '🎭' : '👤'} ${escapeHtml(c.name)}</button>`
+  ).join('');
+  menu.classList.remove('hidden');
+}
+
+function chatMentionMoveSelection(delta) {
+  if (!chatMentionCandidates.length) return;
+  chatMentionSelectedIndex = (chatMentionSelectedIndex + delta + chatMentionCandidates.length) % chatMentionCandidates.length;
+  renderChatMentionMenu();
+}
+
+function chatMentionConfirmSelection() {
+  const c = chatMentionCandidates[chatMentionSelectedIndex];
+  if (c) selectChatMention(c.name);
+}
+
+// Troca o "@parcial" que está sendo digitado (antes do cursor) pelo nome
+// completo escolhido + um espaço, mantendo o resto do texto intacto.
+function selectChatMention(name) {
+  const input = document.getElementById('chatInput');
+  if (!input) return;
+  const pos = input.selectionStart != null ? input.selectionStart : input.value.length;
+  const uptoCursor = input.value.slice(0, pos);
+  const match = uptoCursor.match(/(?:^|\s)@([^\s@]*)$/);
+  if (!match) { closeChatMentionMenu(); return; }
+  const atIndex = pos - match[0].length + (match[0].startsWith(' ') ? 1 : 0);
+  const before = input.value.slice(0, atIndex);
+  const after = input.value.slice(pos);
+  const inserted = '@' + name + ' ';
+  input.value = before + inserted + after;
+  const newPos = (before + inserted).length;
+  closeChatMentionMenu();
+  input.focus();
+  input.setSelectionRange(newPos, newPos);
+}
+
+function closeChatMentionMenu() {
+  chatMentionActive = false;
+  chatMentionCandidates = [];
+  const menu = document.getElementById('chatMentionMenu');
+  if (menu) menu.classList.add('hidden');
+}
+
+// -------------------------------------------------- "ESTÁ DIGITANDO…" --
+// Um documento por pessoa (tables/{id}/typing/{uid}); só escreve/apaga o
+// PRÓPRIO ao começar/parar de digitar (não a cada tecla — ver
+// chatMyTypingActive), evitando martelar o Firestore. CHAT_TYPING_TTL_MS é
+// só uma rede de segurança pro cliente ignorar um documento "preso" (ex.:
+// aba fechada de forma abrupta, sem dar tempo de apagar); normalmente o
+// próprio parar-de-digitar (ou enviar/trocar de conversa/fechar o chat) já
+// apaga o documento na hora — ver clearMyChatTyping.
+const CHAT_TYPING_TTL_MS = 6000;
+const CHAT_TYPING_STOP_DELAY_MS = 4000;
+
+function markChatTyping() {
+  if (!curTable || !curUser) return;
+  if (chatChannel !== 'general' && !chatTargetUid) return; // sem alvo escolhido, não tem pra quem indicar
+  if (!chatMyTypingActive) {
+    chatMyTypingActive = true;
+    const myName = isTableOwner()
+      ? (curProfile.name || 'Mestre')
+      : ((liveTokens[curUser.uid] && liveTokens[curUser.uid].name) || curProfile.name || 'Jogador');
+    const payload = {
+      name: myName,
+      channel: chatChannel,
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    };
+    if (chatChannel === 'whisper') payload.toUserId = chatTargetUid;
+    db.collection('tables').doc(curTable.id).collection('typing').doc(curUser.uid)
+      .set(payload).catch(err => console.warn('Erro ao sinalizar "digitando":', err));
+  }
+  clearTimeout(chatTypingStopTimer);
+  chatTypingStopTimer = setTimeout(clearMyChatTyping, CHAT_TYPING_STOP_DELAY_MS);
+}
+
+function clearMyChatTyping() {
+  clearTimeout(chatTypingStopTimer);
+  chatTypingStopTimer = null;
+  if (!chatMyTypingActive) return;
+  chatMyTypingActive = false;
+  if (curTable && curUser) {
+    db.collection('tables').doc(curTable.id).collection('typing').doc(curUser.uid).delete().catch(() => {});
+  }
+}
+
+// Registrado em beforeunload (ver listenChatTyping) pra tentar limpar o
+// documento se a aba fechar sem dar tempo do timeout normal — igual ao
+// mesmo padrão já usado pra presença (ver presenceBeforeUnload).
+function chatTypingBeforeUnload() {
+  if (curTable && curUser) {
+    db.collection('tables').doc(curTable.id).collection('typing').doc(curUser.uid).delete().catch(() => {});
+  }
+}
+
+// Igual ao padrão de listenChat: uma query só (sem "where" nenhum) numa
+// coleção com regra de leitura variável por documento faz o Firestore
+// negar a leitura inteira — por isso, de novo, uma query por canal já
+// restrita de um jeito que a regra consegue aprovar por completo (ver
+// firestore.rules: tables/{id}/typing/{uid}).
+function listenChatTyping() {
+  chatTypingOthers = {};
+  window.addEventListener('beforeunload', chatTypingBeforeUnload);
+
+  const isMaster = isTableOwner();
+  const base = db.collection('tables').doc(curTable.id).collection('typing');
+  const byId = new Map();
+  const unsubs = [];
+
+  function attach(query) {
+    const unsub = query.onSnapshot(snap => {
+      snap.docChanges().forEach(change => {
+        if (change.doc.id === curUser.uid) return; // nunca precisa do próprio indicador de volta
+        if (change.type === 'removed') { byId.delete(change.doc.id); return; }
+        byId.set(change.doc.id, { uid: change.doc.id, ...change.doc.data() });
+      });
+      chatTypingOthers = Object.fromEntries(byId);
+      renderChatTypingIndicator();
+    }, err => console.warn('Erro ao sincronizar "digitando":', err));
+    unsubs.push(unsub);
+  }
+
+  attach(base.where('channel', '==', 'general'));
+  attach(isMaster
+    ? base.where('channel', '==', 'whisper')
+    : base.where('channel', '==', 'whisper').where('toUserId', '==', curUser.uid));
+
+  chatTypingTickTimer = setInterval(renderChatTypingIndicator, 2000);
+  chatTypingUnsub = () => {
+    unsubs.forEach(u => u());
+    clearInterval(chatTypingTickTimer);
+    chatTypingTickTimer = null;
+  };
+}
+
+function renderChatTypingIndicator() {
+  const el = document.getElementById('chatTyping');
+  if (!el) return;
+  const now = Date.now();
+  const masterObserving = chatChannel === 'whisper' && isTableOwner() && !chatTargetUid;
+
+  const names = Object.values(chatTypingOthers).filter(t => {
+    if (!t || !t.updatedAt || !t.updatedAt.toDate) return false;
+    if (now - t.updatedAt.toDate().getTime() > CHAT_TYPING_TTL_MS) return false;
+    if (t.channel !== chatChannel) return false;
+    if (chatChannel === 'general') return true;
+    if (masterObserving) return true; // Mestre "vendo todos": qualquer sussurro conta
+    return t.uid === chatTargetUid && t.toUserId === curUser.uid; // só a pessoa desta conversa específica
+  }).map(t => t.name || 'Alguém');
+
+  if (!names.length) { el.classList.add('hidden'); el.textContent = ''; return; }
+  const label = names.length === 1 ? `${names[0]} está digitando…`
+    : names.length === 2 ? `${names[0]} e ${names[1]} estão digitando…`
+    : `${names.length} pessoas estão digitando…`;
+  el.textContent = label;
+  el.classList.remove('hidden');
 }
 
 async function sendChatMessage() {
@@ -438,12 +928,25 @@ async function sendChatMessage() {
 
   if (chatChannel !== 'general') {
     payload.toUserId = chatTargetUid;
-    const target = chatRoster().find(o => o.uid === chatTargetUid);
+    const masterEntry = chatMasterEntry();
+    const target = (masterEntry && masterEntry.uid === chatTargetUid)
+      ? masterEntry
+      : chatRoster().find(o => o.uid === chatTargetUid);
     payload.toName = (target && target.name) || '';
   }
 
+  // "@Nome" reconhecido vira uma notificação (som + aviso do navegador) pra
+  // quem foi citado, igual a um sussurro — ver chatNotifyIncoming em
+  // listenChat. Só soma o campo se achou alguém, pra não sujar mensagens
+  // sem menção nenhuma.
+  const mentions = chatDetectMentions(content);
+  if (mentions.length) payload.mentions = mentions;
+
   try {
     input.value = '';
+    clearMyChatTyping();
+    closeChatEmojiMenu();
+    closeChatMentionMenu();
     await db.collection('tables').doc(curTable.id).collection('chatMessages').add(payload);
   } catch (err) {
     errEl.textContent = 'Erro ao enviar: ' + err.message;

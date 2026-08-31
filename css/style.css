@@ -1165,3 +1165,106 @@ select option{ background:var(--bg-alt); color:var(--ink); }
     to{ opacity:1; transform:translateY(0); }
   }
 }
+
+/* =====================================================================
+   FICHA EDITOR — reforço da linguagem visual "grimório"
+   O editor (ficha-editor.html) já usava o mesmo sistema de .panel/.field
+   do resto do site, mas de forma bem neutra — nenhuma das peças
+   específicas da criação de ficha (índice lateral, cabeçalho de cada
+   etapa, grade de raças, linhas de traço) tinha o toque de ornamento
+   dourado/losango que aparece no topo de página (.page-head h1::after) e
+   no selo do topbar. Os blocos abaixo só adicionam esse acabamento —
+   nenhum HTML/JS muda, nenhuma classe nova é exigida.
+   ===================================================================== */
+
+/* ---- Índice lateral (.wizard-nav): fio dourado ligando as etapas ----
+   Um fio vertical fino atravessa por trás dos círculos numerados, como
+   as etapas fossem contas amarradas por um fio — mesma ideia do
+   ornamento sob os títulos de página. Os círculos ganham fundo sólido
+   pra "flutuar" sobre o fio em vez de deixá-lo cortando o número ao
+   meio. Etapa atual ganha um losango rotacionado por trás do círculo,
+   ecoando o selo do topbar. Só se aplica no layout vertical (desktop) —
+   no mobile o nav vira uma barra horizontal de abas e o fio não faz
+   sentido nesse formato. */
+@media (min-width:781px){
+  .wizard-nav{ position:sticky; }
+  .wizard-nav::before{
+    content:'';
+    position:absolute; top:22px; bottom:22px; left:21px; width:1px;
+    background:linear-gradient(180deg, transparent, var(--hairline) 6%, var(--hairline) 94%, transparent);
+    pointer-events:none;
+  }
+  .wizard-nav{ position:sticky; padding-left:0; }
+  .wizard-nav a{ position:relative; }
+  .wn-num{ background:var(--bg-alt); position:relative; z-index:1; }
+  .wizard-nav a.active .wn-num::after{
+    content:''; position:absolute; inset:-5px; border:1px solid var(--seal-bright);
+    transform:rotate(45deg); opacity:.55; border-radius:2px;
+  }
+}
+
+/* ---- Cabeçalho de cada etapa (.panel h2): losango de fechamento ----
+   O selo circular do número já existe; isso soma um pequeno losango
+   dourado no fim da linha divisória, igual ao ornamento do <h1> da
+   página — a mesma "assinatura" visual encerrando cada bloco. */
+.panel h2::after{
+  content:''; width:6px; height:6px; margin-left:auto; flex-shrink:0;
+  background:var(--gold-dim); opacity:.6; transform:rotate(45deg);
+}
+
+/* ---- Barra de pontos: acento à esquerda + marcador ----
+   Pontos de atributo/traço restantes são o número mais consultado do
+   wizard inteiro (o jogador volta o olho nele a cada clique em +/-) —
+   antes era só mais uma caixa de texto igual às outras. Um traço
+   dourado à esquerda e um pequeno losango antes do rótulo dão a ela
+   peso visual condizente com a importância. */
+.points-bar{
+  position:relative; padding-left:22px; border-left:2px solid var(--gold-dim);
+}
+.points-bar::before{
+  content:''; position:absolute; left:10px; top:50%; width:6px; height:6px;
+  background:var(--gold); transform:translateY(-50%) rotate(45deg); opacity:.85;
+}
+
+/* ---- Grade de atributos: elevação sutil no hover ----
+   Os seis atributos eram alvos clicáveis (+/-) mas visualmente inertes
+   até o cursor passar bem em cima do botão redondo. Uma leve elevação
+   no cartão inteiro (borda + sombra + deslocamento de 1px) já avisa
+   "isto aqui é interativo" antes mesmo de mirar no botão. */
+.attr-box{ transition:border-color .15s, transform .15s, box-shadow .15s; }
+.attr-box:hover{
+  border-color:var(--gold-dim); transform:translateY(-2px);
+  box-shadow:0 8px 18px rgba(0,0,0,.32);
+}
+
+/* ---- Cartões de raça: elevação + marca de selecionado ----
+   Antes o único sinal de "raça escolhida" era a borda mudar de cor —
+   fácil de não notar numa grade de 22 cartões parecidos. Isso soma
+   sombra + leve elevação no hover (mesmo padrão dos atributos, pra
+   linguagem ficar consistente) e um losango sólido no canto do cartão
+   selecionado, como um selo de cera confirmando a escolha. */
+.race-card{
+  position:relative; transition:border-color .15s, background .15s, transform .15s, box-shadow .15s;
+}
+.race-card:hover{ transform:translateY(-2px); box-shadow:0 8px 18px rgba(0,0,0,.32); }
+.race-card.selected{ box-shadow:0 8px 20px rgba(156,43,43,.22); }
+.race-card.selected::after{
+  content:''; position:absolute; top:9px; right:10px; width:6px; height:6px;
+  background:var(--seal-bright); transform:rotate(45deg);
+}
+
+/* ---- Traços: acento lateral por natureza (benigno/maligno) ----
+   Cada traço já carrega uma etiqueta "Benigno"/"Maligno" no cabeçalho
+   da categoria (.tag), mas dentro da lista longa de opções essa
+   distinção se perdia — só dava pra saber a natureza de um traço
+   lendo a categoria lá em cima e lembrando dela ao rolar a lista.
+   Um traço de cor na borda esquerda de cada cartão (e do próprio
+   cabeçalho da categoria) repete essa informação em todo lugar onde
+   ela é decidida, sem precisar rolar de volta. Os seletores usam
+   data-cat/data-cat-toggle (que já terminam em "_benign"/"_malign" —
+   ver renderTraitCategories em editor-build.js) em vez de uma classe
+   nova, então nenhum JS precisa mudar. */
+.trait-cat-body .trait-pick[data-cat$="_benign"]{ border-left:2px solid var(--benign); }
+.trait-cat-body .trait-pick[data-cat$="_malign"]{ border-left:2px solid var(--malign); }
+.trait-cat-title[data-cat-toggle$="_benign"]{ border-left:2px solid var(--benign); padding-left:8px; }
+.trait-cat-title[data-cat-toggle$="_malign"]{ border-left:2px solid var(--malign); padding-left:8px; }
