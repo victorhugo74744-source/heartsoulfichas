@@ -210,24 +210,59 @@ if ('serviceWorker' in navigator) {
     writing-mode:vertical-rl; text-orientation:mixed; padding:14px 0;
   }
   .board-side.retracted .bs-toggle-icon{ transform:rotate(180deg); writing-mode:horizontal-tb; }
+  /* O painel lateral usava uma caixa genérica (fundo liso, borda única,
+     título sem nenhum adorno) — diferente do .panel do resto do site, que
+     já tem fundo em degradê, fio dourado no topo e um losango antes do
+     título (clima "página de grimório"). Aqui a mesma linguagem visual é
+     estendida às 7 sanfonas do board-side, com sombra suave pra dar
+     profundidade e uma borda mais discreta (hairline-soft) já que o fio
+     dourado no topo passa a fazer o papel de separador principal. */
   .side-panel{
-    background:var(--panel); border:1px solid var(--hairline); border-radius:var(--radius);
+    background:linear-gradient(180deg, var(--panel), var(--panel-2));
+    border:1px solid var(--hairline-soft); border-radius:var(--radius);
+    box-shadow:0 8px 20px -14px rgba(0,0,0,.55);
     padding:18px; margin-bottom:14px;
+    position:relative; overflow:hidden;
+  }
+  .side-panel::before{
+    content:''; position:absolute; top:0; left:0; right:0; height:1px;
+    background:linear-gradient(90deg, transparent, var(--gold-dim), transparent);
+    opacity:.6;
   }
   .side-panel h4{ font-family:'Cinzel',serif; color:var(--gold); font-size:15px; margin:0 0 12px; }
-  /* ===== Painéis sanfonados (clica no título pra abrir/fechar) ===== */
+  /* ===== Painéis sanfonados (clica no título pra abrir/fechar) =====
+     O título de cada sanfona ganha o mesmo losango dourado usado nos
+     títulos .panel h2 do resto do site (::before) e uma linha fina
+     embaixo, separando-o do conteúdo como um cabeçalho de capítulo —
+     antes era só o texto em negrito, sem nenhuma marca. */
   .side-panel > h4:first-child{
     cursor:pointer; user-select:none; display:flex; align-items:center; justify-content:space-between;
-    gap:8px;
+    gap:8px; position:relative; padding:0 0 11px 15px; margin:0 0 13px;
+    border-bottom:1px solid var(--hairline-soft);
+  }
+  .side-panel > h4:first-child::before{
+    content:''; position:absolute; left:0; top:6px;
+    width:6px; height:6px; background:var(--seal-bright); transform:rotate(45deg); opacity:.85;
   }
   .side-panel > h4:first-child::after{
-    content:'▾'; font-size:12px; color:var(--ink-mute); transition:transform .15s ease; flex:0 0 auto;
+    content:'▾'; font-size:12px; color:var(--ink-mute); transition:transform .15s ease, color .15s ease; flex:0 0 auto;
   }
+  .side-panel > h4:first-child:hover::before{ opacity:1; }
+  .side-panel > h4:first-child:hover::after{ color:var(--gold); }
   .side-panel.collapsed{ padding-bottom:18px; }
-  .side-panel.collapsed > h4:first-child{ margin-bottom:0; }
+  .side-panel.collapsed > h4:first-child{ border-bottom-color:transparent; padding-bottom:0; margin-bottom:0; }
+  .side-panel.collapsed > h4:first-child::before{ opacity:.5; }
   .side-panel.collapsed > h4:first-child::after{ transform:rotate(-90deg); }
   .side-panel.collapsed > *{ display:none !important; }
   .side-panel.collapsed > h4:first-child{ display:flex !important; }
+  /* "Cenas" e "Mapa" só aparecem pro Mestre (ver renderScenePanel /
+     renderMasterMapPanel) — um friso à esquerda na cor do selo marca
+     essas duas sanfonas como ferramentas de bastidor, diferentes das
+     que todo mundo na mesa vê (Dados, Fichas na mesa, Iniciativa...). */
+  #scenePanel, #masterMapPanel{ border-left:3px solid var(--seal); }
+  #scenePanel > h4:first-child::before, #masterMapPanel > h4:first-child::before{
+    background:var(--seal); left:-1px;
+  }
   .token-row{
     display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:4px 8px;
     font-size:13.5px; color:var(--ink-dim); padding:5px 0; border-bottom:1px solid var(--hairline-soft);
@@ -1030,7 +1065,7 @@ if ('serviceWorker' in navigator) {
     /* Título de cada painel lateral (sanfona) — a área clicável era só a
        altura do texto; aqui ganha uma faixa maior pra abrir/fechar sem
        precisar mirar com precisão. */
-    .side-panel > h4:first-child{ padding:5px 0; margin-bottom:10px; }
+    .side-panel > h4:first-child{ padding:5px 0 11px 15px; margin-bottom:10px; }
 
     /* Botões da lista de cenas (usar/renomear/excluir) e o "x" de fechar a
        ficha em modal — maiores pro toque, mesmo tamanho de fonte. */
