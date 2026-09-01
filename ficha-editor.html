@@ -44,17 +44,27 @@ if ('serviceWorker' in navigator) {
   </div>
 
   <div class="wizard-layout">
-  <nav class="wizard-nav" id="wizardNav">
-    <a href="#step-1"><span class="wn-num">1</span> Identificação</a>
-    <a href="#step-2"><span class="wn-num">2</span> Recursos</a>
-    <a href="#step-3"><span class="wn-num">3</span> Atributos</a>
-    <a href="#step-4"><span class="wn-num">4</span> Perícias</a>
-    <a href="#step-5"><span class="wn-num">5</span> Habilidades</a>
-    <a href="#step-6"><span class="wn-num">6</span> Raça</a>
-    <a href="#step-7"><span class="wn-num">7</span> Traços</a>
-    <a href="#step-8"><span class="wn-num">8</span> Antecedente</a>
-    <a href="#step-9"><span class="wn-num">9</span> Detalhes</a>
-  </nav>
+  <div class="wizard-nav-col">
+    <div class="wizard-progress" id="wizardProgress" aria-hidden="true">
+      <div class="wizard-progress-label">
+        <span>Progresso</span>
+        <span id="wizardProgressLabel">Etapa 1 de 9</span>
+      </div>
+      <div class="wizard-progress-track"><div class="wizard-progress-fill" id="wizardProgressFill"></div></div>
+    </div>
+    <nav class="wizard-nav" id="wizardNav">
+      <a href="#step-1" title="Atalho: Numpad 1"><span class="wn-num">1</span> Identificação</a>
+      <a href="#step-2" title="Atalho: Numpad 2"><span class="wn-num">2</span> Recursos</a>
+      <a href="#step-3" title="Atalho: Numpad 3"><span class="wn-num">3</span> Atributos</a>
+      <a href="#step-4" title="Atalho: Numpad 4"><span class="wn-num">4</span> Perícias</a>
+      <a href="#step-5" title="Atalho: Numpad 5"><span class="wn-num">5</span> Habilidades</a>
+      <a href="#step-6" title="Atalho: Numpad 6"><span class="wn-num">6</span> Raça</a>
+      <a href="#step-7" title="Atalho: Numpad 7"><span class="wn-num">7</span> Traços</a>
+      <a href="#step-8" title="Atalho: Numpad 8"><span class="wn-num">8</span> Antecedente</a>
+      <a href="#step-9" title="Atalho: Numpad 9"><span class="wn-num">9</span> Detalhes</a>
+    </nav>
+    <p class="wizard-numpad-hint" id="wizardNumpadHint">⌨ Use o <b>Numpad</b> (1–9) para pular direto de etapa</p>
+  </div>
   <div class="wizard-main">
 
   <div id="topMsg"></div>
@@ -372,7 +382,8 @@ if ('serviceWorker' in navigator) {
 <script defer src="js/editor-save.js"></script>
 <script defer src="js/editor-init.js"></script>
 <script>
-// ---- Navegação lateral fixa: destaca a etapa visível conforme a rolagem ----
+// ---- Navegação lateral fixa: destaca a etapa visível conforme a rolagem,
+// preenche a barra de progresso e liga o atalho de teclado numérico (Numpad) ----
 (function () {
   const nav = document.getElementById('wizardNav');
   if (!nav) return;
@@ -380,15 +391,49 @@ if ('serviceWorker' in navigator) {
   const sections = links
     .map(a => document.querySelector(a.getAttribute('href')))
     .filter(Boolean);
+  const progressFill = document.getElementById('wizardProgressFill');
+  const progressLabel = document.getElementById('wizardProgressLabel');
+
   function onScroll() {
     const y = window.scrollY + 130;
     let current = sections[0];
-    sections.forEach(sec => { if (sec.offsetTop <= y) current = sec; });
+    let currentIndex = 0;
+    sections.forEach((sec, i) => { if (sec.offsetTop <= y) { current = sec; currentIndex = i; } });
     links.forEach((a, i) => a.classList.toggle('active', sections[i] === current));
+    if (progressFill) progressFill.style.width = ((currentIndex + 1) / sections.length * 100).toFixed(1) + '%';
+    if (progressLabel) progressLabel.textContent = 'Etapa ' + (currentIndex + 1) + ' de ' + sections.length;
   }
   window.addEventListener('scroll', onScroll, { passive: true });
   window.addEventListener('resize', onScroll);
   onScroll();
+
+  // ---- Atalho Numpad: pressionar 1-9 no teclado numérico pula direto pra
+  // etapa correspondente. Ignorado enquanto o foco está num campo editável
+  // (input/textarea/select/contenteditable) pra não atrapalhar quem está
+  // digitando um valor numérico (ex.: Nível, Idade, XP) usando o numpad. ----
+  function isTypingTarget(el) {
+    if (!el) return false;
+    const tag = el.tagName;
+    return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || el.isContentEditable;
+  }
+  function flashStep(sec) {
+    sec.classList.remove('step-jump-flash');
+    // força reflow pra permitir reiniciar a animação em cliques seguidos na mesma etapa
+    void sec.offsetWidth;
+    sec.classList.add('step-jump-flash');
+    sec.addEventListener('animationend', () => sec.classList.remove('step-jump-flash'), { once: true });
+  }
+  window.addEventListener('keydown', (e) => {
+    if (!e.code || !e.code.startsWith('Numpad')) return;
+    const digit = e.code.replace('Numpad', '');
+    if (!/^[1-9]$/.test(digit)) return;
+    if (isTypingTarget(document.activeElement)) return;
+    const sec = sections[Number(digit) - 1];
+    if (!sec) return;
+    e.preventDefault();
+    sec.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    flashStep(sec);
+  });
 })();
 </script>
 </body>

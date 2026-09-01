@@ -1243,6 +1243,72 @@ select option{ background:var(--bg-alt); color:var(--ink); }
   }
 }
 
+/* ---- Coluna do índice lateral (progresso + nav + dica de numpad) ----
+   O índice ganhou dois vizinhos novos (barra de progresso acima, dica do
+   atalho de numpad abaixo), então o antigo sticky/scroll que vivia só em
+   .wizard-nav sobe um nível pra .wizard-nav-col — os três blocos agora
+   sobem/descem juntos como um grupo único ao rolar a página. No mobile a
+   coluna deixa de existir como caixa (display:contents): os filhos voltam
+   a se comportar exatamente como antes (nav vira a barra horizontal de
+   abas já existente), e a barra de progresso/dica somem — não fazem
+   sentido numa tela sem numpad físico e a própria aba ativa já cumpre
+   esse papel ali. */
+@media (min-width:781px){
+  .wizard-nav-col{
+    position:sticky; top:86px; display:flex; flex-direction:column; gap:16px;
+    max-height:calc(100vh - 106px); overflow-y:auto; padding-right:4px;
+  }
+  .wizard-nav{ position:static; top:auto; max-height:none; overflow-y:visible; padding-right:0; }
+}
+@media (max-width:780px){
+  .wizard-nav-col{ display:contents; }
+  .wizard-progress, .wizard-numpad-hint{ display:none; }
+}
+
+/* ---- Barra de progresso do wizard ----
+   Traduz "em que etapa das 9 eu estou" — que antes só dava pra perceber
+   pelo destaque discreto de cor no índice — num preenchimento visual
+   direto, no mesmo espírito do restante do "grimório": rótulo pequeno
+   maiúsculo + trilho fino que enche da cor do selo até o dourado. */
+.wizard-progress{ padding:2px 2px 0; }
+.wizard-progress-label{
+  display:flex; justify-content:space-between; align-items:baseline;
+  font-family:'Cinzel', serif; font-size:11px; text-transform:uppercase;
+  letter-spacing:.06em; color:var(--ink-mute); margin-bottom:8px;
+}
+.wizard-progress-label span:last-child{ color:var(--gold); font-family:'JetBrains Mono', monospace; letter-spacing:0; }
+.wizard-progress-track{
+  height:4px; border-radius:4px; background:var(--hairline); overflow:hidden;
+}
+.wizard-progress-fill{
+  height:100%; width:11%; border-radius:4px;
+  background:linear-gradient(90deg, var(--seal-bright), var(--gold));
+  transition:width .35s ease;
+}
+
+/* ---- Dica do atalho de numpad ----
+   Discreta o bastante pra não competir com o índice, mas visível o
+   suficiente pra ensinar o atalho a quem nunca reparou nos números 1-9
+   ao lado de cada etapa (mesmos números usados no href de cada link). */
+.wizard-numpad-hint{
+  font-size:12px; font-style:italic; color:var(--ink-mute);
+  text-align:center; margin:2px 4px 0; opacity:.8;
+}
+.wizard-numpad-hint b{ color:var(--gold-dim); font-style:normal; }
+
+/* ---- Destaque ao saltar de etapa via numpad ----
+   Sem esse feedback, o scroll suave sozinho deixa dúvida se a tecla
+   realmente "pegou" (principalmente saltando poucas etapas de distância,
+   onde o movimento é sutil). Um brilho interno rápido na cor do selo
+   confirma o salto — usa box-shadow inset (não é cortado pelo
+   overflow:hidden que .panel já tem) em vez de um box-shadow externo. */
+@keyframes hs-step-jump{
+  0%{ box-shadow:inset 0 0 0 0 rgba(196,67,60,0); }
+  18%{ box-shadow:inset 0 0 0 1px rgba(196,67,60,.8), inset 0 0 32px -6px rgba(196,67,60,.4); }
+  100%{ box-shadow:inset 0 0 0 0 rgba(196,67,60,0); }
+}
+.panel.step-jump-flash{ animation:hs-step-jump .9s ease-out; }
+
 /* ---- Cabeçalho de cada etapa (.panel h2): losango de fechamento ----
    O selo circular do número já existe; isso soma um pequeno losango
    dourado no fim da linha divisória, igual ao ornamento do <h1> da
