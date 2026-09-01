@@ -799,7 +799,8 @@ mark{ background:var(--seal); color:#fff; padding:0 1px; border-radius:2px; }
         (p.trim().length <= 60 && /^[A-ZÀ-Ý][\wÀ-ÿ'\-]*(?:\s+(?:(?:de|da|do|das|dos|e|em|a|o|ou|com|para|por|no|na|ao|à|às)\s+)?[A-ZÀ-Ý][\wÀ-ÿ'\-]*){0,5}$/.test(p.trim())
           ? [null, p.trim()] : null);
       const m = p.match(/^([A-ZÀ-Ý][^():]{2,60}?)\s*\((Custo|Custo aproximado)[:\s]*([^)]*)\)\s*[:\-–]?\s*(.*)$/s);
-      const n = p.match(/^([A-ZÀ-Ý][^():]{1,40}?(?:\s*\([^()]{1,60}\))?)\s*:\s+(.+)$/s);
+      const n = p.match(/^([A-ZÀ-Ý][^():]{1,40}?(?:\s*\([^()]{1,60}\))?)\s*:\s+(.+)$/s) ||
+        p.match(/^(Resultado\s+\d+\s*[-–—]\s*\d+\s*[—–-]\s*[A-ZÀ-Ý][^:()]{1,60})\s*:\s+(.+)$/s);
       if(heading){
         const text = heading[1].trim();
         let id = 'h-' + slugify(text);
