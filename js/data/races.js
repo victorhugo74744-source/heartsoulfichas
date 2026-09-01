@@ -62,9 +62,10 @@ window.HEARTSOUL_RACES = [
    "Visão Híbrida: Você herdou parcialmente os sentidos élficos. Não enxerga tão bem no escuro quanto um elfo puro, mas ainda supera a maioria das raças. +2 Foco. Visão em penumbra até 9 metros.",
    "Dualidade Cultural: Crescer entre duas culturas que raramente se entendem forçou sua mente a se tornar mais flexível e perspicaz. +2 Intelecto. +2 em testes de Intuição para identificar mentiras ou segundas intenções.",
    "Adaptabilidade Física: Nem tão frágil quanto um elfo, nem tão robusto quanto um humano, você encontrou seu próprio equilíbrio. +2 Destreza ou +2 Constituição (escolha no momento da criação).",
+   "Mira Refinada: Parte da precisão élfica corre em suas veias. +1 Destreza. Ignora metade da penalidade de cobertura parcial ao realizar ataques à distância.",
    "Herança Flutuante: Seu sangue misto permite uma leve afinidade com uma das energias, dependendo de sua criação e inclinação pessoal. Se a classe for Energia (Mana): +2 pontos de Mana adicionais. Se a classe for Crença (Fé): +2 pontos de Fé adicionais. Se a classe for Poder (Aura): +2 pontos de Aura adicionais.",
    "Diplomata Nato: Você cresceu entre dois mundos e aprendeu a falar a língua de ambos. +2 em testes de Diplomacia e mediação de conflitos. Você pode acalmar discussões acaloradas com um teste de Vontade (CD 15), reduzindo a hostilidade em um nível.",
-   "Versatilidade Inata: Seu sangue misto lhe concede uma flexibilidade incomum. Escolha dois atributos diferentes. Você recebe +1 em cada um deles."
+   "Ecos da Memória: Fragmentos da memória ancestral élfica sussurram em sua mente nos momentos certos. Uma vez por descanso curto, ao realizar um teste de Intelecto, Foco ou Vontade, você pode rolar o dado novamente e ficar com o melhor resultado."
   ]
  },
  {
@@ -89,14 +90,15 @@ window.HEARTSOUL_RACES = [
   "flavor": [
    "Os meio-orcs carregam a força de seus ancestrais orcs temperada pela adaptabilidade humana. São fisicamente imponentes — presas menores que as de um orc puro, mas ainda visíveis, pele em tons de verde-acinzentado, porte musculoso. Os orcs puros os veem como fracos. Os humanos frequentemente os temem ou desprezam. Apesar disso, os meio-orcs que superam o preconceito costumam se tornar guerreiros temíveis, mercenários respeitados ou líderes improváveis."
   ],
-  "fixedTrait": "Determinação Implacável: A vida de rejeição forjou um espírito difícil de quebrar. Quando o mundo tenta oprimi-lo, você resiste com unhas e dentes. Uma vez por cena, ao sofrer um efeito de status negativo (medo, confusão, paralisia), teste de Vontade (CD 12) para reduzir a duração do efeito em 3 turnos.",
+  "fixedTrait": "Determinação Implacável: A vida de rejeição forjou um espírito difícil de quebrar. Quando o mundo tenta oprimi-lo, você resiste com unhas e dentes. Uma vez por cena, ao sofrer um efeito de status negativo (medo, confusão, paralisia), teste de Vontade (CD 12) para reduzir a duração do efeito em 3 turnos. Além disso, quando o HP de uma parte vital (cabeça ou tronco) chegar a 0, faça um teste de Constituição (CD 16): se passar, permanece com 1 HP nessa parte e continua consciente. Uma vez por combate.",
   "optionalTraits": [
    "Fúria Contida: A herança orc se manifesta em momentos de raiva controlada. Você não perde o controle, você o usa. Uma vez por combate, ao entrar em fúria (ação livre): +2 em testes de ataque corpo a corpo por 2 rodadas. Após isso, sofre -1 em defesa por 1 rodada.",
    "Força Desproporcional: Mesmo para seu tamanho, você é anormalmente forte. Seus músculos parecem subestimar a gravidade. +2 Força. Capacidade de carga como se tivesse +2 adicionais de Força.",
+   "Golpe Ancestral: O instinto de combate orc guia sua mão, mesmo que de forma menos brutal. Uma vez por combate, ao acertar um ataque corpo a corpo: +1d4 de dano extra. Este dano não dobra em críticos.",
+   "Pele Curtida: Sua pele herdou parte da resistência orc, endurecida pela vida à margem. +1 Constituição. Uma vez por descanso curto, você pode endurecer sua pele por 2 rodadas: reduz 1 ponto de dano físico recebido.",
    "Sangue Guerreiro: O instinto de sobrevivência herdado dos orcs mantém você de pé quando outros já teriam caído. Uma vez por dia, ao zerar o HP de uma parte não-vital (braços ou pernas): ignora os efeitos de inutilização por 2 rodadas.",
    "Aparência Ameaçadora: A combinação de traços orcs e humanos resulta em uma figura que impõe respeito, ou medo. Você não precisa gritar para ser notado. +2 em testes de Intimidação. Se passar no teste, o alvo sofre -2 em seu próximo teste contra você.",
-   "Instinto de Sobrevivência: Seu corpo se recusa a cair, mesmo quando deveria. Quando o HP de uma parte vital (cabeça ou tronco) chegar a 0, faça um teste de Constituição (CD 16). Se passar, permanece com 1 HP nessa parte e continua consciente. Uma vez por combate.",
-   "Aceitação Amarga: Você está acostumado ao preconceito e aprendeu a usá-lo. -1 em testes sociais iniciais (as pessoas o julgam pela aparência). +2 em testes de Intimidação e resistência a intimidação."
+   "Eco dos Ancestrais: Vozes distantes de uma linhagem que você mal conhece ainda sussurram em momentos de necessidade. +1 Vontade. Uma vez por cena, você pode invocar essa herança: escolha um aliado ou a si mesmo. O alvo recebe +1 em seu próximo teste de ataque ou resistência."
   ]
  },
  {
