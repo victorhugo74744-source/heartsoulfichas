@@ -61,15 +61,41 @@ function tokenHpBarHtml(tok) {
   </div>`;
 }
 
+// Quando a cena ainda não tem nenhum token, a caixa "Aplicar em um alvo"
+// (select + partes do corpo) some e dá lugar a uma dica curta — no início
+// de toda mesa nova (ou numa cena só de exploração, sem combate) esse bloco
+// inteiro ficava ocupando espaço vertical só pra mostrar "sem alvo", que já
+// é o comportamento padrão de qualquer jeito.
 function renderDiceTargetOptions() {
   const select = document.getElementById('diceTargetSelect');
+  const targetRow = document.getElementById('diceTargetRow');
+  const emptyHint = document.getElementById('diceTargetEmpty');
   if (!select) return;
   const prevValue = select.value;
   const tokens = Object.values(liveTokens).filter(t => isTokenInActiveScene(t) && !t.prop);
+
+  if (!tokens.length) {
+    if (targetRow) targetRow.classList.add('hidden');
+    if (emptyHint) emptyHint.classList.remove('hidden');
+    select.innerHTML = '<option value="">— sem alvo (rolagem livre) —</option>';
+    select.value = '';
+    updateDiceTargetUiState();
+    return;
+  }
+  if (targetRow) targetRow.classList.remove('hidden');
+  if (emptyHint) emptyHint.classList.add('hidden');
+
   const options = tokens.map(t => `<option value="${t.id}">${escapeHtml(t.name || 'Token')}</option>`).join('');
   select.innerHTML = `<option value="">— sem alvo (rolagem livre) —</option>${options}`;
   if (prevValue && tokens.some(t => t.id === prevValue)) select.value = prevValue;
   updateDiceTargetUiState();
+}
+
+// Lê a ação marcada no toggle segmentado "⚔️ Dano / ❤️ Curar" (substituiu
+// o antigo <select> — ver comentário na CSS do dice-action-toggle).
+function getSelectedDiceAction() {
+  const checked = document.querySelector('#diceActionToggle input[name="diceAction"]:checked');
+  return checked ? checked.value : 'damage';
 }
 
 // Lê quais partes do corpo estão marcadas no grupo de checkboxes (multi-
@@ -433,6 +459,31 @@ function renderTableDiceLog() {
 // tremor vermelho em 1 natural. Cada rolagem nova ganha o seu próprio
 // balão independente — não fila nem espera o anterior sumir, pra não
 // atrasar a resposta visual se vários jogadores rolarem ao mesmo tempo.
+// Estima o teto plausível pros números aleatórios mostrados durante o
+// "suspense" do balão — antes girava sempre entre 1 e 20, mesmo numa
+// rolagem de d100 ou 2d6 (ficava saltando de "17" pra "84" no instante do
+// resultado, quebrando a ilusão). Aqui lemos o(s) dNN do próprio rótulo da
+// rolagem (ex.: "2d6+3" → 6, "1d100" → 100, "3#d20kh1" → 20) e giramos
+// dentro da faixa do maior dado realmente usado.
+function guessSpinCeiling(label) {
+  const sides = Array.from((label || '').matchAll(/d(\d+)/gi))
+    .map(m => parseInt(m[1], 10)).filter(n => n > 1);
+  if (!sides.length) return 20;
+  return Math.min(100, Math.max(...sides));
+}
+
+// Balão flutuante sobre o tabuleiro: o dado tomba (ícone rodando em várias
+// etapas, não um giro plano) mostrando números de suspense dentro da faixa
+// plausível do próprio dado, cada troca com um "tique" visual (pop rápido,
+// como um contador de caça-níquel), até encaixar no resultado real já
+// calculado (o total já veio pronto do Firestore — aqui só criamos o efeito
+// de "o dado ainda está rolando"). No pouso: brilho dourado varrendo o
+// balão em 20 natural, anel vermelho pulsante em 1 natural. A duração do
+// giro varia um pouco a cada rolagem (não é sempre idêntica), pra não ficar
+// mecânico numa sessão com muitas rolagens seguidas. Cada rolagem nova
+// ganha o seu próprio balão independente — não fila nem espera o anterior
+// sumir, pra não atrasar a resposta visual se vários jogadores rolarem ao
+// mesmo tempo.
 function showDiceRollToast(entry) {
   const layer = document.getElementById('diceToastLayer');
   if (!layer) return;
@@ -447,15 +498,27 @@ function showDiceRollToast(entry) {
     <span class="dice-toast-total">–</span>`;
   layer.appendChild(el);
   const totalEl = el.querySelector('.dice-toast-total');
+  const iconEl = el.querySelector('.dice-toast-icon');
 
-  const spinMs = 550, tickMs = 60;
+  const ceiling = guessSpinCeiling(entry.label);
+  const spinMs = 480 + Math.floor(Math.random() * 170); // varia ~480–650ms
+  const tickMs = 60;
   const ticks = Math.max(1, Math.round(spinMs / tickMs));
+  iconEl.style.animationDuration = spinMs + 'ms';
   let i = 0;
   const spinTimer = setInterval(() => {
-    totalEl.textContent = String(1 + Math.floor(Math.random() * 20));
+    totalEl.textContent = String(1 + Math.floor(Math.random() * ceiling));
+    // Reinicia a animação de "tique" a cada troca de número — remover,
+    // forçar reflow e reaplicar é o jeito confiável de reiniciar a mesma
+    // CSS animation em rápida sucessão (senão o browser ignora repetições
+    // da mesma classe já aplicada).
+    totalEl.classList.remove('ticking');
+    void totalEl.offsetWidth;
+    totalEl.classList.add('ticking');
     i++;
     if (i >= ticks) {
       clearInterval(spinTimer);
+      totalEl.classList.remove('ticking');
       totalEl.textContent = entry.total;
       el.classList.add('settled');
       if (entry.isNat20) el.classList.add('crit');
@@ -475,18 +538,24 @@ async function doTableRoll() {
   const errEl = document.getElementById('diceErr');
   const hideChk = document.getElementById('diceHideChk');
   const targetSel = document.getElementById('diceTargetSelect');
-  const actionSel = document.getElementById('diceActionSelect');
   const result = parseTableRollCommand(input.value);
   if (result.error) {
     errEl.textContent = result.error;
-    errEl.style.display = 'block';
+    errEl.style.display = 'flex';
+    // Reinicia a animação mesmo se o erro anterior ainda não tiver sumido
+    // (dois comandos errados seguidos) — remover e forçar reflow antes de
+    // reaplicar a classe é o jeito confiável de reiniciar uma CSS animation.
+    input.classList.remove('dice-input-shake');
+    void input.offsetWidth;
+    input.classList.add('dice-input-shake');
     return;
   }
   errEl.style.display = 'none';
+  input.classList.remove('dice-input-shake');
 
   const targetId = targetSel ? targetSel.value : '';
   const partKeys = targetId ? getCheckedBodyParts() : [];
-  const action = (targetId && partKeys.length && actionSel) ? actionSel.value : '';
+  const action = (targetId && partKeys.length) ? getSelectedDiceAction() : '';
 
   // Se um alvo e ao menos uma parte do corpo estiverem marcados, o total da
   // própria rolagem é debitado (dano) ou somado (cura) diretamente no HP de

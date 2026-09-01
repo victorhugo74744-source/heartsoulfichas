@@ -382,9 +382,29 @@ if ('serviceWorker' in navigator) {
   #dicePanel .dice-quick-row button[data-quick="2#d20"]{
     margin-left:8px; padding-left:12px; border-left:1px solid var(--hairline-soft);
   }
-  #dicePanel .dice-cmd-row{ display:flex; gap:6px; margin-bottom:14px; }
-  #dicePanel .dice-cmd-row input{ flex:1; font-family:'JetBrains Mono', monospace; font-size:13px; padding:8px 10px; }
+  #dicePanel .dice-cmd-row{ display:flex; gap:6px; margin-bottom:5px; }
+  #dicePanel .dice-cmd-row input{ flex:1; font-family:'JetBrains Mono', monospace; font-size:13px; padding:8px 10px; min-width:0; }
   #dicePanel .dice-cmd-row button{ width:auto; padding:8px 14px; flex-shrink:0; }
+  /* "Ocultar rolagem" virou um botão-pill de olho ao lado do campo (antes
+     era uma linha inteira de checkbox+texto abaixo do botão Rolar — pesava
+     visualmente numa decisão que é rápida e opcional). Fica aceso em
+     vermelho-selo quando ativo, e um aviso discreto (dice-hide-hint)
+     aparece só nesse estado, pra confirmar sem ocupar espaço à toa. */
+  #dicePanel .dice-hide-toggle{
+    position:relative; display:flex; align-items:center; justify-content:center;
+    width:38px; flex-shrink:0; border:1px solid var(--hairline-soft); border-radius:6px;
+    cursor:pointer; font-size:15px; color:var(--ink-mute); user-select:none;
+    transition:border-color .12s ease, color .12s ease, background .12s ease;
+  }
+  #dicePanel .dice-hide-toggle input{ position:absolute; opacity:0; width:0; height:0; }
+  #dicePanel .dice-hide-toggle:hover{ border-color:var(--gold-dim); color:var(--gold); }
+  #dicePanel .dice-hide-toggle:has(input:checked){
+    border-color:var(--seal-bright); color:var(--seal-bright); background:rgba(156,43,43,.14);
+  }
+  #dicePanel .dice-hide-hint{
+    display:none; font-size:11px; color:var(--seal-bright); margin:-1px 0 12px; padding-left:1px;
+  }
+  #dicePanel:has(#diceHideChk:checked) .dice-hide-hint{ display:block; }
 
   /* Microrótulo de seção — mesmo estilo já usado em .tool-toolbar-label na
      barra de ferramentas do mapa, reaproveitado aqui pra manter os dois
@@ -403,8 +423,26 @@ if ('serviceWorker' in navigator) {
   }
   #dicePanel .dice-target-row{ display:flex; gap:6px; }
   #dicePanel .dice-target-row select{ flex:1; font-size:12.5px; padding:7px 8px; }
+  #dicePanel .dice-target-empty{
+    font-size:11.5px; color:var(--ink-mute); font-style:italic; padding:4px 1px 1px; line-height:1.4;
+  }
   #dicePanel .dice-part-row{ display:flex; flex-direction:column; gap:8px; margin-top:8px; }
-  #dicePanel .dice-part-row select{ font-size:12.5px; padding:7px 8px; }
+  /* Dano/Curar era um <select> nativo solto no meio de chips estilizados —
+     destoava do resto do painel e escondia a opção atual atrás de um clique
+     a mais. Agora é um par de botões segmentados, mesma linguagem visual
+     dos chips de parte do corpo logo acima, com a opção ativa sempre visível
+     e colorida (vermelho pra dano, verde pra cura). */
+  #dicePanel .dice-action-toggle{ display:flex; gap:6px; }
+  #dicePanel .dice-action-opt{
+    position:relative; flex:1; display:flex; align-items:center; justify-content:center;
+    border:1px solid var(--hairline-soft); border-radius:6px; padding:7px 4px; cursor:pointer;
+    font-size:12px; color:var(--ink-dim); user-select:none; text-align:center;
+    transition:border-color .12s ease, color .12s ease, background .12s ease;
+  }
+  #dicePanel .dice-action-opt input{ position:absolute; opacity:0; width:0; height:0; }
+  #dicePanel .dice-action-opt:hover{ border-color:var(--gold-dim); }
+  #dicePanel .dice-action-opt.dmg:has(input:checked){ border-color:#c9564f; color:#c9564f; background:rgba(201,86,79,.13); }
+  #dicePanel .dice-action-opt.heal:has(input:checked){ border-color:#7fb27a; color:#7fb27a; background:rgba(127,178,122,.13); }
   /* Partes do corpo como chips (em vez de checkbox + texto corrido) — mais
      fácil de escanear rápido no meio de uma sessão, e a parte marcada fica
      visualmente destacada em vez de só o quadradinho preenchido. */
@@ -430,18 +468,30 @@ if ('serviceWorker' in navigator) {
   }
   #dicePanel .dice-entry .de-apply .dmg{ color:#c9564f; }
   #dicePanel .dice-entry .de-apply .heal{ color:#7fb27a; }
-  #dicePanel .dice-hide-row{
-    display:flex; align-items:center; gap:7px; font-size:11.5px; color:var(--ink-mute);
-    margin-bottom:10px; cursor:pointer; text-transform:none; letter-spacing:0;
+  /* Erro de comando (ex.: "d2o" digitado errado) ganhou um ícone fixo e faz
+     o campo tremer/acender uma borda vermelha por um instante — antes só
+     surgia um texto pequeno abaixo do botão, fácil de não notar no meio de
+     uma sessão corrida. */
+  #dicePanel .dice-err{
+    color:#e0a5a5; font-size:12px; margin:0 0 10px; display:none; align-items:baseline; gap:5px;
   }
-  #dicePanel .dice-hide-row input{ width:auto; flex-shrink:0; }
-  #dicePanel .dice-err{ color:#e0a5a5; font-size:12px; margin:2px 0 6px; display:none; }
+  #dicePanel .dice-err::before{ content:'⚠'; flex-shrink:0; }
+  #dicePanel .dice-cmd-row input.dice-input-shake{
+    animation:deFailShake .4s ease; border-color:#9c4a45 !important;
+  }
   #dicePanel .dice-log-label{ margin-top:2px; }
   #dicePanel .dice-log{ max-height:190px; overflow-y:auto; overscroll-behavior-y:contain; display:flex; flex-direction:column-reverse; gap:6px; }
   #dicePanel .dice-entry{
-    padding:7px 10px; background:var(--panel-2); border:1px solid var(--hairline-soft); border-radius:8px;
+    position:relative; overflow:hidden;
+    padding:7px 10px 7px 9px; background:var(--panel-2); border:1px solid var(--hairline-soft);
+    border-left:3px solid var(--hairline-soft); border-radius:8px;
     font-size:12.5px; animation:rollIn .2s ease;
   }
+  /* Borda esquerda colorida pra bater o olho e já saber se foi 20 natural,
+     1 natural ou uma rolagem comum sem precisar ler o número — útil ao
+     rolar rápido a lista inteira de histórico durante o combate. */
+  #dicePanel .dice-entry:has(.de-total.crit){ border-left-color:#e8c76a; }
+  #dicePanel .dice-entry:has(.de-total.fail){ border-left-color:#c9564f; }
   @keyframes rollIn{ from{ opacity:0; transform:translateY(4px);} to{ opacity:1; transform:translateY(0);} }
   #dicePanel .de-head{ display:flex; justify-content:space-between; gap:8px; }
   #dicePanel .de-cmd{ color:var(--ink-mute); font-family:'JetBrains Mono', monospace; }
@@ -449,7 +499,7 @@ if ('serviceWorker' in navigator) {
   #dicePanel .de-total.crit{ color:#e8c76a; }
   #dicePanel .de-total.fail{ color:#c9564f; }
   #dicePanel .de-detail{ color:var(--ink-dim); font-size:11px; margin-top:2px; }
-  #dicePanel .dice-empty{ color:var(--ink-mute); font-style:italic; font-size:12px; text-align:center; padding:10px 0; }
+  #dicePanel .dice-empty{ color:var(--ink-mute); font-style:italic; font-size:12px; text-align:center; padding:10px 0; opacity:.75; }
   #dicePanel .dice-entry.de-hidden{ border-style:dashed; opacity:.85; }
   /* "Pouso" do resultado no log — só aplicado 1x, na rolagem que acabou de
      chegar (marcada como "fresca" no JS), pra não replay a cada re-render. */
@@ -459,6 +509,15 @@ if ('serviceWorker' in navigator) {
   @keyframes deLanding{ 0%{ transform:scale(1.05);} 55%{ transform:scale(.98);} 100%{ transform:scale(1);} }
   @keyframes deCritPulse{ 0%,100%{ box-shadow:none;} 40%{ box-shadow:0 0 0 2px rgba(232,199,106,.55), 0 0 16px rgba(232,199,106,.4);} }
   @keyframes deFailShake{ 0%,100%{ transform:translateX(0);} 25%{ transform:translateX(-4px);} 75%{ transform:translateX(4px);} }
+  /* Mesma faixa dourada varrendo do balão flutuante, só que aplicada 1x na
+     entrada do log que acabou de chegar como 20 natural — costura o efeito
+     do balão com o efeito do histórico, em vez de dois visuais soltos. */
+  #dicePanel .dice-entry.de-fresh.de-crit::after{
+    content:''; position:absolute; inset:0; pointer-events:none;
+    background:linear-gradient(115deg, transparent 35%, rgba(232,199,106,.35) 50%, transparent 65%);
+    background-size:250% 100%; background-position:150% 0;
+    animation:diceCritSweep .8s ease .1s;
+  }
 
   /* ===== Rolagem de dado — animação flutuante sobre o tabuleiro =====
      Toda vez que uma rolagem nova chega (sua ou de outro jogador), aparece
@@ -473,13 +532,18 @@ if ('serviceWorker' in navigator) {
     align-items:center; width:min(92%, 340px);
   }
   .dice-toast{
-    display:flex; align-items:center; gap:10px; padding:7px 16px 7px 12px;
+    position:relative; display:flex; align-items:center; gap:10px; padding:7px 16px 7px 12px;
     background:rgba(20,15,10,.94); border:1px solid var(--hairline); border-radius:30px;
-    box-shadow:0 6px 22px rgba(0,0,0,.5);
+    box-shadow:0 6px 22px rgba(0,0,0,.5); overflow:hidden;
     animation:diceToastIn .22s ease, diceToastOut .35s ease 1.75s forwards;
   }
   .dice-toast.fail{ animation:diceToastIn .22s ease, deFailShake .4s ease .5s, diceToastOut .35s ease 1.75s forwards; }
-  .dice-toast-icon{ font-size:20px; line-height:1; animation:diceSpin .55s linear; flex-shrink:0; }
+  /* Ícone "tombando" em várias etapas (rotação + leve variação de escala a
+     cada passo) em vez de um giro plano — mais parecido com um dado
+     quicando na mesa que uma seta de "carregando". A duração real é
+     definida por rolagem via animation-duration inline (showDiceRollToast),
+     pra variar um pouco a cada vez. */
+  .dice-toast-icon{ font-size:20px; line-height:1; animation:diceTumble .55s ease-out; flex-shrink:0; }
   .dice-toast.settled .dice-toast-icon{ animation:diceSettleBounce .4s ease; }
   .dice-toast-body{ display:flex; flex-direction:column; line-height:1.25; min-width:0; }
   .dice-toast-who{
@@ -488,18 +552,57 @@ if ('serviceWorker' in navigator) {
   .dice-toast-cmd{ font-size:11.5px; color:var(--ink-dim); font-family:'JetBrains Mono', monospace; }
   .dice-toast-total{
     font-family:'Cinzel',serif; font-size:21px; color:var(--gold); font-variant-numeric:tabular-nums;
-    margin-left:auto; padding-left:8px;
+    margin-left:auto; padding-left:8px; display:inline-block;
   }
+  /* "Tique" a cada número de suspense trocado (a cada 60ms enquanto gira) —
+     um pop rápido que dá a sensação de contador de caça-níquel em vez de o
+     número só trocar seco. Reaplicado via JS (remove/reflow/add) a cada
+     troca. */
+  .dice-toast-total.ticking{ animation:diceTickPop .12s ease-out; }
+  @keyframes diceTickPop{ 0%{ transform:scale(1.3) translateY(-2px); opacity:.55;} 100%{ transform:scale(1) translateY(0); opacity:1;} }
+  /* Pouso do número final: todo resultado ganha um leve "impacto" de escala
+     ao encaixar — reforça a sensação de "o dado parou" mesmo numa rolagem
+     comum, sem precisar ser crítico ou falha pra ter algum efeito. */
+  .dice-toast.settled .dice-toast-total{ animation:diceTotalSettle .3s ease; }
+  @keyframes diceTotalSettle{ 0%{ transform:scale(1.45);} 55%{ transform:scale(.92);} 100%{ transform:scale(1);} }
   .dice-toast.crit{ border-color:#e8c76a; box-shadow:0 6px 22px rgba(0,0,0,.5), 0 0 18px rgba(232,199,106,.4); }
   .dice-toast.crit .dice-toast-total{ color:#e8c76a; text-shadow:0 0 10px rgba(232,199,106,.7); }
   .dice-toast.fail{ border-color:#9c4a45; }
   .dice-toast.fail .dice-toast-total{ color:#c9564f; }
+  /* Faixa dourada varrendo o balão inteiro no 20 natural — só dispara uma
+     vez, junto do "settled", nunca em loop (senão vira só um brilho
+     piscando que cansa a vista numa sessão de combate longa). */
+  .dice-toast.crit.settled::after{
+    content:''; position:absolute; inset:0; pointer-events:none;
+    background:linear-gradient(115deg, transparent 35%, rgba(232,199,106,.6) 50%, transparent 65%);
+    background-size:250% 100%; background-position:150% 0;
+    animation:diceCritSweep .8s ease .05s;
+  }
+  @keyframes diceCritSweep{ from{ background-position:160% 0; opacity:1;} to{ background-position:-60% 0; opacity:0;} }
+  /* Anel vermelho pulsando ao redor do balão no 1 natural, junto do tremor
+     já existente — reforça o "golpe" sem depender só do texto ficar
+     vermelho. */
+  .dice-toast.fail.settled::after{
+    content:''; position:absolute; inset:-2px; border-radius:inherit; pointer-events:none;
+    box-shadow:0 0 0 2px rgba(201,86,79,.65), 0 0 18px rgba(201,86,79,.5);
+    animation:diceFailFlash .55s ease .05s;
+  }
+  @keyframes diceFailFlash{ 0%{ opacity:1;} 100%{ opacity:0;} }
   @keyframes diceToastIn{ from{ opacity:0; transform:translateY(-10px) scale(.92);} to{ opacity:1; transform:translateY(0) scale(1);} }
   @keyframes diceToastOut{ to{ opacity:0; transform:translateY(-6px) scale(.96);} }
-  @keyframes diceSpin{ from{ transform:rotate(0deg);} to{ transform:rotate(360deg);} }
+  @keyframes diceTumble{
+    0%{ transform:rotate(0deg) scale(1); }
+    18%{ transform:rotate(150deg) scale(.82); }
+    38%{ transform:rotate(255deg) scale(1.12); }
+    58%{ transform:rotate(410deg) scale(.88); }
+    78%{ transform:rotate(560deg) scale(1.06); }
+    100%{ transform:rotate(720deg) scale(1); }
+  }
   @keyframes diceSettleBounce{ 0%{ transform:scale(1.35) rotate(0);} 55%{ transform:scale(.92);} 100%{ transform:scale(1);} }
   @media (prefers-reduced-motion:reduce){
-    .dice-toast, .dice-toast-icon, .dice-entry.de-fresh{ animation:none !important; }
+    .dice-toast, .dice-toast-icon, .dice-toast-total, .dice-entry.de-fresh,
+    .dice-toast.crit.settled::after, .dice-toast.fail.settled::after,
+    .dice-entry.de-fresh.de-crit::after{ animation:none !important; }
   }
 
   /* ===== Ferramentas do mapa (régua, desenho, névoa, marcar) ===== */
@@ -1028,7 +1131,8 @@ if ('serviceWorker' in navigator) {
     #dicePanel .dice-quick-row button{ padding:10px 14px; font-size:13.5px; min-height:40px; }
     #dicePanel .dice-cmd-row input{ padding:11px 12px; font-size:16px; }
     #dicePanel .dice-cmd-row button{ padding:11px 16px; }
-    #dicePanel .dice-hide-row input{ width:20px; height:20px; }
+    #dicePanel .dice-hide-toggle{ width:44px; font-size:17px; }
+    #dicePanel .dice-action-opt{ padding:10px 4px; font-size:13px; min-height:40px; }
     /* BUG: os selects de alvo e parte do corpo tinham padding/fonte menores
        que os outros campos do mesmo painel (7px/12.5px, herdados do
        desktop) — no celular ficavam com ~30px de altura e texto pequeno
@@ -1569,16 +1673,23 @@ if ('serviceWorker' in navigator) {
           <div class="dice-quick-row" id="diceQuickRow"></div>
           <div class="dice-cmd-row">
             <input type="text" id="diceCmdInput" placeholder="ex.: d20, 2d6+3, 2#d20">
-            <button class="btn small" id="diceRollBtn">Rolar</button>
+            <label class="dice-hide-toggle" for="diceHideChk" title="Ocultar esta rolagem dos outros jogadores (só você e o Mestre veem)">
+              <input type="checkbox" id="diceHideChk">
+              <span>🙈</span>
+            </label>
+            <button class="btn small" id="diceRollBtn">🎲 Rolar</button>
           </div>
+          <div class="dice-hide-hint" id="diceHideHint">🙈 Esta rolagem vai ficar oculta — só você e o Mestre verão o resultado.</div>
+          <div class="dice-err" id="diceErr"></div>
 
           <div class="dice-target-group" id="diceTargetGroup">
             <div class="dice-section-label">🎯 Aplicar em um alvo <span class="dice-section-label-opt">(opcional)</span></div>
-            <div class="dice-target-row">
+            <div class="dice-target-row" id="diceTargetRow">
               <select id="diceTargetSelect" title="Alvo do ataque/cura">
                 <option value="">— sem alvo (rolagem livre) —</option>
               </select>
             </div>
+            <div class="dice-target-empty hidden" id="diceTargetEmpty">Nenhum token na cena ainda — coloque um em "Fichas na mesa" para poder mirar dano ou cura nele.</div>
             <div class="dice-part-row hidden" id="dicePartRow">
               <div class="dice-part-checks" id="diceBodyPartChecks" title="Partes do corpo">
                 <label class="dice-part-check-item"><input type="checkbox" value="cabeca" checked><span>Cabeça</span></label>
@@ -1588,19 +1699,17 @@ if ('serviceWorker' in navigator) {
                 <label class="dice-part-check-item"><input type="checkbox" value="perna_esq"><span>Perna Esq.</span></label>
                 <label class="dice-part-check-item"><input type="checkbox" value="perna_dir"><span>Perna Dir.</span></label>
               </div>
-              <select id="diceActionSelect" title="O que fazer com o resultado">
-                <option value="damage">⚔️ Causar dano</option>
-                <option value="heal">❤️ Curar</option>
-              </select>
+              <div class="dice-action-toggle" id="diceActionToggle">
+                <label class="dice-action-opt dmg">
+                  <input type="radio" name="diceAction" value="damage" checked><span>⚔️ Dano</span>
+                </label>
+                <label class="dice-action-opt heal">
+                  <input type="radio" name="diceAction" value="heal"><span>❤️ Curar</span>
+                </label>
+              </div>
             </div>
             <div class="dice-target-hp hidden" id="diceTargetHpLine"></div>
           </div>
-
-          <label class="dice-hide-row" for="diceHideChk">
-            <input type="checkbox" id="diceHideChk">
-            Ocultar esta rolagem dos outros jogadores (só você e o Mestre veem)
-          </label>
-          <div class="dice-err" id="diceErr"></div>
 
           <div class="dice-section-label dice-log-label">📜 Histórico</div>
           <div class="dice-log" id="diceLog"><div class="dice-empty">Nenhuma rolagem ainda.</div></div>
