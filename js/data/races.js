@@ -75,11 +75,11 @@ window.HEARTSOUL_RACES = [
   ],
   "fixedTrait": "Resiliência Orc: O corpo de um orc é preparado para a guerra desde o nascimento. Mesmo quando ferido gravemente, você continua lutando quando outros já teriam caído. +2 Constituição. Uma vez por combate, ao zerar o HP de uma parte do corpo, teste de Constituição (CD 12) para mantê-la funcional por mais 1 rodada.",
   "optionalTraits": [
-   "Fúria de Batalha: Quando ferido, você se torna ainda mais perigoso. A dor não o enfraquece, ela o alimenta. Ao receber dano em combate, no próximo turno: +2 em testes de ataque corpo a corpo. Não acumula consigo mesmo.",
+   "Visão do Mundo Espiritual: Seus olhos foram abertos pelo ritual de passagem, permitindo que você enxergue os espíritos que caminham entre os vivos. +1 Foco. Você pode ver criaturas invisíveis ou incorpóreas (espíritos, fantasmas, entidades) a até 9 metros, como se fossem sombras translúcidas.",
    "Intimidação Bestial: Sua presença é suficiente para fazer os fracos hesitarem. Não são apenas as presas, é o olhar, a postura, a aura de violência contida. +2 Força. +2 em testes de Intimidação. Se passar no teste de Intimidação, o alvo sofre -2 no próximo teste contra você.",
    "Golpe Brutal: Treinado para causar o máximo de estrago, você sabe exatamente onde bater para que doa mais. Uma vez por combate, ao acertar um ataque corpo a corpo: +2d4 de dano extra. Este dano não dobra em críticos.",
-   "Pele de Ferro: Sua epiderme é mais espessa e resistente a ferimentos superficiais. O que seria um corte profundo em outros é apenas um arranhão para você. +2 de HP máximo em cada parte do corpo (Cabeça, Tronco, Braços e Pernas).",
-   "Marca de Guerreiro: Seu corpo é coberto por cicatrizes ritualísticas que contam suas vitórias. +2 em Intimidação. -1 em testes sociais amigáveis (as pessoas o temem antes de conhecê-lo).",
+   "Pele de Pedra do Clã: Os xamãs do seu clã o ensinaram a invocar a resistência das montanhas para proteger seu corpo. +1 Constituição. Uma vez por descanso curto, você pode endurecer sua pele por 3 rodadas: reduz 2 pontos de dano físico (contundente, cortante, perfurante) recebido.",
+   "Voz dos Ancestrais: Os espíritos dos antigos guerreiros orcs sussurram em seus ouvidos, guiando seus passos e inflamando sua coragem. +1 Vontade. Uma vez por cena, você pode invocar a sabedoria dos ancestrais: escolha um aliado ou a si mesmo. O alvo recebe +2 em seu próximo teste de ataque ou resistência.",
    "Ímpeto Selvagem: Ao derrubar um inimigo, você avança como uma avalanche. Ao reduzir um inimigo a 0 PV em qualquer parte do corpo, você pode se mover até 2 metros como ação livre."
   ]
  },
