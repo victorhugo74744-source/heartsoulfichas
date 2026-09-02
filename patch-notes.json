@@ -1,5 +1,37 @@
 [
   {
+    "id": "2026-09-02-rework-elfo-elfo-negro-undead-racas-fracas",
+    "date": "2026-09-02",
+    "title": "Rework de Elfo, Elfo Negro e Undead + reforço de 4 raças com poucos traços",
+    "tags": [
+      "Traços",
+      "Correção"
+    ],
+    "changes": [
+      "Elfo: traço fixo renomeado para Natureza Élfica e reformulado com o efeito de transe da Meditação Élfica (4h de meditação substituem o sono, mantendo consciência do ambiente e imunidade a surpresas, com os mesmos benefícios de um descanso longo completo), além de +2 Foco e visão no escuro até 18 metros.",
+      "Elfo: traços opcionais revisados — Precisão Natural ganhou +2 Foco, Memória Ancestral subiu de +1 para +2 Intelecto, e entraram Reflexos do Bosque e Flecha Certeira no lugar de Melodia Élfica.",
+      "Elfo Negro: rework completo. Traço fixo (Herança das Profundezas) ganhou +2 Intelecto (era +1), Sentidos Subterrâneos e Orientação Natural.",
+      "Elfo Negro: traços opcionais reformulados para 7 — Arma da Nobreza, Magia das Sombras, Toque Venenoso (fusão dos antigos Lâmina Envenenada e Tradição Venenosa, que eram redundantes), Reflexos do Submundo, Resistência Arcana, Máscara da Nobreza Sombria e Olhos de Obsidiana.",
+      "Undead: traços opcionais revisados — Toque Necrótico agora cura 2 PV via Ação de Suporte (antes 1 PV via Reação), Presença Aterrorizante simplificado, Visão da Morte virou Olhos Mortos (detecta energia necrótica em 24 metros através de paredes), Carne Recomposta virou Regeneração Cadavérica (regen por turno em combate), Inimigo da Luz foi rebalanceado, e entrou Domínio Necrótico (comando sobre mortos-vivos menores).",
+      "Fada, Mechatron, Gnomo e Meio-Elemental: cada uma ganhou 2 traços opcionais novos, subindo de 5 para 7 opções, alinhando com o resto do livro.",
+      "Correção: o traço Pele de Tubarão (Kinguian) não aparecia destacado no Ficha Editor nem no Livro de Regras por faltar os dois-pontos após o nome."
+    ]
+  },
+  {
+    "id": "2026-09-01-rework-vampiro-dampiro-meio-orc-meio-elfo",
+    "date": "2026-09-01",
+    "title": "Rework de traços: Vampiro, Dampiro, Meio-Orc e Meio-Elfo",
+    "tags": [
+      "Traços"
+    ],
+    "changes": [
+      "Vampiro: traços opcionais totalmente revisados — entraram Gula de Sangue e Linhagem Pura, saiu Nobreza Noturna, e Hipnose Predatória ficou mais forte (CD 16, custo em Stamina em vez de 'uma vez por cena').",
+      "Dampiro: traços opcionais revisados — entraram Sangue Híbrido, Afinidade com as Sombras e Dança da Lâmina Rubra, saíram Sangue Revigorante e Sedução Sobrenatural.",
+      "Meio-Orc: traço fixo (Determinação Implacável) passou a incluir o antigo efeito de Instinto de Sobrevivência (sobrevive com 1 HP em uma parte vital, uma vez por combate). Traços opcionais reformulados para espelhar os traços do Orc puro: Fúria Contida, Força Desproporcional, Golpe Ancestral, Pele Curtida, Sangue Guerreiro, Aparência Ameaçadora e Eco dos Ancestrais.",
+      "Meio-Elfo: traço fixo (Herança Élfica) passou a combinar o descanso reduzido de 6 horas com o bônus social de Persuasão/Diplomacia com elfos e humanos. 7 traços opcionais finais: Visão Híbrida, Dualidade Cultural, Adaptabilidade Física, Mira Refinada, Herança Flutuante, Diplomata Nato e Ecos da Memória."
+    ]
+  },
+  {
     "id": "2026-08-29-fichas-na-mesa-busca-condicoes",
     "date": "2026-08-29",
     "title": "Lista \"Fichas na mesa\": busca, agrupamento e condições",
