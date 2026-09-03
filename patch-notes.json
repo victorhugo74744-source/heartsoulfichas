@@ -1,5 +1,28 @@
 [
   {
+    "id": "2026-09-03-rework-traços-12-raças",
+    "date": "2026-09-03",
+    "title": "Rework e novos traços para 12 raças (Draconatos, Nephilins, Fada, Humano, Orc, Golias, Kinguian, Platae, Soulbeast e Meio-Elemental)",
+    "tags": [
+      "Traços"
+    ],
+    "changes": [
+      "Draconato-Cromático: 2 traços opcionais novos — Escamas de Obsidiana (reduz dano do mesmo tipo do Sopro Dracônico) e Chamas da Ganância (+2 Vontade, bônus de Percepção para tesouros).",
+      "Draconato-Metálico: Garras Naturais foi substituído por Sabedoria Ancestral (+2 Intelecto, rerolagem em testes de Intelecto/Foco). Entrou o traço Égide do Dragão (reduz 2d4 de dano recebido, uma vez por combate).",
+      "Nephilim-Demoníaco: Chamas do Inferno e Pacto Sombrio tiveram o texto atualizado (Pacto Sombrio deixou de ser limitado a uma vez por combate). Entraram 2 traços novos: Manipulador Nato (Persuasão/Enganação + dominar um alvo) e Olhar do Abismo (Intimidação + penalidade de ataque no inimigo que te encarar).",
+      "Nephilim Angelical: 2 traços opcionais novos — Bênção da Aurora (bônus no primeiro turno de combate + remove status negativo uma vez por sessão) e Visão da Verdade (+1 Foco, bônus de Intuição contra mentiras).",
+      "Fada: Pó de Fada teve o custo trocado de \"uma vez por combate\" para 3 de Estamina por uso. Entrou o traço Asas Camaleônicas (Furtividade + esconder-se sem cobertura).",
+      "Humano: 2 traços opcionais novos — Ambição Incansável (rerolagem em falha ligada ao objetivo principal, uma vez por sessão) e Resiliência Humana (bônus em testes de resistência + sobrevive com 1 PV uma vez por dia).",
+      "Orc: o traço fixo Resiliência Orc mudou — ao zerar o HP de uma parte do corpo e passar no teste, a parte agora fica travada em 1 HP em vez de continuar funcional por apenas mais 1 rodada. Entrou o traço Guardião do Clã (proteger um aliado adjacente recebendo o dano no lugar dele).",
+      "Golias: entrou o traço Fúria do Gigante (bônus de ataque corpo a corpo ao sofrer dano, com penalidade de Defesa).",
+      "Kinguian: Canto das Profundezas foi fortalecido (virou Ação Principal com custo de 2 de Estamina, CD subiu para 16 e o dano de 1d4 para 1d6). Entrou o traço Carapaça de Crustáceo (redução de dano físico, dobrada enquanto submerso).",
+      "Platae: Esporos de Confusão foi substituído por uma nova versão de Seiva Vital (cura via Ação de Suporte, custo de 3 de Estamina), e a versão antiga e duplicada de Seiva Vital foi removida. Entraram 2 traços novos: Memória das Raízes (consulta as plantas sobre o que aconteceu num local nas últimas 24h) e Raízes Profundas (+1 Constituição, resistência a empurrões/agarrões).",
+      "Soulbeast: Poder Despertado foi fortalecido (bônus de atributo subiu de +1 para +2, e o bônus ao resistir à alma subiu de +1 para +2). Entrou o traço Diálogo Interior (rerolagem em testes de Intelecto/Foco, uma vez por cena).",
+      "Meio-Elemental: Arma Elemental foi reformulado — a infusão elemental agora é automática enquanto a arma estiver empunhada, com uma opção de sobrecarga (+2d4 de dano) uma vez por combate.",
+      "Todas as mudanças foram aplicadas tanto no Ficha Editor quanto no Livro de Regras."
+    ]
+  },
+  {
     "id": "2026-09-02-rework-elfo-elfo-negro-undead-racas-fracas",
     "date": "2026-09-02",
     "title": "Rework de Elfo, Elfo Negro e Undead + reforço de 4 raças com poucos traços",
