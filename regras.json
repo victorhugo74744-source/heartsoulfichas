@@ -2718,14 +2718,15 @@
         "paragraphs": [
           "Os anões são um povo orgulhoso, forjado nas profundezas das montanhas e nas bigornas de suas lendárias forjas. Baixos e atarracados, com barbas exuberantes, eles são mestres da metalurgia, da engenharia e da guerra de resistência. Sua sociedade é clânica, baseada na honra familiar e no respeito aos ancestrais. Desconfiam profundamente dos humanos, que consideram volúveis e inconstantes. Apesar disso, respeitam o artesanato e a coragem individual.",
           "Traço Fixo (obrigatório):",
-          "Constituição das Montanhas: Forjados na dureza das rochas, os anões são excepcionalmente resistentes. Venenos e doenças que derrubariam outras raças são apenas inconvenientes para você. +2 Constituição. +2 adicional em testes para resistir a venenos ou doenças.",
+          "Constituição das Montanhas: Forjados na dureza das rochas, os anões são excepcionalmente resistentes, seus olhos se acostumaram à escuridão das cavernas onde vivem, e suas mãos são tão resistentes que trabalham metal quente sem luvas. +2 Constituição, +1 Força. +2 adicional em testes para resistir a venenos ou doenças. Visão no escuro total até 12 metros (em preto e branco); em penumbra, visão colorida e nítida. Você não sofre dano ao tocar objetos quentes (como metal recém-forjado). +1 em testes de Ferraria ou Metalurgia.",
           "Traços Opcionais (escolha dois):",
           "Mestre das Forjas: O anão carrega em seu sangue o conhecimento ancestral da metalurgia. Suas mãos reconhecem a qualidade de um metal antes mesmo que seus olhos o vejam. +2 em testes de criação e reparo de itens metálicos. Identifica a qualidade e composição de qualquer arma ou armadura apenas observando-a por alguns segundos.",
           "Guardião Implacável: Treinado para defender os salões subterrâneos, você é uma muralha viva. Quando firma os pés no chão, é difícil movê-lo. +2 adicional em testes de Bloqueio. Se já tiver bônus de escudo, o bônus do escudo aumenta em +1.",
-          "Visão nas Profundezas: Acostumado às cavernas escuras, você enxerga perfeitamente onde outros tropeçam cegos. Visão no escuro total até 12 metros (em preto e branco). Em penumbra, visão colorida e nítida.",
           "Vigor de Batalha: A resistência anã é lendária. Você aguenta pancadas que fariam outros desabarem, e ainda pede mais uma rodada de hidromel. Uma vez por combate, ao receber dano: ignora 2d4 de dano do ataque (usa-se após o dano ser rolado).",
           "Resistência a Magia: Os anões sempre foram teimosos contra encantamentos. +1 Vontade. +2 em testes de resistência contra magia e efeitos arcanos.",
-          "Orgulho dos Ancestrais: Quando você cai, os espíritos da montanha o erguem. Uma vez por dia, ao falhar em um teste, você pode invocar seus ancestrais e repetir o teste com +2."
+          "Orgulho dos Ancestrais: Quando você cai, os espíritos da montanha o erguem. Uma vez por dia, ao falhar em um teste, você pode invocar seus ancestrais e repetir o teste com +2.",
+          "Fígado de Ferro: Seu fígado é lendário, capaz de processar qualquer substância tóxica sem efeito. +1 Constituição. Vantagem em testes de resistência contra venenos e efeitos de embriaguez. Você pode beber qualquer quantidade de álcool sem sofrer penalidades (narrativamente, você nunca fica bêbado a menos que queira).",
+          "Força de Três Anões: Sua força é desproporcional ao seu tamanho, como se três anões vivessem em seu corpo. +1 Força. Sua capacidade de carga é calculada como se você tivesse +2 de Força adicional. Você pode carregar um aliado caído sem sofrer penalidades de movimento."
         ]
       },
       {
@@ -2734,14 +2735,15 @@
         "paragraphs": [
           "Os meio-anões são fruto da união, rara e frequentemente malvista, entre anões e humanos. Herdam a robustez anã, mas com uma estatura um pouco mais elevada. Muitos clãs anões os tratam com frieza. Entre os humanos, são vistos como exóticos ou teimosos demais. Tornam-se artesãos dedicados, guerreiros obstinados ou mercadores que transitam entre o mundo das montanhas e o mundo da superfície.",
           "Traço Fixo (obrigatório):",
-          "Linhagem Dividida: Você carrega a herança de dois povos que raramente se entendem, e isso o torna mais forte. +2 em testes de Persuasão ao interagir com anões ou humanos. Uma vez por cena, pode repetir um teste de resistência recém-falhado, ficando com o novo resultado.",
+          "Linhagem Dividida: Você carrega a herança de dois povos que raramente se entendem, e isso o torna mais forte. Seus olhos também herdaram parte da adaptação anã à escuridão das montanhas. +2 em testes de Persuasão ao interagir com anões ou humanos. Uma vez por cena, pode repetir um teste de resistência recém-falhado, ficando com o novo resultado. Visão em penumbra até 9 metros; em ambientes totalmente escuros, discerne formas vagas a até 3 metros.",
           "Traços Opcionais (escolha dois):",
           "Sangue das Minas: A herança anã se manifesta na resistência física. Seus ossos são mais densos, seus pulmões acostumados ao ar pesado das profundezas. +2 Constituição. +2 em testes de sobrevivência em ambientes subterrâneos.",
           "Mãos Habilidosas: Herdou parte da aptidão artesanal anã, combinada com a versatilidade humana. Suas mãos criam o que sua mente imagina. +2 em testes de criação e reparo de itens (qualquer material).",
           "Pequeno Tanque: Mais resistente que um humano, mais ágil que um anão. Você é o equilíbrio perfeito entre força e mobilidade. +2 em testes de bloqueio. Pode usar armaduras pesadas sem sofrer penalidade de deslocamento.",
-          "Olhos Acostumados: Seus olhos se adaptam rapidamente à escuridão, herança das gerações que viveram sob as montanhas. Visão em penumbra até 9 metros. Em ambientes totalmente escuros, discerne formas vagas a até 3 metros.",
           "Pele de Pedra: Sua herança anã endureceu sua pele como rocha. +1 Defesa. Reduz 1 ponto de dano físico (contundente, cortante, perfurante) recebido.",
-          "Coração da Montanha: Você é tão difícil de mover quanto a própria terra. +1 Constituição. +2 em testes para resistir a empurrões, agarrões e desequilíbrios."
+          "Coração da Montanha: Você é tão difícil de mover quanto a própria terra. +1 Constituição. +2 em testes para resistir a empurrões, agarrões e desequilíbrios.",
+          "Orgulho Dividido: Você não é totalmente anão nem totalmente humano, e isso o torna teimosamente independente. +1 Vontade. +2 em testes de resistência contra intimidação e manipulação. Quando alguém tenta convencê-lo a agir contra sua vontade, você tem vantagem no teste de resistência.",
+          "Resistência de Ferro: Você herdou a lendária resistência anã a toxinas, mas seu sangue humano a tornou ainda mais adaptável. +1 Constituição. Vantagem em testes de resistência contra venenos, doenças e efeitos de intoxicação. Você pode beber álcool sem sofrer penalidades por embriaguez (a menos que beba quantidades absurdas)."
         ]
       },
       {
