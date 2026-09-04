@@ -555,6 +555,7 @@ function renderAllTokens() {
   if (selectedTokenId) {
     const st = liveTokens[selectedTokenId];
     if (!st || !isTokenInActiveScene(st) || !isTokenVisibleToViewer(st)) {
+      if (inspectedTokenId === selectedTokenId) inspectedTokenId = null;
       selectedTokenId = null;
       if (typeof updateToolToolbarActive === 'function') updateToolToolbarActive();
     }
@@ -797,7 +798,12 @@ function tokenRowHtml(t, canManage) {
   let activeGroup = tokenActiveGroup.get(t.id);
   if (!groupDefs.some(([key]) => key === activeGroup)) activeGroup = null;
 
-  const miniHp = (!t.prop && sumMax) ? `<span class="tr-mini-hp" title="HP total (soma das partes)">❤ ${sumCur}/${sumMax}</span>` : '';
+  // O total de HP (essa "❤ cur/max") só aparece pra quem pode editar o
+  // token — o próprio dono ou o Mestre. Um jogador olhando a ficha de
+  // OUTRO jogador na lista não vê mais o número; se quiser saber como o
+  // alvo está, usa o painel "🎯 Inspecionar" no mapa (clique no token),
+  // que mostra só a % de desgaste por parte do corpo, não o valor bruto.
+  const miniHp = (!t.prop && sumMax && canEdit) ? `<span class="tr-mini-hp" title="HP total (soma das partes)">❤ ${sumCur}/${sumMax}</span>` : '';
   // Posição na iniciativa (se este token estiver na lista de combate) —
   // dá pra ver de relance sem precisar abrir o painel "⚔️ Iniciativa" à parte.
   const initEntry = liveInitiative[t.id];
@@ -1619,6 +1625,25 @@ function renderTokenInspectPanel() {
   if (closeBtn) closeBtn.addEventListener('click', () => { inspectedTokenId = null; renderTokenInspectPanel(); });
 }
 
+// O painel fica dentro do board-wrap, que tem uma pilha de listeners de
+// 'pointerdown' pra cada ferramenta (régua, desenho, porta, sala, template,
+// pan/seleção — ver attachBoardInteractionHandlers e os attach*Handlers em
+// mesa-tools.js). Sem isto, um clique no × (ou em qualquer parte do painel)
+// borbulha pra esses listeners: o handler de pan, por exemplo, captura o
+// ponteiro no wrap (wrap.setPointerCapture), o que faz o clique no botão
+// nunca "fechar o ciclo" nele — o × parecia não fazer nada. Bloqueando a
+// propagação aqui, nenhuma ferramenta do mapa por baixo do painel chega a
+// ver o clique. Só precisa ser feito uma vez (o painel é sempre o mesmo
+// elemento; só o innerHTML muda a cada renderização).
+function attachTokenInspectPanelGuard() {
+  const panel = document.getElementById('tokenInspectPanel');
+  if (!panel || panel._guardAttached) return;
+  panel._guardAttached = true;
+  ['pointerdown', 'pointerup', 'click', 'dblclick', 'contextmenu', 'wheel'].forEach(evt => {
+    panel.addEventListener(evt, (e) => e.stopPropagation());
+  });
+}
+
 function attachTokenDragHandlers(el, tokenId) {
   // Clique num token que a pessoa NÃO pode arrastar (não é dono nem
   // Mestre) — o pointerdown abaixo devolve cedo pra esses casos (deixa o
@@ -1777,9 +1802,23 @@ function attachTokenDragHandlers(el, tokenId) {
           scheduleVisionRecompute();
           return;
         }
-        selectedTokenId = (selectedTokenId === tokenId) ? null : tokenId;
+        const wasSelected = selectedTokenId === tokenId;
+        selectedTokenId = wasSelected ? null : tokenId;
+        // Além das alças de girar/redimensionar, também abre o painel "🎯
+        // Inspecionar" pro próprio token selecionado (ou, sendo Mestre,
+        // pro token de qualquer um) — antes o painel só aparecia pra
+        // tokens que a pessoa NÃO controla. Selecionar de novo o mesmo
+        // token fecha as duas coisas juntas; só limpa o painel se era
+        // este token mesmo que estava inspecionado (não mexe se a pessoa
+        // tinha outro alvo aberto por outro caminho).
+        if (wasSelected) {
+          if (inspectedTokenId === tokenId) inspectedTokenId = null;
+        } else {
+          inspectedTokenId = tokenId;
+        }
         renderTokenListPanel();
         updateSelectionHandles();
+        renderTokenInspectPanel();
         scheduleVisionRecompute();
         if (typeof updateToolToolbarActive === 'function') updateToolToolbarActive();
         return;

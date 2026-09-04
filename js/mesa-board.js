@@ -798,6 +798,7 @@ async function openTable(tableId) {
   listenInitiative();
   startPresenceHeartbeat();
   attachBoardInteractionHandlers();
+  if (typeof attachTokenInspectPanelGuard === 'function') attachTokenInspectPanelGuard();
   resetChatState();
   listenChat();
   listenChatTyping();

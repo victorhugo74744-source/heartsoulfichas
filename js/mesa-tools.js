@@ -2267,7 +2267,12 @@ function attachBoardInteractionHandlers() {
 
   wrap.addEventListener('pointerdown', (e) => {
     if (e.target.closest('.token') || e.target.closest('.token-handles')) return; // deixa o drag do token/alças cuidar disso
-    if (selectedTokenId) { selectedTokenId = null; updateSelectionHandles(); renderTokenListPanel(); }
+    if (selectedTokenId) {
+      if (inspectedTokenId === selectedTokenId) { inspectedTokenId = null; if (typeof renderTokenInspectPanel === 'function') renderTokenInspectPanel(); }
+      selectedTokenId = null;
+      updateSelectionHandles();
+      renderTokenListPanel();
+    }
     // Clicar numa área vazia do mapa (fora de qualquer token) limpa a
     // seleção múltipla em andamento, do mesmo jeito que já limpa a seleção
     // simples (alças) acima.
