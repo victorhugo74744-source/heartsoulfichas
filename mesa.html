@@ -178,12 +178,40 @@ if ('serviceWorker' in navigator) {
     font-size:11px; color:var(--ink); background:rgba(10,8,6,.75); padding:1px 6px; border-radius:8px;
     white-space:nowrap; pointer-events:none;
   }
-  .token .token-hp-bar{
-    position:absolute; bottom:3px; left:10%;
-    width:80%; height:4px; background:rgba(10,8,6,.65); border-radius:3px;
-    overflow:hidden; pointer-events:none; z-index:2;
+  /* ===== Painel "🎯 Inspecionar" — abre ao clicar num token que não é
+     seu (ver o listener de 'click' em attachTokenDragHandlers, mesa-
+     tokens.js). Fica fixo num canto do board-wrap (não é filho do
+     board-surface, então não some/desloca com o pan e zoom do mapa) e só
+     mostra o desgaste de cada parte do corpo em % (nunca o HP bruto) e
+     as condições/status do alvo — nada editável aqui. */
+  .token-inspect-panel{
+    position:absolute; top:10px; left:10px; z-index:8; max-width:220px;
+    background:linear-gradient(180deg, var(--panel), var(--panel-2));
+    border:1px solid var(--hairline-soft); border-radius:var(--radius);
+    box-shadow:0 8px 20px -10px rgba(0,0,0,.65); padding:10px 12px;
   }
-  .token .token-hp-bar-fill{ height:100%; transition:width .25s ease; }
+  .tip-head{ display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:7px; }
+  .tip-name{ font-family:'Cinzel',serif; color:var(--gold); font-size:13px; }
+  .tip-close{
+    background:none; border:none; color:var(--ink-mute); font-size:15px; line-height:1;
+    cursor:pointer; padding:0 2px;
+  }
+  .tip-close:hover{ color:var(--gold); }
+  .tip-parts{ display:flex; flex-direction:column; gap:4px; }
+  .tip-part{ display:flex; align-items:center; gap:6px; font-size:11px; color:var(--ink-dim); }
+  .tip-part-label{ flex:0 0 68px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .tip-part-bar{
+    flex:1 1 auto; height:6px; border-radius:3px; background:rgba(10,8,6,.65);
+    overflow:hidden; display:block;
+  }
+  .tip-part-fill{ display:block; height:100%; transition:width .25s ease; }
+  .tip-part-pct{ flex:0 0 32px; text-align:right; font-variant-numeric:tabular-nums; }
+  .tip-empty{ font-size:11px; color:var(--ink-mute); }
+  .tip-conds{ display:flex; flex-wrap:wrap; gap:5px; margin-top:8px; }
+  .tip-cond-chip{
+    font-size:10.5px; padding:2px 7px; border-radius:8px;
+    background:rgba(201,86,79,.18); border:1px solid rgba(201,86,79,.4); color:var(--ink);
+  }
   .board-side{ flex:0 0 clamp(300px, 24vw, 340px); max-height:calc(78vh + 10px); overflow-y:auto; position:relative; transition:flex-basis .18s ease, width .18s ease; }
   /* Rolagem mais discreta no painel lateral, pra não brigar visualmente com
      o mapa ao lado (usa a mesma cor do site, só mais fina que o padrão). */
@@ -1672,6 +1700,7 @@ if ('serviceWorker' in navigator) {
       <div class="board-wrap" id="boardWrap">
         <div class="board-surface" id="boardSurface"></div>
         <div class="dice-toast-layer" id="diceToastLayer" aria-live="polite"></div>
+        <div class="token-inspect-panel hidden" id="tokenInspectPanel"></div>
       </div>
 
       <div class="board-side">

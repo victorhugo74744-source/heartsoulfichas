@@ -46,19 +46,27 @@ function hpFromSheetResources(resources) {
 
 // Popula o seletor de alvo do painel de Dados com os tokens presentes na
 // cena atual (mesma regra de visibilidade usada na lista "Fichas na mesa").
-// Barrinha de HP mostrada sob o token no mapa — soma de todas as partes do
-// corpo, colorida por faixa (verde/amarelo/vermelho), igual à barra de vida
-// clássica de VTT. Token sem nenhum HP configurado (max = 0) não mostra nada.
-function tokenHpBarHtml(tok) {
-  const hp = tok.hp; if (!hp) return '';
-  let cur = 0, max = 0;
-  BODY_PARTS_TABLE.forEach(([k]) => { const p = hp[k]; if (p) { cur += p.cur || 0; max += p.max || 0; } });
-  if (!max) return '';
-  const pct = Math.max(0, Math.min(100, Math.round((cur / max) * 100)));
-  const color = pct > 60 ? '#7fb27a' : (pct > 25 ? '#d8b45c' : '#c9564f');
-  return `<div class="token-hp-bar" title="${cur}/${max} HP">
-    <div class="token-hp-bar-fill" style="width:${pct}%; background:${color};"></div>
-  </div>`;
+// Cor por faixa de HP restante (verde/amarelo/vermelho) — mesma escala usada
+// tanto na barrinha por parte do corpo do painel "🎯 Inspecionar" quanto em
+// qualquer outro lugar que precise colorir uma fração de vida.
+function hpFractionColor(pct) {
+  return pct > 60 ? '#7fb27a' : (pct > 25 ? '#d8b45c' : '#c9564f');
+}
+
+// HP de cada parte do corpo em % restante (0–100) — usado pelo painel
+// "🎯 Inspecionar" (ver renderTokenInspectPanel em mesa-tokens.js) no lugar
+// do número total de HP: um jogador mirando um alvo vê o desgaste de cada
+// parte (ex.: "Cabeça 80%"), não o valor bruto cur/max. Partes sem HP
+// configurado (max = 0) entram com pct=null, pra a tela pular a barra e só
+// mostrar "—".
+function tokenPartsHpPercent(tok) {
+  const hp = tok.hp || {};
+  return BODY_PARTS_TABLE.map(([k, label]) => {
+    const p = hp[k] || { cur: 0, max: 0 };
+    const max = p.max || 0;
+    const pct = max ? Math.max(0, Math.min(100, Math.round(((p.cur || 0) / max) * 100))) : null;
+    return { key: k, label, pct };
+  });
 }
 
 // Quando a cena ainda não tem nenhum token, a caixa "Aplicar em um alvo"

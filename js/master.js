@@ -253,6 +253,51 @@ async function reloadSheets() {
   renderGroups(allGroups, currentSearch, currentFolderFilter);
 }
 
+// "Corrigir acesso às mesas" — repara jogadores que ficaram sem a marca
+// /folders/{folderId}/members/{uid} (ver syncFolderMembership em
+// js/firebase-init.js), que é o que decide quem vê a mesa de cada
+// campanha (ver firestore.rules, match /tables, e loadTables em
+// js/mesa-board.js). Essa marca só é gravada no momento em que a PASTA de
+// uma ficha muda de valor; qualquer ficha que já estava numa pasta desde
+// antes dessa marca existir no site, ou cuja gravação da marca tenha
+// falhado silenciosamente (o catch em syncFolderMembership nunca bloqueia
+// o salvamento por causa disso, só loga um aviso no console) fica com a
+// marca faltando pra sempre — e o dono simplesmente não vê a mesa daquela
+// campanha, sem nenhum erro aparecer pra ele, até que resalve a própria
+// ficha mudando de pasta e voltando (o que a maioria nunca faz). Este
+// botão varre toda ficha que este Mestre gerencia (mesmas fichas de
+// allGroups, já filtradas por firestore.rules a só as das campanhas dele)
+// e regrava a marca certa pra pasta atual de cada uma, faltando ou não —
+// sana o descompasso pra todo mundo de uma vez, sem depender de cada
+// jogador resalvar a ficha.
+async function repairTableAccess() {
+  const btn = document.getElementById('repairAccessBtn');
+  const msgEl = document.getElementById('repairAccessMsg');
+  btn.disabled = true;
+  btn.textContent = 'Corrigindo…';
+  msgEl.innerHTML = '';
+  try {
+    const pairs = allGroups.flatMap(g =>
+      g.sheets.filter(s => s.folderId).map(s => ({ ownerId: g.player.uid, folderId: s.folderId }))
+    );
+    // A marca é por dono+pasta, não por ficha — um jogador com 2 fichas na
+    // mesma campanha só precisa de 1 gravação.
+    const uniquePairs = Array.from(new Map(pairs.map(p => [p.ownerId + '|' + p.folderId, p])).values());
+    for (const { ownerId, folderId } of uniquePairs) {
+      await db.collection('folders').doc(folderId).collection('members').doc(ownerId).set({
+        uid: ownerId,
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+    }
+    msgEl.innerHTML = `<div class="ok-msg">Acesso conferido e corrigido para ${uniquePairs.length} combinação${uniquePairs.length === 1 ? '' : 'ões'} de jogador + campanha. Peça para os players recarregarem a página de mesas.</div>`;
+  } catch (err) {
+    msgEl.innerHTML = `<div class="error-msg">Erro ao corrigir acesso: ${escapeHtml(err.message)}</div>`;
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Corrigir acesso às mesas';
+  }
+}
+
 guardPage('master', async (user, profile) => {
   renderTopbar(profile);
   const listEl = document.getElementById('masterList');
@@ -261,6 +306,7 @@ guardPage('master', async (user, profile) => {
   document.getElementById('newFolderName').addEventListener('keydown', (e) => {
     if (e.key === 'Enter') { e.preventDefault(); createFolder(); }
   });
+  document.getElementById('repairAccessBtn').addEventListener('click', repairTableAccess);
 
   try {
     await loadFolders();

@@ -471,6 +471,12 @@ async function addNpcToken() {
 
 // -------------------------------------------------------------- TOKENS --
 let liveTokens = {}; // id -> data (cache local do último snapshot)
+// Token "inspecionado" (clique num token que não é o seu, pra só olhar —
+// diferente de selectedTokenId, que abre as alças de girar/redimensionar e
+// só existe pra quem pode mexer no token). Mostra HP por parte do corpo
+// (em %, sem os números brutos) e as condições/status que o alvo está
+// sofrendo, num painel próprio sobre o mapa — ver renderTokenInspectPanel.
+let inspectedTokenId = null;
 let hpEditExpanded = new Set(); // ids de token com o mini-editor de HP aberto na lista
 let tokenToolsExpanded = new Set(); // ids de token com os botões de ação abertos na lista (clicou em cima)
 // Qual grupo de ferramentas (Vida/Aparência/Visão/Movimento/Estado) está
@@ -652,13 +658,13 @@ function renderAllTokens() {
         ? `<img src="${escapeHtml(tok.image)}" alt="" style="transform:rotate(${rot}deg);">`
         : `<div class="token-ph" style="transform:rotate(${rot}deg);">${tok.prop ? '📦' : '👤'}</div>`;
       el.innerHTML += `<span class="token-label">${escapeHtml(tok.name || '')}</span>`;
-      el.innerHTML += tokenHpBarHtml(tok);
     }
   });
 
   renderTokenListPanel();
   renderDiceTargetOptions();
   updateSelectionHandles();
+  renderTokenInspectPanel();
   renderMyResourcesBox();
   renderMyInventoryBox();
   // A lista de tokens (ou algum campo deles, como visão/alcance/HP) pode
@@ -1569,7 +1575,68 @@ function canDragToken(tok) {
   return !!(tok && (isTableOwner() || tok.ownerId === curUser.uid || tok.prop === true));
 }
 
+// Painel "🎯 Inspecionar" — aberto ao clicar num token que não é seu (ver
+// o listener de 'click' em attachTokenDragHandlers). Mostra só o que um
+// jogador mirando um alvo precisa ver: o desgaste de cada parte do corpo
+// (em %, nunca o HP bruto) e as condições/status que ele está sofrendo no
+// momento — nada de editar nada por aqui. Recalculado a cada renderização
+// de tokens, então acompanha dano/cura e condições em tempo real; se o
+// token inspecionado sumir (removido, trocou de cena, ficou invisível pra
+// quem está olhando), o painel fecha sozinho.
+function renderTokenInspectPanel() {
+  const panel = document.getElementById('tokenInspectPanel');
+  if (!panel) return;
+  const tok = inspectedTokenId ? liveTokens[inspectedTokenId] : null;
+  if (!tok || !isTokenInActiveScene(tok) || !isTokenVisibleToViewer(tok)) {
+    inspectedTokenId = null;
+    panel.classList.add('hidden');
+    panel.innerHTML = '';
+    return;
+  }
+  const parts = tokenPartsHpPercent(tok);
+  const hasAnyHp = parts.some(p => p.pct !== null);
+  const conditions = Array.isArray(tok.conditions) ? tok.conditions : [];
+  panel.classList.remove('hidden');
+  panel.innerHTML = `
+    <div class="tip-head">
+      <span class="tip-name">${escapeHtml(tok.name || 'Alvo')}</span>
+      <button type="button" class="tip-close" data-tip-close title="Fechar">×</button>
+    </div>
+    ${hasAnyHp ? `
+    <div class="tip-parts">
+      ${parts.map(p => p.pct === null ? '' : `
+        <div class="tip-part">
+          <span class="tip-part-label">${p.label}</span>
+          <span class="tip-part-bar" title="${p.pct}%"><span class="tip-part-fill" style="width:${p.pct}%; background:${hpFractionColor(p.pct)};"></span></span>
+          <span class="tip-part-pct">${p.pct}%</span>
+        </div>`).join('')}
+    </div>` : `<div class="tip-empty">Sem HP configurado.</div>`}
+    ${conditions.length ? `
+    <div class="tip-conds">
+      ${conditions.map(c => `<span class="tip-cond-chip">${escapeHtml(c)}</span>`).join('')}
+    </div>` : ''}`;
+  const closeBtn = panel.querySelector('[data-tip-close]');
+  if (closeBtn) closeBtn.addEventListener('click', () => { inspectedTokenId = null; renderTokenInspectPanel(); });
+}
+
 function attachTokenDragHandlers(el, tokenId) {
+  // Clique num token que a pessoa NÃO pode arrastar (não é dono nem
+  // Mestre) — o pointerdown abaixo devolve cedo pra esses casos (deixa o
+  // evento passar pro pan do mapa por baixo), então é aqui, num listener
+  // de 'click' separado, que vira "mirar pra inspecionar": abre um
+  // painel só de leitura com HP por parte (em %) e condições/status do
+  // alvo. Tokens que a própria pessoa controla continuam abrindo as
+  // alças de girar/redimensionar de sempre (ver pointerup mais abaixo),
+  // sem passar por aqui.
+  el.addEventListener('click', (e) => {
+    if (boardTool !== 'pan' && boardTool !== 'select') return;
+    const tok = liveTokens[tokenId];
+    if (!tok || canDragToken(tok)) return;
+    e.stopPropagation();
+    inspectedTokenId = (inspectedTokenId === tokenId) ? null : tokenId;
+    renderTokenInspectPanel();
+  });
+
   el.addEventListener('pointerdown', (e) => {
     // Só arrasta o token quando a ferramenta ativa é "Mover" (padrão) ou
     // "Seleção múltipla" — com régua/marcar/áreas/desenho/névoa ativas, o

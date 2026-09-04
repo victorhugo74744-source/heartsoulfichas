@@ -608,7 +608,7 @@ function refreshBoardForActiveScene() {
     if (typeof cancelWallChain === 'function') cancelWallChain(); // idem, pra um traço de parede em andamento
     if (typeof cancelDoorDraft === 'function') cancelDoorDraft(); // idem, pra uma porta sendo posicionada
     if (typeof cancelRoomDraft === 'function') cancelRoomDraft(); // idem, pro contorno de uma sala sendo arrastado
-    selectedTokenId = null; handleDraggingTokenId = null;
+    selectedTokenId = null; handleDraggingTokenId = null; inspectedTokenId = null;
     if (typeof updateToolToolbarActive === 'function') updateToolToolbarActive();
     boardZoom = 1; boardPanX = 0; boardPanY = 0;
     if (newId) { listenDrawings(); listenFog(); listenTemplates(); listenWalls(); listenDoors(); listenLights(); listenVisionMemory(); }
@@ -782,7 +782,7 @@ async function openTable(tableId) {
   boardZoom = 1;
   boardPanX = 0; boardPanY = 0;
   boardTool = 'pan';
-  selectedTokenId = null;
+  selectedTokenId = null; inspectedTokenId = null;
   curScenes = [];
   lastRenderedSceneId = undefined;
   renderMyTokenPanel();
@@ -844,7 +844,7 @@ function closeTable() {
   if (typeof lastVisionTokenState !== 'undefined') { lastVisionTokenState = {}; visionFullRedrawNeeded = true; }
   liveDragPositions = {}; liveDragRotations = {};
   liveInitiative = {}; activeInitiativeId = null;
-  selectedTokenId = null; handleDraggingTokenId = null;
+  selectedTokenId = null; handleDraggingTokenId = null; inspectedTokenId = null;
   curScenes = []; lastRenderedSceneId = undefined;
   curTable = null;
   const boardView = document.getElementById('boardView');
