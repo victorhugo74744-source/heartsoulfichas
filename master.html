@@ -72,6 +72,11 @@ if ('serviceWorker' in navigator) {
     </div>
     <div id="folderMsg"></div>
     <div id="folderList" style="display:flex; flex-wrap:wrap; gap:10px; margin-top:14px;"></div>
+    <div style="margin-top:18px; padding-top:16px; border-top:1px solid var(--hairline);">
+      <p class="hint" style="margin-top:0;">Algum jogador com ficha numa campanha não está vendo a mesa dela? Use o botão abaixo para reparar o acesso de todo mundo de uma vez.</p>
+      <button class="btn secondary" id="repairAccessBtn" type="button" style="width:auto;">Corrigir acesso às mesas</button>
+      <div id="repairAccessMsg" style="margin-top:10px;"></div>
+    </div>
   </div>
 
   <div class="toolbar-row" style="margin-bottom:26px;">
