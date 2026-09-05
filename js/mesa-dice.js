@@ -114,35 +114,18 @@ function getCheckedBodyParts() {
 }
 
 // Mostra/esconde os seletores de parte do corpo e ação conforme haver ou
-// não um alvo escolhido, e mostra o HP atual de cada parte marcada.
+// não um alvo escolhido. (A exibição do HP do alvo aqui foi removida —
+// o painel "🎯 Inspecionar" já mostra o HP por parte do corpo.)
 function updateDiceTargetUiState() {
   const targetSel = document.getElementById('diceTargetSelect');
   const partRow = document.getElementById('dicePartRow');
-  const hpLine = document.getElementById('diceTargetHpLine');
-  if (!targetSel || !partRow || !hpLine) return;
+  if (!targetSel || !partRow) return;
   const targetId = targetSel.value;
   if (!targetId) {
     partRow.classList.add('hidden');
-    hpLine.classList.add('hidden');
     return;
   }
   partRow.classList.remove('hidden');
-  const tok = liveTokens[targetId];
-  const partKeys = getCheckedBodyParts();
-  const hp = (tok && tok.hp) || {};
-  if (!partKeys.length) {
-    hpLine.textContent = 'Marque ao menos uma parte do corpo.';
-    hpLine.classList.remove('hidden');
-    return;
-  }
-  const pieces = partKeys.map(partKey => {
-    const part = hp[partKey];
-    return part
-      ? `${BODY_PART_LABEL[partKey]}: ${part.cur}/${part.max}`
-      : `${BODY_PART_LABEL[partKey]}: sem HP`;
-  });
-  hpLine.textContent = `${tok ? (tok.name || 'Alvo') : 'Alvo'} — ${pieces.join(' · ')}`;
-  hpLine.classList.remove('hidden');
 }
 
 // Aplica o total de uma rolagem como dano ou cura em uma ou mais partes do
@@ -597,7 +580,7 @@ async function doTableRoll() {
     });
     input.value = '';
     input.focus();
-    updateDiceTargetUiState(); // refresca o HP mostrado do alvo após aplicar
+    updateDiceTargetUiState();
   } catch (err) {
     errEl.textContent = 'Erro ao registrar a rolagem: ' + err.message;
     errEl.style.display = 'block';
