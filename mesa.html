@@ -283,6 +283,33 @@ if ('serviceWorker' in navigator) {
   .side-panel.collapsed > h4:first-child::after{ transform:rotate(-90deg); }
   .side-panel.collapsed > *{ display:none !important; }
   .side-panel.collapsed > h4:first-child{ display:flex !important; }
+  /* ===== Sub-sanfonas dentro de uma sanfona (.subpanel) =====
+     O painel "Colocar tokens na mesa" juntava formulário de NPC avulso +
+     biblioteca inteira + entrar com ficha + montarias, tudo sempre aberto
+     ao mesmo tempo — ficava enorme assim que a mesa abria. Cada .subpanel
+     abre/fecha por conta própria (ver initSubPanelAccordion em
+     mesa-tools.js), com visual mais discreto que a sanfona de painel
+     inteiro (cabeçalho menor, sem o losango dourado) pra deixar claro que
+     é uma subdivisão, não outro painel novo. */
+  .subpanel{
+    border:1px solid var(--hairline-soft); border-radius:var(--radius);
+    background:rgba(0,0,0,.16); margin-bottom:10px; overflow:hidden;
+  }
+  .subpanel:last-child{ margin-bottom:0; }
+  .subpanel-head{
+    cursor:pointer; user-select:none; display:flex; align-items:center; gap:8px;
+    padding:10px 12px; font-family:'Cinzel', serif; font-size:12.5px; letter-spacing:.02em;
+    color:var(--ink-dim); background:linear-gradient(180deg, rgba(201,161,92,.07), transparent);
+    transition:color .15s ease;
+  }
+  .subpanel-head:hover{ color:var(--gold); }
+  .subpanel-head .sp-icon{ flex:0 0 auto; font-size:14px; line-height:1; }
+  .subpanel-head .sp-title{ flex:1 1 auto; min-width:0; }
+  .subpanel-head .sp-chevron{ flex:0 0 auto; font-size:11px; color:var(--ink-mute); transition:transform .15s ease, color .15s ease; }
+  .subpanel-head:hover .sp-chevron{ color:var(--gold); }
+  .subpanel.collapsed .sp-chevron{ transform:rotate(-90deg); }
+  .subpanel-body{ padding:2px 12px 14px; border-top:1px solid var(--hairline-soft); }
+  .subpanel.collapsed .subpanel-body{ display:none; }
   /* "Cenas" e "Mapa" só aparecem pro Mestre (ver renderScenePanel /
      renderMasterMapPanel) — um friso à esquerda na cor do selo marca
      essas duas sanfonas como ferramentas de bastidor, diferentes das

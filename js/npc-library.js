@@ -91,22 +91,26 @@ function renderNpcLibraryUI(box, opts) {
 
   box.innerHTML = `
     <div class="npc-lib-form">
-      <h4 style="margin-top:0;">${editing ? '✏️ Editando: ' + escapeHtml(editing.name || '') : '+ Novo NPC/Monstro'}</h4>
-      <div class="field"><input type="text" id="npcLibName" placeholder="Nome (ex.: Lobo Sombrio)" value="${escapeHtml(editing ? editing.name || '' : '')}"></div>
-      <div class="field"><input type="file" id="npcLibImage" accept="image/*"></div>
-      ${editing && editing.image ? `<img src="${escapeHtml(editing.image)}" alt="" class="npc-lib-preview">` : ''}
-      <label class="npc-lib-color-row">
-        Cor (aura e contorno na mesa)
-        <input type="color" id="npcLibColor" value="${escapeHtml((editing && editing.color) || '#8f7a4c')}">
-      </label>
-      <p class="tc-meta" style="margin:10px 0 4px;">HP padrão por parte do corpo</p>
+      <h4 class="npc-lib-form-title">${editing ? '✏️ Editando: ' + escapeHtml(editing.name || '') : '✦ Novo NPC/Monstro'}</h4>
+      <div class="npc-lib-form-grid">
+        <div>
+          <div class="field"><input type="text" id="npcLibName" placeholder="Nome (ex.: Lobo Sombrio)" value="${escapeHtml(editing ? editing.name || '' : '')}"></div>
+          <div class="field"><input type="file" id="npcLibImage" accept="image/*"></div>
+          <label class="npc-lib-color-row">
+            Cor (aura e contorno na mesa)
+            <input type="color" id="npcLibColor" value="${escapeHtml((editing && editing.color) || '#8f7a4c')}">
+          </label>
+        </div>
+        ${editing && editing.image ? `<img src="${escapeHtml(editing.image)}" alt="" class="npc-lib-preview">` : ''}
+      </div>
+      <p class="npc-lib-subhead">HP padrão por parte do corpo</p>
       <div class="npc-lib-hp-grid">
         ${NPC_LIB_BODY_PARTS.map(([k, label]) => `
           <label class="npc-lib-hp-field">${label}
             <input type="number" min="0" step="1" data-npc-lib-hp="${k}" value="${formHp[k]}">
           </label>`).join('')}
       </div>
-      <label class="inv-consumable-toggle" style="margin-top:10px;">
+      <label class="inv-consumable-toggle npc-lib-vision-toggle">
         <input type="checkbox" id="npcLibVisionOn" ${visionOn ? 'checked' : ''}>
         👁 Já nasce enxergando (revela névoa sozinho)
       </label>
@@ -114,21 +118,28 @@ function renderNpcLibraryUI(box, opts) {
         <input type="number" id="npcLibVisionRadius" min="1" step="1" placeholder="Alcance de visão (em quadrados)" value="${visionRadius}">
       </div>
       <div class="error-msg hidden" id="npcLibErr"></div>
-      <button class="btn small" id="npcLibSaveBtn" style="width:auto; margin-top:8px;">${editing ? 'Salvar alterações' : '💾 Salvar na biblioteca'}</button>
-      ${editing ? `<button class="btn secondary small" id="npcLibCancelBtn" style="width:auto; margin-top:8px; margin-left:8px;">Cancelar</button>` : ''}
+      <div class="npc-lib-form-actions">
+        <button class="btn small" id="npcLibSaveBtn" style="width:auto;">${editing ? 'Salvar alterações' : '💾 Salvar na biblioteca'}</button>
+        ${editing ? `<button class="btn secondary small" id="npcLibCancelBtn" style="width:auto;">Cancelar</button>` : ''}
+      </div>
     </div>
-    <hr style="border-color:var(--hairline); margin:16px 0;">
-    <h4 style="margin-top:0;">📚 Biblioteca (${npcLibTemplates.length})</h4>
+    <div class="npc-lib-section-head">
+      <span class="npc-lib-section-title">📚 Biblioteca</span>
+      <span class="npc-lib-count">${npcLibTemplates.length}</span>
+    </div>
     ${npcLibTemplates.length === 0
-      ? '<p class="tc-meta">Nenhum NPC salvo ainda — preencha o formulário acima pra começar.</p>'
+      ? '<p class="npc-lib-empty">🗃️ Nenhum NPC salvo ainda — preencha o formulário acima pra começar.</p>'
       : `<div class="npc-lib-list">${npcLibTemplates.map(t => {
           const totalHp = NPC_LIB_BODY_PARTS.reduce((s, [k]) => s + ((t.hp && t.hp[k]) || 0), 0);
           return `
-        <div class="npc-lib-card">
+        <div class="npc-lib-card" style="border-left-color:${escapeHtml(t.color || '#8f7a4c')};">
           ${t.image ? `<img src="${escapeHtml(t.image)}" alt="" class="npc-lib-thumb">` : `<div class="npc-lib-thumb npc-lib-thumb-ph">👹</div>`}
           <div class="npc-lib-info">
             <b>${escapeHtml(t.name || 'Sem nome')}</b>
-            <span class="tc-meta">❤ ${totalHp} HP total${t.visionOn ? ' · 👁 visão' : ''}</span>
+            <span class="npc-lib-badges">
+              <span class="npc-lib-badge npc-lib-badge-hp">❤ ${totalHp} HP</span>
+              ${t.visionOn ? '<span class="npc-lib-badge npc-lib-badge-vision">👁 visão</span>' : ''}
+            </span>
           </div>
           <div class="npc-lib-actions">
             ${opts.allowAddToTable ? `<button class="btn small" data-npc-lib-add="${t.id}" style="width:auto;">+ Mesa</button>` : ''}

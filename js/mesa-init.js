@@ -42,6 +42,7 @@ guardPage(null, (user, profile) => {
   renderTableDiceQuickRow();
   renderTableDiceLog();
   initSidePanelAccordion();
+  initSubPanelAccordion();
   initSidebarToggles();
   document.getElementById('diceRollBtn').addEventListener('click', doTableRoll);
   document.getElementById('diceCmdInput').addEventListener('keydown', (e) => {

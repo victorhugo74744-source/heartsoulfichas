@@ -10,7 +10,8 @@
 // cai por um instante, e permite abrir o app (a tela de login, por
 // exemplo) mesmo sem internet.
 
-const CACHE_NAME = 'heartsoul-shell-v15'; // v15: sistema de consumíveis no inventário (efeitos de Cura/Dano/Buff/Debuff + botão "Usar" na mesa)
+const CACHE_NAME = 'heartsoul-shell-v16'; // v16: painel "Colocar tokens na mesa" virou sub-sanfonas retráteis (mesa.html/mesa-tokens.js/mesa-tools.js) + redesign da Biblioteca de NPCs/Monstros (npc-library.js/style.css)
+// v15 (anterior): sistema de consumíveis no inventário (efeitos de Cura/Dano/Buff/Debuff + botão "Usar" na mesa)
 // (lista "Fichas na mesa" e a correção do bug de cache) não apareceriam na página "Novidades" pra quem
 // já visitou o site sem este bump, pelo mesmo motivo das vezes anteriores.
 // v10 (anterior): melhorias na lista "Fichas na mesa" (mesa.html/js/mesa-tokens.js/js/mesa-init.js:

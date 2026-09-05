@@ -10,10 +10,9 @@
 // Mestre (que também pode ter fichas próprias, criadas como jogador).
 function sheetSectionHtml() {
   if (mySheets.length === 0) {
-    return `<h4>Sua ficha</h4><p class="tc-meta">Você ainda não tem nenhuma ficha criada. <a href="ficha-editor.html" target="_blank" rel="noopener">Criar ficha</a></p>`;
+    return `<p class="tc-meta">Você ainda não tem nenhuma ficha criada. <a href="ficha-editor.html" target="_blank" rel="noopener">Criar ficha</a></p>`;
   }
   return `
-    <h4>Se transformar em ficha</h4>
     <div class="field">
       <select id="sheetSelect">
         ${mySheets.map(s => `<option value="${s.id}">${escapeHtml(s.characterName || 'Sem nome')}</option>`).join('')}
@@ -59,8 +58,6 @@ function wireSheetSection() {
 // (ver os "!t.prop" espalhados por renderTokenListPanel/renderAllTokens).
 function propSectionHtml() {
   return `
-    <hr style="border-color:var(--hairline); margin:16px 0;">
-    <h4>Montarias / Props</h4>
     <p class="tc-meta">Objetos soltos no mapa (montaria, baú, carroça...) que qualquer jogador presente pode colocar e depois mover, girar e redimensionar à vontade.</p>
     <div class="field">
       <input type="text" id="propName" placeholder="Nome (ex.: Cavalo, Baú, Carroça)">
@@ -100,28 +97,33 @@ async function addPropToken() {
 function renderMyTokenPanel() {
   const panel = document.getElementById('myTokenPanel');
   if (isTableOwner()) {
-    // O Mestre (dono desta mesa) vê as duas coisas: o form de NPC avulso e, logo abaixo, a
-    // mesma seção "entrar com ficha" que os jogadores têm — assim ele
-    // também pode colocar seu próprio personagem (ficha de jogador) na mesa.
+    // O Mestre (dono desta mesa) vê tudo: NPC avulso rápido, a biblioteca
+    // inteira de NPCs/Monstros, a mesma seção "entrar com ficha" que os
+    // jogadores têm (assim ele também pode colocar seu próprio personagem
+    // na mesa) e montarias/props — 4 blocos que juntos ficavam enormes
+    // sempre abertos ao mesmo tempo, por isso cada um agora é uma
+    // sub-sanfona independente (ver subPanelHtml em mesa-tools.js). Só o
+    // NPC avulso (ação mais rápida e usada) começa aberto; os outros três
+    // começam fechados.
     panel.innerHTML = `
-      <h4>➕ Adicionar token</h4>
-      <div class="field">
-        <input type="text" id="npcName" placeholder="Nome (ex.: Lobo Sombrio)">
-      </div>
-      <div class="field">
-        <input type="file" id="npcImage" accept="image/*">
-      </div>
-      <div class="my-color-row">
-        <button type="button" class="color-swatch" id="npcColorSwatch" style="background:${npcColor};" title="Cor deste token"></button>
-        <span>Cor do token (aura e contorno)</span>
-      </div>
-      <button class="btn small" id="addNpcBtn" style="width:auto;">Adicionar à mesa</button>
-      <div class="error-msg hidden" id="npcErr"></div>
-      <hr style="border-color:var(--hairline); margin:16px 0;">
-      <div id="npcLibraryPanel"></div>
-      <hr style="border-color:var(--hairline); margin:16px 0;">
-      ${sheetSectionHtml()}
-      ${propSectionHtml()}`;
+      <h4>➕ Colocar tokens na mesa</h4>
+      ${subPanelHtml('subAddNpc', '👹', 'NPC avulso rápido', `
+        <div class="field">
+          <input type="text" id="npcName" placeholder="Nome (ex.: Lobo Sombrio)">
+        </div>
+        <div class="field">
+          <input type="file" id="npcImage" accept="image/*">
+        </div>
+        <div class="my-color-row">
+          <button type="button" class="color-swatch" id="npcColorSwatch" style="background:${npcColor};" title="Cor deste token"></button>
+          <span>Cor do token (aura e contorno)</span>
+        </div>
+        <button class="btn small" id="addNpcBtn" style="width:auto;">Adicionar à mesa</button>
+        <div class="error-msg hidden" id="npcErr"></div>
+      `, true)}
+      ${subPanelHtml('subNpcLib', '📚', 'Biblioteca de NPCs/Monstros', `<div id="npcLibraryPanel"></div>`, false)}
+      ${subPanelHtml('subMySheet', '🧙', mySheets.length ? 'Entrar com sua ficha' : 'Sua ficha', sheetSectionHtml(), false)}
+      ${subPanelHtml('subProps', '📦', 'Montarias / Props', propSectionHtml(), false)}`;
     document.getElementById('addNpcBtn').addEventListener('click', addNpcToken);
     document.getElementById('npcColorSwatch').addEventListener('click', (e) => {
       openColorWheel(e.currentTarget, npcColor, (hex) => {
@@ -135,7 +137,12 @@ function renderMyTokenPanel() {
     return;
   }
 
-  panel.innerHTML = sheetSectionHtml() + propSectionHtml();
+  // Jogador: só "entrar com ficha" (ação principal, começa aberta) e
+  // montarias/props (secundário, começa fechado).
+  panel.innerHTML = `
+    <h4>🎭 Entrar na mesa</h4>
+    ${subPanelHtml('subMySheet', '🧙', 'Se transformar em ficha', sheetSectionHtml(), true)}
+    ${subPanelHtml('subProps', '📦', 'Montarias / Props', propSectionHtml(), false)}`;
   wireSheetSection();
   wirePropSection();
 }

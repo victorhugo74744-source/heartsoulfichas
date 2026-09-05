@@ -2438,6 +2438,56 @@ function initSidePanelAccordion() {
   applySidePanelCollapseState();
 }
 
+// ============================================== SUB-SANFONAS ==
+// Sub-divisões retráteis DENTRO de uma única sanfona (.side-panel) — usado
+// no painel "Colocar tokens na mesa" (myTokenPanel, ver mesa-tokens.js),
+// que juntava formulário de NPC avulso + biblioteca inteira de NPCs/
+// Monstros + "entrar com ficha" + montarias, tudo sempre aberto ao mesmo
+// tempo, deixando o painel enorme assim que a mesa abria. Cada .subpanel
+// abre/fecha por conta própria, com estado lembrado por navegador (chave
+// própria) — mesma ideia das sanfonas de painel inteiro acima, só que
+// aqui a granularidade é dentro de um único painel.
+//
+// subPanelHtml() monta o HTML de uma sub-sanfona já com o estado salvo
+// (ou o padrão passado em defaultOpen, se nunca foi mexida antes) —
+// chamada pelas funções render*Panel na hora de montar o innerHTML, igual
+// qualquer outro pedaço de HTML. O clique é tratado por delegação em
+// document.body (initSubPanelAccordion, chamada uma única vez no início),
+// então funciona mesmo depois do painel ser redesenhado via innerHTML.
+const SUB_PANEL_COLLAPSE_KEY = 'heartsoul_subPanelCollapsed';
+function loadSubPanelCollapseState() {
+  try { return JSON.parse(localStorage.getItem(SUB_PANEL_COLLAPSE_KEY) || '{}'); }
+  catch (err) { return {}; }
+}
+function subPanelHtml(id, icon, title, bodyHtml, defaultOpen) {
+  const saved = loadSubPanelCollapseState();
+  const collapsed = Object.prototype.hasOwnProperty.call(saved, id) ? saved[id] : !defaultOpen;
+  return `
+    <div class="subpanel${collapsed ? ' collapsed' : ''}" id="${id}">
+      <div class="subpanel-head" data-subpanel-toggle="${id}">
+        <span class="sp-icon">${icon}</span>
+        <span class="sp-title">${escapeHtml(title)}</span>
+        <span class="sp-chevron">▾</span>
+      </div>
+      <div class="subpanel-body">${bodyHtml}</div>
+    </div>`;
+}
+function initSubPanelAccordion() {
+  if (document.body.dataset.subAccordionBound === '1') return;
+  document.body.dataset.subAccordionBound = '1';
+  document.body.addEventListener('click', (e) => {
+    const head = e.target.closest('[data-subpanel-toggle]');
+    if (!head) return;
+    const id = head.dataset.subpanelToggle;
+    const panel = document.getElementById(id);
+    if (!panel) return;
+    const collapsed = panel.classList.toggle('collapsed');
+    const saved = loadSubPanelCollapseState();
+    saved[id] = collapsed;
+    try { localStorage.setItem(SUB_PANEL_COLLAPSE_KEY, JSON.stringify(saved)); } catch (err) { /* ignora se o navegador bloquear */ }
+  });
+}
+
 // ===== Painéis retráteis (ferramentas à esquerda / painel lateral à
 // direita) — recolhe a coluna inteira de um lado, não só uma sanfona.
 // Guarda o estado de cada um separadamente no navegador (chaves próprias),
