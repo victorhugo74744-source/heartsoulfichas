@@ -307,6 +307,7 @@ guardPage('master', async (user, profile) => {
     if (e.key === 'Enter') { e.preventDefault(); createFolder(); }
   });
   document.getElementById('repairAccessBtn').addEventListener('click', repairTableAccess);
+  initNpcLibraryPanel('npcLibraryPanelMaster', { uid: user.uid, allowAddToTable: false });
 
   try {
     await loadFolders();

@@ -118,6 +118,8 @@ function renderMyTokenPanel() {
       <button class="btn small" id="addNpcBtn" style="width:auto;">Adicionar à mesa</button>
       <div class="error-msg hidden" id="npcErr"></div>
       <hr style="border-color:var(--hairline); margin:16px 0;">
+      <div id="npcLibraryPanel"></div>
+      <hr style="border-color:var(--hairline); margin:16px 0;">
       ${sheetSectionHtml()}
       ${propSectionHtml()}`;
     document.getElementById('addNpcBtn').addEventListener('click', addNpcToken);
@@ -127,6 +129,7 @@ function renderMyTokenPanel() {
         e.currentTarget.style.background = hex;
       });
     });
+    initNpcLibraryPanel('npcLibraryPanel', { uid: curUser.uid, allowAddToTable: true, onAddToTable: addNpcFromTemplate });
     wireSheetSection();
     wirePropSection();
     return;
@@ -566,6 +569,31 @@ async function addNpcToken() {
   } catch (err) {
     errEl.textContent = 'Erro ao adicionar: ' + err.message;
     errEl.classList.remove('hidden');
+  }
+}
+
+// Coloca na cena atual um token a partir de um NPC salvo na Biblioteca
+// (js/npc-library.js) — mesmo formato de addNpcToken acima, só que o
+// HP por parte, a cor e a visão já vêm prontos do template em vez de
+// serem preenchidos toda vez no formulário rápido.
+async function addNpcFromTemplate(template) {
+  try {
+    const hp = {};
+    BODY_PARTS_TABLE.forEach(([k]) => {
+      const max = (template.hp && template.hp[k]) || 0;
+      hp[k] = { max, cur: max };
+    });
+    await db.collection('tables').doc(curTable.id).collection('tokens').add({
+      ownerId: curUser.uid, name: template.name || 'NPC', image: template.image || '',
+      npc: true, color: template.color || pickDefaultColor((template.name || 'npc') + Date.now()),
+      sceneId: curTable.activeSceneId,
+      x: snapAxisToGrid(0.5, baseMapW, boardCellPx), y: snapAxisToGrid(0.5, baseMapH, boardCellPx),
+      hp,
+      visionOn: !!template.visionOn, visionRadius: template.visionRadius || DEFAULT_VISION_RADIUS_CELLS,
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+  } catch (err) {
+    alert('Erro ao adicionar da biblioteca: ' + err.message);
   }
 }
 

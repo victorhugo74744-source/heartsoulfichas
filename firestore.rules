@@ -143,6 +143,19 @@ service cloud.firestore {
       );
     }
 
+    // Biblioteca de NPCs/Monstros prontos (js/npc-library.js): templates
+    // reaproveitáveis que um Mestre monta uma vez (nome, imagem, cor, HP
+    // padrão por parte do corpo, visão) e depois usa em qualquer mesa dele
+    // pra colocar um token pronto na cena com um clique, sem preencher o
+    // formulário de NPC de novo. Só existem em master.html/mesa.html;
+    // nada aqui depende de mesa específica — cada template pertence só ao
+    // Mestre que criou (ownerId), igual ao padrão já usado em /folders.
+    match /npcTemplates/{templateId} {
+      allow read: if isSignedIn() && isMaster() && resource.data.ownerId == request.auth.uid;
+      allow create: if isSignedIn() && isMaster() && request.resource.data.ownerId == request.auth.uid;
+      allow update, delete: if isSignedIn() && isMaster() && resource.data.ownerId == request.auth.uid;
+    }
+
     // Mesas de tabletop (tabuleiro). Toda mesa é afiliada a uma pasta de
     // campanha (campo "folderId", obrigatório) e só é vista por quem tem
     // uma ficha nessa pasta — jogador sem ficha ali nem sabe que a mesa
