@@ -35,6 +35,10 @@ if ('serviceWorker' in navigator) {
     display:inline-block; background:rgba(201,161,92,.12); border:1px solid var(--gold-dim); color:var(--gold);
     font-size:11.5px; padding:2px 9px; border-radius:20px; margin-top:6px;
   }
+  /* As duas abas do painel (Fichas / Configurações) usam o componente
+     .tabs/.tab-btn que já existe em style.css (mesmo usado em ficha-view.html
+     pra alternar entre a visão do Jogador e a do Mestre) — sem CSS novo aqui,
+     só reaproveitando o que o site já tem. */
 </style>
 </head>
 <body>
@@ -57,46 +61,55 @@ if ('serviceWorker' in navigator) {
 <div class="shell wide">
   <div class="page-head">
     <div class="eyebrow">Visão do Mestre</div>
-    <h1>Fichas dos Jogadores</h1>
-    <p>Todas as fichas criadas pelos jogadores da mesa, organizadas por jogador.</p>
+    <h1>Painel do Mestre</h1>
+    <p>Acompanhe as fichas dos jogadores ou ajuste as configurações da mesa (pastas, acesso, NPCs).</p>
   </div>
 
-  <div class="panel" style="margin-bottom:26px;">
-    <h2 style="margin-top:0;">Pastas de Campanha</h2>
-    <p class="hint" style="margin-top:-6px;">Crie uma pasta para cada campanha/mesa. Seus jogadores poderão escolher a pasta certa ao salvar a ficha deles.</p>
-    <div class="toolbar-row">
-      <div class="field">
-        <input type="text" id="newFolderName" placeholder="Nome da campanha (ex.: Águas Negras)">
+  <div class="tabs">
+    <button type="button" class="tab-btn active" id="masterTabBtnFichas" data-tab="fichas">Fichas dos Jogadores</button>
+    <button type="button" class="tab-btn" id="masterTabBtnConfig" data-tab="config">Configurações da Mesa</button>
+  </div>
+
+  <div id="masterTabFichas">
+    <div class="toolbar-row" style="margin-bottom:26px;">
+      <div class="field" style="max-width:400px;">
+        <input type="text" id="searchBox" placeholder="Buscar por nome de jogador ou personagem…">
       </div>
-      <button class="btn" id="createFolderBtn" type="button" style="width:auto;">Criar pasta</button>
+      <div class="field" style="max-width:280px;">
+        <select id="folderFilter">
+          <option value="">Todas as pastas</option>
+        </select>
+      </div>
     </div>
-    <div id="folderMsg"></div>
-    <div id="folderList" style="display:flex; flex-wrap:wrap; gap:10px; margin-top:14px;"></div>
-    <div style="margin-top:18px; padding-top:16px; border-top:1px solid var(--hairline);">
-      <p class="hint" style="margin-top:0;">Algum jogador com ficha numa campanha não está vendo a mesa dela? Use o botão abaixo para reparar o acesso de todo mundo de uma vez.</p>
-      <button class="btn secondary" id="repairAccessBtn" type="button" style="width:auto;">Corrigir acesso às mesas</button>
-      <div id="repairAccessMsg" style="margin-top:10px;"></div>
-    </div>
+
+    <div id="masterList" class="center-loading">Carregando fichas…</div>
   </div>
 
-  <div class="panel" style="margin-bottom:26px;">
-    <h2 style="margin-top:0;">Biblioteca de NPCs/Monstros</h2>
-    <p class="hint" style="margin-top:-6px;">NPCs salvos aqui ficam disponíveis em qualquer uma das suas mesas — na Mesa, use o botão "+ Mesa" pra colocar um na cena atual sem preencher o formulário de NPC de novo.</p>
-    <div id="npcLibraryPanelMaster"></div>
-  </div>
-
-  <div class="toolbar-row" style="margin-bottom:26px;">
-    <div class="field" style="max-width:400px;">
-      <input type="text" id="searchBox" placeholder="Buscar por nome de jogador ou personagem…">
+  <div id="masterTabConfig" style="display:none;">
+    <div class="panel" style="margin-bottom:26px;">
+      <h2 style="margin-top:0;">Pastas de Campanha</h2>
+      <p class="hint" style="margin-top:-6px;">Crie uma pasta para cada campanha/mesa. Seus jogadores poderão escolher a pasta certa ao salvar a ficha deles.</p>
+      <div class="toolbar-row">
+        <div class="field">
+          <input type="text" id="newFolderName" placeholder="Nome da campanha (ex.: Águas Negras)">
+        </div>
+        <button class="btn" id="createFolderBtn" type="button" style="width:auto;">Criar pasta</button>
+      </div>
+      <div id="folderMsg"></div>
+      <div id="folderList" style="display:flex; flex-wrap:wrap; gap:10px; margin-top:14px;"></div>
+      <div style="margin-top:18px; padding-top:16px; border-top:1px solid var(--hairline);">
+        <p class="hint" style="margin-top:0;">Algum jogador com ficha numa campanha não está vendo a mesa dela? Use o botão abaixo para reparar o acesso de todo mundo de uma vez.</p>
+        <button class="btn secondary" id="repairAccessBtn" type="button" style="width:auto;">Corrigir acesso às mesas</button>
+        <div id="repairAccessMsg" style="margin-top:10px;"></div>
+      </div>
     </div>
-    <div class="field" style="max-width:280px;">
-      <select id="folderFilter">
-        <option value="">Todas as pastas</option>
-      </select>
+
+    <div class="panel" style="margin-bottom:26px;">
+      <h2 style="margin-top:0;">Biblioteca de NPCs/Monstros</h2>
+      <p class="hint" style="margin-top:-6px;">NPCs salvos aqui ficam disponíveis em qualquer uma das suas mesas — na Mesa, use o botão "+ Mesa" pra colocar um na cena atual sem preencher o formulário de NPC de novo.</p>
+      <div id="npcLibraryPanelMaster"></div>
     </div>
   </div>
-
-  <div id="masterList" class="center-loading">Carregando fichas…</div>
 </div>
 
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
@@ -106,5 +119,24 @@ if ('serviceWorker' in navigator) {
 <script src="js/firebase-init.js"></script>
 <script src="js/npc-library.js"></script>
 <script src="js/master.js"></script>
+<script>
+// Alterna entre as duas abas do painel (Fichas dos Jogadores / Configurações
+// da Mesa). Mesmo padrão de .tab-btn usado em ficha-view.html (js/view.js).
+// Puramente visual — não afeta o carregamento dos dados de cada aba.
+(function () {
+  const fichasBtn = document.getElementById('masterTabBtnFichas');
+  const configBtn = document.getElementById('masterTabBtnConfig');
+  const fichasPanel = document.getElementById('masterTabFichas');
+  const configPanel = document.getElementById('masterTabConfig');
+  function showTab(tab) {
+    fichasBtn.classList.toggle('active', tab === 'fichas');
+    configBtn.classList.toggle('active', tab === 'config');
+    fichasPanel.style.display = tab === 'fichas' ? '' : 'none';
+    configPanel.style.display = tab === 'config' ? '' : 'none';
+  }
+  fichasBtn.addEventListener('click', () => showTab('fichas'));
+  configBtn.addEventListener('click', () => showTab('config'));
+})();
+</script>
 </body>
 </html>

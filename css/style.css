@@ -94,6 +94,11 @@ a:hover{ color:var(--gold-dim); }
 .brand .seal-icon{ width:26px; height:26px; flex-shrink:0; }
 .brand-title{ font-family:'Cinzel', serif; font-size:17px; color:var(--gold); letter-spacing:.04em; }
 .brand-sub{ font-size:11px; letter-spacing:.16em; text-transform:uppercase; color:var(--ink-mute); }
+/* O logo/brasão agora é um link (ver renderTopbar em firebase-init.js) que
+   leva pra "casa" do usuário (Painel do Mestre ou Minhas Fichas, conforme o
+   papel). Mantém a aparência de antes — só troca cursor e some o underline. */
+.brand-link{ display:flex; align-items:center; gap:10px; text-decoration:none; color:inherit; }
+.brand-link:hover .brand-title{ color:var(--gold-dim); }
 .topbar-right{ display:flex; align-items:center; gap:14px; font-size:14px; color:var(--ink-dim); }
 .topbar-right .who{ color:var(--gold); }
 .topbar-menu{ display:flex; align-items:center; gap:14px; flex-wrap:wrap; }
@@ -103,12 +108,24 @@ a:hover{ color:var(--gold-dim); }
    branco no fim dele, colando "Olá," direto no nome ("Olá,Fulano"). Um
    gap explícito entre os itens resolve sem depender daquele espaço. */
 .topbar-menu .topbar-user{ display:flex; align-items:center; gap:4px; }
+/* Os links do menu agora são agrupados por finalidade (Fichas / Ferramentas
+   / Conta) em vez de uma fileira única — ver renderTopbar. No desktop cada
+   grupo continua em linha, só separado por um traço fino; no mobile (ver
+   @media abaixo) cada grupo vira uma seção com um rótulo pequeno. */
+.topbar-group{ display:flex; align-items:center; gap:14px; }
+.topbar-divider{ width:1px; height:18px; background:var(--hairline); flex-shrink:0; }
 .btn-link{
   background:none; border:1px solid var(--hairline); color:var(--ink-dim);
   padding:7px 14px; border-radius:var(--radius); cursor:pointer;
   font-family:'EB Garamond', serif; font-size:14px; transition:all .15s;
 }
 .btn-link:hover{ border-color:var(--gold-dim); color:var(--gold); }
+/* Indica em qual página o usuário já está — mesmo tratamento visual usado
+   nos outros seletores "ativos" do site (ex: .who-tabs button.active), pra
+   não introduzir uma linguagem visual nova. */
+.btn-link.active{
+  border-color:var(--seal-bright); color:var(--gold); background:rgba(156,43,43,.08);
+}
 
 /* Botão hamburger do topbar — escondido no desktop, só aparece no mobile
    (ver @media abaixo), onde substitui a fileira de links por um menu
@@ -773,6 +790,18 @@ textarea.auto-expand{
     padding:8px 0 12px; border-bottom:1px solid var(--hairline-soft); margin-bottom:6px; flex-wrap:wrap;
   }
   .topbar-menu .btn-link{ width:100%; text-align:left; }
+  /* No mobile, cada grupo de links vira uma seção empilhada com um rótulo
+     pequeno acima (ex: "FERRAMENTAS") em vez do traço vertical do desktop,
+     que não faz sentido numa coluna. */
+  .topbar-group{
+    display:flex; flex-direction:column; align-items:stretch; gap:2px; width:100%;
+  }
+  .topbar-group::before{
+    content: attr(data-group-label);
+    font-family:'Cinzel', serif; font-size:10px; letter-spacing:.14em; text-transform:uppercase;
+    color:var(--ink-mute); padding:10px 2px 4px;
+  }
+  .topbar-divider{ display:none; }
 
   .page-head h1{ font-size:26px; }
 

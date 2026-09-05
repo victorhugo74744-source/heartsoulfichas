@@ -291,6 +291,15 @@ if ('serviceWorker' in navigator) {
   #scenePanel > h4:first-child::before, #masterMapPanel > h4:first-child::before{
     background:var(--seal); left:-1px;
   }
+  /* Rótulos que agrupam as 7 sanfonas do painel lateral por finalidade
+     (Cena / Em jogo / Mesa), pra ficar claro de relance o que é ferramenta
+     de bastidor do Mestre e o que todo mundo na mesa usa toda hora — sem
+     transformar isso em abas (que esconderiam painéis que ficam abertos
+     lado a lado durante o jogo, como Dados + Fichas na mesa). */
+  .side-group-label{
+    font-family:'Cinzel', serif; font-size:11px; letter-spacing:.14em; text-transform:uppercase;
+    color:var(--ink-mute); padding:4px 2px 8px; margin-top:2px;
+  }
   .token-row{
     display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:4px 8px;
     font-size:13.5px; color:var(--ink-dim); padding:5px 0; border-bottom:1px solid var(--hairline-soft);
@@ -1735,8 +1744,10 @@ if ('serviceWorker' in navigator) {
           <span class="bs-toggle-label">Painel</span>
         </button>
         <div class="side-panel" id="myTokenPanel"></div>
+        <div class="side-group-label hidden" id="sideGroupCena">Cena</div>
         <div class="side-panel hidden" id="scenePanel"></div>
         <div class="side-panel" id="masterMapPanel"></div>
+        <div class="side-group-label" id="sideGroupJogo">Em jogo</div>
         <div class="side-panel" id="dicePanel">
           <h4>🎲 Dados</h4>
 
@@ -1784,7 +1795,7 @@ if ('serviceWorker' in navigator) {
           <div class="dice-log" id="diceLog"><div class="dice-empty">Nenhuma rolagem ainda.</div></div>
         </div>
         <div class="side-panel" id="tokenListPanel">
-          <h4>Fichas na mesa</h4>
+          <h4>📋 Fichas na mesa</h4>
           <div class="tl-toolbar">
             <input type="text" id="tokenListSearchInput" class="tl-search-input" placeholder="🔎 Buscar por nome…">
             <select id="tokenListSortSelect" class="tl-sort-select" title="Ordenar lista">
@@ -1802,6 +1813,7 @@ if ('serviceWorker' in navigator) {
           <div id="tokenListBody"><span class="tc-meta">Nenhum token ainda.</span></div>
         </div>
         <div class="side-panel" id="initiativePanel"></div>
+        <div class="side-group-label hidden" id="sideGroupMesa">Mesa</div>
         <div class="side-panel hidden" id="presencePanel">
           <h4>👁 Quem está na mesa</h4>
           <div id="presenceBody"><span class="tc-meta">Ninguém além de você, por enquanto.</span></div>

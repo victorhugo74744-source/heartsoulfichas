@@ -104,7 +104,7 @@ function renderMyTokenPanel() {
     // mesma seção "entrar com ficha" que os jogadores têm — assim ele
     // também pode colocar seu próprio personagem (ficha de jogador) na mesa.
     panel.innerHTML = `
-      <h4>Adicionar token</h4>
+      <h4>➕ Adicionar token</h4>
       <div class="field">
         <input type="text" id="npcName" placeholder="Nome (ex.: Lobo Sombrio)">
       </div>
@@ -2282,7 +2282,7 @@ function renderMasterMapPanel() {
   const sizeOptions = Object.keys(MAPGEN_SIZES)
     .map(id => `<option value="${id}"${id === 'medio' ? ' selected' : ''}>${escapeHtml(MAPGEN_SIZE_LABELS[id] || id)}</option>`).join('');
   panel.innerHTML = `
-    <h4>Mapa da cena atual${scene ? ' — ' + escapeHtml(scene.name || '') : ''}</h4>
+    <h4>🗺️ Mapa da cena atual${scene ? ' — ' + escapeHtml(scene.name || '') : ''}</h4>
     <h4 style="font-size:13px; margin-top:-6px;">Gerar mapa procedural</h4>
     <div class="field">
       <select id="mapBiome">${biomeOptions}</select>

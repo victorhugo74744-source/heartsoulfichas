@@ -217,24 +217,68 @@ function renderTopbar(profile) {
   const avatarImg = profile.avatarImage
     ? `<img src="${profile.avatarImage}" alt="" class="topbar-avatar">`
     : '';
+
+  // Página atual (nome do arquivo), pra destacar o link correspondente no
+  // menu e a pessoa sempre saber "onde" está dentro do site.
+  const currentPage = location.pathname.split('/').pop() || 'index.html';
+  // Monta a tag <a> inteira já com classe/estado ativo, em vez de montar
+  // pedaços de atributo espalhados — mais fácil de ler e de mexer depois.
+  const navLink = (file, icon, label, extra = '') => {
+    const isActive = currentPage === file;
+    const cls = 'btn-link' + (isActive ? ' active' : '');
+    const aria = isActive ? ' aria-current="page"' : '';
+    return `<a href="${file}" class="${cls}"${aria}${extra}>${icon} ${label}</a>`;
+  };
+
+  // "Casa" do usuário — pra onde o brasão no canto esquerdo do topbar leva.
+  // Mestre cai no Painel do Mestre (é onde ele passa a maior parte do
+  // tempo); jogador cai em Minhas Fichas.
+  const homeHref = profile.role === 'master' ? 'master.html' : 'minhas-fichas.html';
+
+  const fichasGroup = profile.role === 'master'
+    ? navLink('master.html', '🛡️', 'Painel do Mestre') + navLink('minhas-fichas.html', '📜', 'Minhas Fichas (Jogador)')
+    : navLink('minhas-fichas.html', '📜', 'Minhas Fichas');
+
   // No mobile, esse bloco vira um menu retrátil (toggle + dropdown) em vez de
   // uma fileira de links que não cabe na tela. Ver regras @media em style.css.
+  // Os links são agrupados por finalidade (Fichas / Ferramentas / Conta) —
+  // no desktop cada grupo fica separado por um traço fino; no mobile vira
+  // uma seção com rótulo (ver .topbar-group em style.css).
   el.innerHTML = `
     <button class="topbar-toggle" id="topbarToggle" type="button" aria-label="Abrir menu" aria-expanded="false">☰</button>
     <div class="topbar-menu" id="topbarMenu">
       <span class="topbar-user">${avatarImg}Olá, <span class="who">${escapeHtml(profile.name)}</span> ${roleLabel}</span>
-      <a href="perfil.html" class="btn-link">👤 Meu Perfil</a>
-      <a href="livro-de-regras.html" class="btn-link" target="_blank" rel="noopener">📖 Livro de Regras</a>
-      <a href="patch-notes.html" class="btn-link">🆕 Novidades<span id="patchNotesBadge" class="new-dot hidden"></span></a>
-      <a href="dados.html" class="btn-link">🎲 Rolagem de Dados</a>
-      <a href="mesa.html" class="btn-link">🗺️ Mesa</a>
-      ${profile.role === 'master'
-        ? '<a href="master.html" class="btn-link">Painel do Mestre</a><a href="minhas-fichas.html" class="btn-link">Minhas Fichas (Jogador)</a>'
-        : '<a href="minhas-fichas.html" class="btn-link">Minhas Fichas</a>'}
+      <span class="topbar-group" data-group-label="Fichas">${fichasGroup}</span>
+      <span class="topbar-divider" aria-hidden="true"></span>
+      <span class="topbar-group" data-group-label="Ferramentas">
+        ${navLink('mesa.html', '🗺️', 'Mesa')}
+        ${navLink('dados.html', '🎲', 'Rolagem de Dados')}
+        ${navLink('livro-de-regras.html', '📖', 'Livro de Regras', ' target="_blank" rel="noopener"')}
+      </span>
+      <span class="topbar-divider" aria-hidden="true"></span>
+      <span class="topbar-group" data-group-label="Conta">
+        ${navLink('perfil.html', '👤', 'Meu Perfil')}
+        ${navLink('patch-notes.html', '🆕', 'Novidades<span id="patchNotesBadge" class="new-dot hidden"></span>')}
+      </span>
     </div>
   `;
   // "Sair" e "Excluir conta" não ficam mais na barra principal — ambos já
   // estão disponíveis na aba Meu Perfil (ver perfil.html / perfil.js).
+
+  // Transforma o brasão (.brand) num link de volta pra "casa" do usuário.
+  // Feito aqui (e não direto no HTML de cada página) porque o destino
+  // depende do papel (Mestre x jogador), que só se sabe depois do login.
+  // O "!brand.closest('a')" evita duplicar o link se renderTopbar rodar
+  // mais de uma vez na mesma página (ex: troca de perfil sem recarregar).
+  const brand = document.querySelector('.topbar .brand');
+  if (brand && !brand.closest('a')) {
+    const brandLink = document.createElement('a');
+    brandLink.href = homeHref;
+    brandLink.className = 'brand-link';
+    brandLink.setAttribute('aria-label', 'Ir para o início');
+    while (brand.firstChild) brandLink.appendChild(brand.firstChild);
+    brand.appendChild(brandLink);
+  }
 
   const toggleBtn = document.getElementById('topbarToggle');
   const menu = document.getElementById('topbarMenu');

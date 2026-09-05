@@ -785,6 +785,13 @@ async function openTable(tableId) {
   selectedTokenId = null; inspectedTokenId = null;
   curScenes = [];
   lastRenderedSceneId = undefined;
+  // Rótulos "Cena" e "Mesa" só fazem sentido pro Mestre — os painéis que eles
+  // agrupam (Cenas/Mapa da cena, Presença) já ficam escondidos pra jogador,
+  // então o rótulo acompanha o mesmo critério (ver isTableOwner acima).
+  const sideGroupCena = document.getElementById('sideGroupCena');
+  const sideGroupMesa = document.getElementById('sideGroupMesa');
+  if (sideGroupCena) sideGroupCena.classList.toggle('hidden', !isTableOwner());
+  if (sideGroupMesa) sideGroupMesa.classList.toggle('hidden', !isTableOwner());
   renderMyTokenPanel();
   renderToolToolbar();
   await ensureFirstScene(); // migra mesas antigas (mapa direto na mesa) pra uma primeira cena, se preciso
