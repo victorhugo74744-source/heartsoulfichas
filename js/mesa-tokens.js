@@ -285,13 +285,18 @@ function carryCapacityQuick(sheet) {
   return 15 + attrModQuick((attrs.constituicao || 0) + traitBonus + manual);
 }
 function ensureInventoryItemShapeQuick(it) {
-  if (typeof it === 'string') return { name: it, weight: 0, qty: 1 };
+  if (typeof it === 'string') return { name: it, weight: 0, qty: 1, consumable: false, effectType: '', effectValue: '', effectDesc: '' };
   return {
     name: (it && it.name) || '',
     weight: (it && it.weight !== undefined && it.weight !== null) ? it.weight : 0,
-    qty: (it && it.qty !== undefined && it.qty !== null) ? it.qty : 1
+    qty: (it && it.qty !== undefined && it.qty !== null) ? it.qty : 1,
+    consumable: !!(it && it.consumable),
+    effectType: (it && it.effectType) || '',
+    effectValue: (it && it.effectValue) || '',
+    effectDesc: (it && it.effectDesc) || ''
   };
 }
+const CONSUMABLE_EFFECT_LABELS_Q = { cura: '💚 Cura', dano: '⚔️ Dano', buff: '✨ Buff', debuff: '☠️ Debuff', estamina: '🏃 Recuperar Estamina', energia: '⚡ Recuperar Energia' };
 function inventoryTotalWeightQuick(items) {
   return items.reduce((sum, it) => {
     const w = parseFloat(it.weight) || 0;
@@ -322,7 +327,7 @@ function renderMyInventoryBox() {
   if (box.contains(document.activeElement)) return;
 
   const items = (sheet.inventoryItems || []).map(ensureInventoryItemShapeQuick);
-  if (!items.length) items.push({ name: '', weight: 0, qty: 1 });
+  if (!items.length) items.push({ name: '', weight: 0, qty: 1, consumable: false, effectType: '', effectValue: '', effectDesc: '' });
   const capacity = carryCapacityQuick(sheet);
   const total = inventoryTotalWeightQuick(items);
   const st = weightStatusQuick(total, capacity);
@@ -332,11 +337,32 @@ function renderMyInventoryBox() {
     <div class="my-resources-box my-inventory-box">
       <h4>Seu inventário</h4>
       ${items.map((it, i) => `
-        <div class="inventory-item">
-          <input type="text" class="inv-name" data-mi-name="${i}" placeholder="Nome do item" value="${escapeHtml(it.name)}">
-          <input type="number" class="inv-weight" data-mi-weight="${i}" placeholder="Peso" min="0" step="0.5" value="${it.weight}">
-          <input type="number" class="inv-qty" data-mi-qty="${i}" placeholder="Qtd" min="0" step="1" value="${it.qty}">
-          <button type="button" class="skill-remove" data-mi-remove="${i}" ${items.length <= 1 ? 'style="visibility:hidden;"' : ''}>✕</button>
+        <div class="inventory-item-block">
+          <div class="inventory-item">
+            <input type="text" class="inv-name" data-mi-name="${i}" placeholder="Nome do item" value="${escapeHtml(it.name)}">
+            <input type="number" class="inv-weight" data-mi-weight="${i}" placeholder="Peso" min="0" step="0.5" value="${it.weight}">
+            <input type="number" class="inv-qty" data-mi-qty="${i}" placeholder="Qtd" min="0" step="1" value="${it.qty}">
+            <button type="button" class="skill-remove" data-mi-remove="${i}" ${items.length <= 1 ? 'style="visibility:hidden;"' : ''}>✕</button>
+          </div>
+          <label class="inv-consumable-toggle"><input type="checkbox" data-mi-consumable="${i}" ${it.consumable ? 'checked' : ''}> 🧪 Consumível</label>
+          ${it.consumable ? `
+          <div class="inv-effect-fields">
+            <select data-mi-effect-type="${i}">
+              <option value="">Tipo de efeito…</option>
+              <option value="cura" ${it.effectType === 'cura' ? 'selected' : ''}>💚 Cura</option>
+              <option value="dano" ${it.effectType === 'dano' ? 'selected' : ''}>⚔️ Dano</option>
+              <option value="buff" ${it.effectType === 'buff' ? 'selected' : ''}>✨ Buff</option>
+              <option value="debuff" ${it.effectType === 'debuff' ? 'selected' : ''}>☠️ Debuff</option>
+              <option value="estamina" ${it.effectType === 'estamina' ? 'selected' : ''}>🏃 Recuperar Estamina</option>
+              <option value="energia" ${it.effectType === 'energia' ? 'selected' : ''}>⚡ Recuperar Energia</option>
+            </select>
+            <input type="text" class="inv-effect-value" data-mi-effect-value="${i}" placeholder="Dado (ex.: 1d8+2)" value="${escapeHtml(it.effectValue)}" title="Opcional — notação de dado (ex.: 1d8+2). Deixe em branco se o efeito não tem número pra rolar.">
+            <input type="text" class="inv-effect-desc" data-mi-effect-desc="${i}" placeholder="Descrição do efeito" value="${escapeHtml(it.effectDesc)}">
+          </div>
+          <div class="inv-use-row">
+            <span class="tc-meta">${CONSUMABLE_EFFECT_LABELS_Q[it.effectType] || ''}</span>
+            <button type="button" class="inv-use-btn" data-mi-use="${i}" ${it.qty > 0 ? '' : 'disabled'} title="Usa 1 unidade: rola o dado do efeito (se houver) e anuncia na mesa para todo mundo ver">Usar</button>
+          </div>` : ''}
         </div>`).join('')}
       <button type="button" class="btn secondary small line-list-add" data-mi-add style="width:auto;">+ Adicionar item</button>
       <div class="weight-summary-row" style="margin-top:8px;">
@@ -358,6 +384,22 @@ function renderMyInventoryBox() {
     inp.addEventListener('click', (e) => e.stopPropagation());
     inp.addEventListener('change', () => { items[parseInt(inp.dataset.miQty)].qty = parseInt(inp.value, 10) || 0; commit(); });
   });
+  box.querySelectorAll('[data-mi-consumable]').forEach(inp => {
+    inp.addEventListener('click', (e) => e.stopPropagation());
+    inp.addEventListener('change', () => { items[parseInt(inp.dataset.miConsumable)].consumable = inp.checked; commit(); });
+  });
+  box.querySelectorAll('[data-mi-effect-type]').forEach(sel => {
+    sel.addEventListener('click', (e) => e.stopPropagation());
+    sel.addEventListener('change', () => { items[parseInt(sel.dataset.miEffectType)].effectType = sel.value; commit(); });
+  });
+  box.querySelectorAll('[data-mi-effect-value]').forEach(inp => {
+    inp.addEventListener('click', (e) => e.stopPropagation());
+    inp.addEventListener('change', () => { items[parseInt(inp.dataset.miEffectValue)].effectValue = inp.value; commit(); });
+  });
+  box.querySelectorAll('[data-mi-effect-desc]').forEach(inp => {
+    inp.addEventListener('click', (e) => e.stopPropagation());
+    inp.addEventListener('change', () => { items[parseInt(inp.dataset.miEffectDesc)].effectDesc = inp.value; commit(); });
+  });
   box.querySelectorAll('[data-mi-remove]').forEach(btn => {
     btn.addEventListener('click', () => {
       if (items.length <= 1) return;
@@ -365,11 +407,69 @@ function renderMyInventoryBox() {
       commit();
     });
   });
+  box.querySelectorAll('[data-mi-use]').forEach(btn => {
+    btn.addEventListener('click', (e) => { e.stopPropagation(); useConsumableItem(sheet.id, items, parseInt(btn.dataset.miUse)); });
+  });
   const addBtn = box.querySelector('[data-mi-add]');
   if (addBtn) addBtn.addEventListener('click', () => {
-    items.push({ name: '', weight: 0, qty: 1 });
+    items.push({ name: '', weight: 0, qty: 1, consumable: false, effectType: '', effectValue: '', effectDesc: '' });
     commit();
   });
+}
+// Usar 1 unidade de um item consumível: se ele tiver um dado/valor de
+// efeito (ex.: "1d8+2"), rola usando o mesmo motor da mesa e posta o
+// resultado no histórico de rolagens (mesmo efeito visual/balão de
+// qualquer outra rolagem da mesa); sem dado (comum em Buff/Debuff, cujo
+// efeito é só descrito em texto), posta um aviso no chat geral em vez
+// disso. De qualquer forma, desconta 1 da quantidade do item na ficha.
+// Não aplica o efeito automaticamente em nenhum recurso — cura/dano/buff/
+// debuff/estamina/energia continuam a critério do Mestre/jogador, que pode
+// aplicar o resultado manualmente (cura/dano pelo painel de Dados, 🎯
+// Aplicar em um alvo; estamina/energia digitando o valor rolado direto no
+// campo "atual" do recurso na ficha, já que esses recursos não têm partes
+// do corpo pra escolher).
+async function useConsumableItem(sheetId, items, idx) {
+  const it = items[idx]; if (!it || !it.consumable || it.qty <= 0) return;
+  const effectLabel = CONSUMABLE_EFFECT_LABELS_Q[it.effectType] || '🧪 Efeito';
+  const byName = (liveTokens[curUser.uid] && liveTokens[curUser.uid].name) || (curProfile ? curProfile.name : 'Alguém');
+  const itemLabel = it.name.trim() || 'item';
+  try {
+    if (it.effectValue && it.effectValue.trim()) {
+      const result = parseTableRollCommand(it.effectValue);
+      if (result.error) {
+        alert(`Dado/valor inválido no efeito de "${itemLabel}": ${result.error}`);
+        return;
+      }
+      await db.collection('tables').doc(curTable.id).collection('rolls').add({
+        by: curUser.uid,
+        byName,
+        label: `🧪 ${itemLabel} — ${effectLabel}`,
+        detail: result.detail + (it.effectDesc ? ` · ${it.effectDesc}` : ''),
+        total: result.total,
+        isNat20: !!result.isNat20,
+        isNat1: !!result.isNat1,
+        hidden: false,
+        applyAction: null,
+        applyTargetName: null,
+        applyParts: null,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+    } else {
+      await db.collection('tables').doc(curTable.id).collection('chatMessages').add({
+        tableId: curTable.id,
+        fromUserId: curUser.uid,
+        fromName: byName,
+        type: 'general',
+        content: `🧪 usou ${itemLabel} (${effectLabel})${it.effectDesc ? `: ${it.effectDesc}` : ''}`,
+        timestamp: firebase.firestore.FieldValue.serverTimestamp()
+      });
+    }
+  } catch (err) {
+    console.error('Erro ao usar consumível:', err);
+    return;
+  }
+  it.qty = Math.max(0, it.qty - 1);
+  setMyInventoryItems(sheetId, items);
 }
 // Grava o array inteiro de volta no documento — diferente de resources
 // (campos soltos que dá pra atualizar um a um com notação de ponto),
@@ -569,6 +669,7 @@ function renderAllTokens() {
       if (!st || !isTokenInActiveScene(st) || !isTokenVisibleToViewer(st)) multiSelectedIds.delete(id);
     });
   }
+  if (typeof updateTokenListBulkBar === 'function') updateTokenListBulkBar();
 
   // O board-surface agora sempre fica no tamanho "natural" (sem zoom) — quem
   // escala tudo (mapa, grade e tokens) é o transform aplicado nele. Por isso
@@ -832,6 +933,11 @@ function tokenRowHtml(t, canManage) {
         ${activeGroup === 'vida' ? `
         <div class="tr-group">
           ${canEdit && !elsewhere ? `<button data-hp-toggle="${t.id}" title="Ver/editar HP por parte">${expanded ? '❤︎ fechar HP' : '❤ Ver/editar HP'}</button>` : ''}
+          ${canEdit && !elsewhere ? `
+            <span class="tr-hp-quick">
+              <input type="number" min="0" class="hp-quick-input" data-hp-quick="${t.id}" placeholder="HP" title="Define esta vida (máxima e atual) em todas as 6 partes do corpo de uma vez, sem precisar editar parte por parte — ideal pra configurar um NPC rápido">
+              <button data-hp-quick-apply="${t.id}" title="Aplicar este HP a todas as partes do corpo deste token">❤ definir tudo</button>
+            </span>` : ''}
           ${canManage && t.sheetId ? `
             <span class="tr-xp-add">
               <input type="number" class="xp-add-input" data-xp-input="${t.id}" placeholder="± XP" title="Quantidade de XP para dar (ou tirar, com número negativo)">
@@ -1001,6 +1107,13 @@ function bindTokenListPanelEvents() {
       renderTokenListPanel();
       return;
     }
+    const hpQuickApply = e.target.closest('[data-hp-quick-apply]');
+    if (hpQuickApply) {
+      const id = hpQuickApply.dataset.hpQuickApply;
+      const input = body.querySelector(`[data-hp-quick="${id}"]`);
+      if (input) setTokenHpAllParts(id, input.value);
+      return;
+    }
     const condAdd = e.target.closest('[data-cond-add]');
     if (condAdd) {
       const id = condAdd.dataset.condAdd;
@@ -1032,6 +1145,7 @@ function bindTokenListPanelEvents() {
     if (e.key !== 'Enter') return;
     if (e.target.matches('[data-xp-input]')) { e.preventDefault(); addXpToToken(e.target.dataset.xpInput, e.target); return; }
     if (e.target.matches('[data-cond-input]')) { e.preventDefault(); addTokenCondition(e.target.dataset.condInput, e.target.value); e.target.value = ''; return; }
+    if (e.target.matches('[data-hp-quick]')) { e.preventDefault(); setTokenHpAllParts(e.target.dataset.hpQuick, e.target.value); return; }
     if (e.target.matches('input')) e.target.blur();
   });
 
@@ -1070,6 +1184,86 @@ async function removeTokenCondition(tokenId, label) {
 // Edição manual de uma única parte do HP de um token, direto na lista
 // lateral — útil para corrigir um valor ou configurar o HP inicial de um
 // NPC avulso (que não tem ficha própria pra puxar os valores automaticamente).
+// Atalho pra não precisar editar as 6 partes do corpo uma a uma: define de
+// uma vez max=cur=valor em todas elas — pensado pra configurar rapidamente
+// o HP de um NPC avulso (que sempre nasce com o valor padrão genérico).
+async function setTokenHpAllParts(tokenId, rawValue) {
+  const tok = liveTokens[tokenId]; if (!tok) return;
+  const value = parseInt(rawValue, 10);
+  if (isNaN(value) || value < 0) return;
+  const hp = {};
+  BODY_PARTS_TABLE.forEach(([k]) => { hp[k] = { max: value, cur: value }; });
+  try {
+    await db.collection('tables').doc(curTable.id).collection('tokens').doc(tokenId)
+      .update({ hp, updatedAt: firebase.firestore.FieldValue.serverTimestamp() });
+    if (tok.sheetId) await syncTokenHpToSheet(tok.sheetId, hp);
+  } catch (err) {
+    console.error('Erro ao definir HP do token:', err);
+  }
+  renderTokenListPanel();
+}
+
+// ---------- HP em lote para vários tokens marcados (ferramenta 🔲) --------
+// Resolve o caso que mais demora na mesa: configurar HP de vários NPCs
+// iguais (ex.: 5 goblins) um por um. Com a ferramenta de seleção múltipla,
+// o Mestre marca todos e aplica o mesmo HP a todos de uma vez, num único
+// commit no Firestore (em vez de N updates separados).
+let tokenListBulkHpEventsBound = false;
+function bindTokenListBulkBarEvents() {
+  if (tokenListBulkHpEventsBound) return;
+  const bar = document.getElementById('tokenListBulkHp');
+  if (!bar) return;
+  tokenListBulkHpEventsBound = true;
+  const input = document.getElementById('tokenListBulkHpInput');
+  const applyBtn = document.getElementById('tokenListBulkHpApply');
+  applyBtn.addEventListener('click', () => { applyHpToSelectedTokens(input.value); });
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); applyHpToSelectedTokens(input.value); }
+  });
+}
+
+// Mostra/esconde a barra e atualiza a contagem — chamado sempre que a
+// seleção múltipla muda (junto de renderAllTokens, que já roda nesses
+// momentos) ou a lista de tokens é re-renderizada.
+function updateTokenListBulkBar() {
+  bindTokenListBulkBarEvents();
+  const bar = document.getElementById('tokenListBulkHp');
+  if (!bar) return;
+  const count = (typeof multiSelectedIds !== 'undefined') ? multiSelectedIds.size : 0;
+  const eligible = count > 1 && Object.values(liveTokens).some(t => multiSelectedIds.has(t.id) && !t.prop && canDragToken(t));
+  bar.classList.toggle('hidden', !eligible);
+  if (eligible) {
+    const countEl = document.getElementById('tokenListBulkHpCount');
+    if (countEl) countEl.textContent = `🔲 ${count} tokens marcados —`;
+  }
+}
+
+async function applyHpToSelectedTokens(rawValue) {
+  const value = parseInt(rawValue, 10);
+  if (isNaN(value) || value < 0) return;
+  const hp = {};
+  BODY_PARTS_TABLE.forEach(([k]) => { hp[k] = { max: value, cur: value }; });
+  const targets = Array.from(multiSelectedIds)
+    .map(id => liveTokens[id])
+    .filter(t => t && !t.prop && canDragToken(t));
+  if (!targets.length) return;
+  try {
+    const batch = db.batch();
+    targets.forEach(t => {
+      const ref = db.collection('tables').doc(curTable.id).collection('tokens').doc(t.id);
+      batch.update(ref, { hp, updatedAt: firebase.firestore.FieldValue.serverTimestamp() });
+    });
+    await batch.commit();
+    // Fichas de jogador vinculadas também recebem o HP novo, um doc por vez
+    // (mesmo caminho usado pela edição individual — não dá pra ir em lote
+    // porque cada ficha é uma coleção diferente).
+    const sheetIds = targets.filter(t => t.sheetId).map(t => t.sheetId);
+    for (const sheetId of sheetIds) await syncTokenHpToSheet(sheetId, hp);
+  } catch (err) {
+    console.error('Erro ao aplicar HP em lote:', err);
+  }
+}
+
 async function setTokenHpPart(tokenId, partKey, field, rawValue) {
   const tok = liveTokens[tokenId]; if (!tok) return;
   const value = parseInt(rawValue, 10);

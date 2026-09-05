@@ -84,13 +84,18 @@ function renderLineListView(items) {
 // não carrega os scripts do editor. Compatível com fichas antigas, cujos
 // itens eram strings soltas sem peso.
 function ensureInventoryItemShapeV(it) {
-  if (typeof it === 'string') return { name: it, weight: 0, qty: 1 };
+  if (typeof it === 'string') return { name: it, weight: 0, qty: 1, consumable: false, effectType: '', effectValue: '', effectDesc: '' };
   return {
     name: (it && it.name) || '',
     weight: (it && it.weight !== undefined && it.weight !== null) ? it.weight : 0,
-    qty: (it && it.qty !== undefined && it.qty !== null) ? it.qty : 1
+    qty: (it && it.qty !== undefined && it.qty !== null) ? it.qty : 1,
+    consumable: !!(it && it.consumable),
+    effectType: (it && it.effectType) || '',
+    effectValue: (it && it.effectValue) || '',
+    effectDesc: (it && it.effectDesc) || ''
   };
 }
+const CONSUMABLE_EFFECT_LABELS_V = { cura: '💚 Cura', dano: '⚔️ Dano', buff: '✨ Buff', debuff: '☠️ Debuff', estamina: '🏃 Recuperar Estamina', energia: '⚡ Recuperar Energia' };
 function carryCapacityV(constTotal) { return 15 + attrModV(constTotal); }
 function inventoryTotalWeightV(items) {
   return items.reduce((sum, it) => {
@@ -122,7 +127,10 @@ function renderInventoryView(rawItems, constTotal) {
   const tableHtml = items.length
     ? `<table class="sheet-inventory-table">
         <thead><tr><th>Item</th><th>Peso</th><th>Qtd.</th><th>Subtotal</th></tr></thead>
-        <tbody>${items.map(it => `<tr><td>${escapeHtml(it.name)}</td><td>${it.weight}</td><td>${it.qty}</td><td>${(it.weight * it.qty)}</td></tr>`).join('')}</tbody>
+        <tbody>${items.map(it => `<tr><td>${escapeHtml(it.name)}${it.consumable ? `
+              <span class="effect-tag ${escapeHtml(it.effectType || '')}">${CONSUMABLE_EFFECT_LABELS_V[it.effectType] || '🧪 Consumível'}</span>
+              ${(it.effectValue || it.effectDesc) ? `<span class="item-effect-detail">${it.effectValue ? escapeHtml(it.effectValue) : ''}${it.effectValue && it.effectDesc ? ' · ' : ''}${it.effectDesc ? escapeHtml(it.effectDesc) : ''}</span>` : ''}
+            ` : ''}</td><td>${it.weight}</td><td>${it.qty}</td><td>${(it.weight * it.qty)}</td></tr>`).join('')}</tbody>
       </table>`
     : '<p class="hint" style="margin:0;">Nada registrado ainda.</p>';
   return `

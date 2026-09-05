@@ -587,6 +587,43 @@ textarea.auto-expand{
 .inventory-item .inv-name{ min-width:0; }
 .inventory-item .inv-weight, .inventory-item .inv-qty{ text-align:center; }
 @media (max-width:520px){ .inventory-item{ grid-template-columns:1fr 1fr; grid-template-areas:"name name" "weight qty" "remove remove"; } .inventory-item .inv-name{ grid-area:name; } .inventory-item .inv-weight{ grid-area:weight; } .inventory-item .inv-qty{ grid-area:qty; } .inventory-item .skill-remove{ grid-area:remove; justify-self:end; } }
+
+/* ---- Consumíveis: caixa "É consumível?" + campos de efeito (Cura/Dano/
+   Buff/Debuff) por item de inventário — usado no editor de ficha, na ficha
+   de leitura (só exibição) e no inventário rápido da mesa. ---- */
+.inventory-item-block{ margin-bottom:10px; padding-bottom:8px; border-bottom:1px dotted var(--hairline-soft); }
+.inventory-item-block:last-of-type{ border-bottom:none; margin-bottom:0; padding-bottom:0; }
+.inventory-item-block .inventory-item{ margin-bottom:6px; }
+.inv-consumable-toggle{ display:flex; align-items:center; gap:5px; font-size:12px; color:var(--ink-mute); cursor:pointer; margin:0; }
+.inv-consumable-toggle input{ margin:0; }
+.inv-effect-fields{ display:flex; flex-wrap:wrap; gap:6px; margin-top:6px; }
+.inv-effect-fields select{ flex:0 0 auto; min-width:118px; }
+.inv-effect-fields input.inv-effect-value{ flex:0 1 110px; }
+.inv-effect-fields input.inv-effect-desc{ flex:1 1 200px; }
+.inv-effect-fields select, .inv-effect-fields input{
+  background:var(--bg-alt); border:1px solid var(--hairline); color:var(--ink); border-radius:6px; padding:6px 8px; font-size:12.5px;
+}
+.inv-effect-fields select:focus, .inv-effect-fields input:focus{ border-color:var(--gold-dim); outline:none; }
+
+/* Tag de efeito na ficha de leitura (Cura/Dano/Buff/Debuff) */
+.effect-tag{ display:inline-flex; align-items:center; gap:3px; padding:1px 7px; border-radius:20px; font-size:11px; white-space:nowrap; }
+.effect-tag.cura{ background:rgba(127,178,122,.15); color:#8fc98a; }
+.effect-tag.dano{ background:rgba(201,86,79,.15); color:#e0847d; }
+.effect-tag.buff{ background:rgba(122,168,201,.15); color:#8fbfe6; }
+.effect-tag.debuff{ background:rgba(158,111,201,.15); color:#c5a3e6; }
+.effect-tag.estamina{ background:rgba(201,140,79,.15); color:#e0a97d; }
+.effect-tag.energia{ background:rgba(90,140,201,.15); color:#7fa8e0; }
+.item-effect-detail{ font-size:11px; color:var(--ink-mute); display:block; margin-top:2px; }
+
+/* Botão "Usar" no inventário rápido da mesa */
+.inv-use-row{ display:flex; align-items:center; justify-content:space-between; gap:6px; margin-top:4px; }
+.inv-use-btn{
+  background:none; border:1px solid var(--gold-dim); color:var(--gold); cursor:pointer; font-size:11px;
+  padding:4px 9px; border-radius:5px; white-space:nowrap;
+}
+.inv-use-btn:hover{ background:rgba(201,161,92,.12); }
+.inv-use-btn:disabled{ opacity:.4; cursor:default; }
+
 .weight-summary{
   background:var(--bg-alt); border:1px solid var(--hairline); border-radius:var(--radius);
   padding:10px 14px; margin-top:10px; font-size:14px;

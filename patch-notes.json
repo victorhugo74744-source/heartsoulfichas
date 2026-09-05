@@ -1,5 +1,31 @@
 [
   {
+    "id": "2026-09-04-sistema-consumiveis-inventario",
+    "date": "2026-09-04",
+    "title": "Sistema de consumíveis no Inventário (Cura, Dano, Buff e Debuff)",
+    "tags": [
+      "Sistema"
+    ],
+    "changes": [
+      "Cada item do inventário (no Ficha Editor e no inventário rápido da mesa) agora pode ser marcado como \"🧪 Consumível\" e ganhar um efeito: 💚 Cura, ⚔️ Dano, ✨ Buff ou ☠️ Debuff.",
+      "Cada efeito pode ter um dado/valor opcional (ex.: \"1d8+2\", mesma notação usada na mesa) e uma descrição livre (ex.: \"+2 Força por 3 rodadas\") — a descrição é essencial para Buff/Debuff, que normalmente não têm um número fixo.",
+      "Na ficha de leitura (ficha-view.html), itens consumíveis mostram uma etiqueta colorida com o tipo de efeito e os detalhes, direto na tabela de inventário.",
+      "No inventário rápido da mesa, um botão \"Usar\" consome 1 unidade do item: se houver um dado configurado, ele é rolado e entra no histórico de rolagens da mesa (com o balão flutuante de sempre); sem dado, entra como um aviso no chat geral. Em nenhum dos dois casos o efeito é aplicado automaticamente no HP de ninguém — dano/cura seguem podendo ser aplicados a um alvo pelo painel de Dados de sempre."
+    ]
+  },
+  {
+    "id": "2026-09-04-hp-em-lote-npcs-mesa",
+    "date": "2026-09-04",
+    "title": "HP de NPCs mais rápido de configurar na mesa",
+    "tags": [
+      "Sistema"
+    ],
+    "changes": [
+      "Novo campo \"❤ definir tudo\" na aba Vida de cada token: digite um número e ele vira o HP máximo (e atual) das 6 partes do corpo de uma vez, sem precisar editar parte por parte.",
+      "Nova barra \"Aplicar a todos marcados\" na lista \"Fichas na mesa\": marque vários NPCs com a ferramenta 🔲 Seleção múltipla, digite um HP e aplique a todos de uma vez só — pensado para configurar rapidamente vários NPCs iguais (ex.: um grupo de goblins)."
+    ]
+  },
+  {
     "id": "2026-09-03-rework-traços-12-raças",
     "date": "2026-09-03",
     "title": "Rework e novos traços para 12 raças (Draconatos, Nephilins, Fada, Humano, Orc, Golias, Kinguian, Platae, Soulbeast e Meio-Elemental)",

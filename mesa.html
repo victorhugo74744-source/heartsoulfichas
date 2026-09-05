@@ -324,6 +324,33 @@ if ('serviceWorker' in navigator) {
   .token-row .tr-tools input.xp-add-input:focus{ border-color:var(--gold-dim); outline:none; }
   .token-row .tr-tools input.xp-add-input::-webkit-inner-spin-button,
   .token-row .tr-tools input.xp-add-input::-webkit-outer-spin-button{ opacity:0.5; }
+  /* Definir de uma vez o HP (máx=atual) das 6 partes do corpo, sem abrir o
+     editor parte-a-parte — atalho pra configurar NPCs avulsos rapidamente. */
+  .token-row .tr-tools .tr-hp-quick{ display:flex; align-items:center; gap:3px; }
+  input.hp-quick-input{
+    width:48px; padding:3px 4px; font-size:11.5px; text-align:center;
+    background:var(--panel-2); border:1px solid var(--hairline-soft); border-radius:5px; color:var(--ink);
+  }
+  input.hp-quick-input:focus{ border-color:var(--gold-dim); outline:none; }
+  input.hp-quick-input::-webkit-inner-spin-button,
+  input.hp-quick-input::-webkit-outer-spin-button{ opacity:0.5; }
+
+  /* Barra de HP em lote: aparece só quando 2+ tokens estão marcados com a
+     ferramenta 🔲 Seleção múltipla — define o mesmo HP em todos de uma vez,
+     pensado pra configurar vários NPCs iguais (ex.: 5 goblins) sem precisar
+     abrir token por token. */
+  .tl-bulk-hp{
+    display:flex; align-items:center; gap:6px; margin:-4px 0 10px; padding:6px 8px;
+    background:rgba(201,161,92,.08); border:1px solid var(--gold-dim); border-radius:6px; font-size:12px;
+  }
+  .tl-bulk-hp.hidden{ display:none; }
+  .tl-bulk-hp #tokenListBulkHpCount{ flex:1 1 auto; min-width:0; }
+  .tl-bulk-hp input.hp-quick-input{ flex:0 0 auto; width:56px; }
+  .tl-bulk-hp button{
+    background:none; border:1px solid var(--hairline-soft); color:var(--gold); cursor:pointer;
+    font-size:11.5px; padding:4px 8px; border-radius:5px; white-space:nowrap;
+  }
+  .tl-bulk-hp button:hover{ border-color:var(--gold-dim); background:rgba(201,161,92,.12); }
 
   /* ===== "Fichas na mesa": busca, ordenação, agrupamento e condições ===== */
   .tl-toolbar{ display:flex; gap:6px; margin-bottom:10px; }
@@ -1196,6 +1223,9 @@ if ('serviceWorker' in navigator) {
     .token-row .tr-quick-btn{ padding:8px 10px; min-height:38px; }
     .token-row .tr-tools input.aura-radius-input{ padding:8px 4px; min-height:38px; font-size:13px; }
     .token-row .tr-tools input.xp-add-input{ padding:8px 4px; min-height:38px; font-size:13px; width:54px; }
+    input.hp-quick-input{ padding:8px 4px; min-height:38px; font-size:13px; width:54px; }
+    .tl-bulk-hp{ flex-wrap:wrap; }
+    .tl-bulk-hp button{ padding:8px 10px; min-height:38px; }
     /* BUG: o swatch de cor do token (data-tcolor) tem width/height/padding
        inline (14px, pensado pro mouse) — como estilo inline vence a classe,
        a regra geral de alvo de toque de ".token-row button" acima não
@@ -1763,6 +1793,11 @@ if ('serviceWorker' in navigator) {
               <option value="hp">HP (mais ferido primeiro)</option>
               <option value="init">Iniciativa</option>
             </select>
+          </div>
+          <div class="tl-bulk-hp hidden" id="tokenListBulkHp">
+            <span id="tokenListBulkHpCount" class="tc-meta"></span>
+            <input type="number" min="0" id="tokenListBulkHpInput" class="hp-quick-input" placeholder="HP" title="Define esta vida (máxima e atual) em todas as 6 partes do corpo de todos os tokens marcados de uma vez">
+            <button id="tokenListBulkHpApply" title="Aplicar este HP a todos os tokens marcados com a ferramenta 🔲 Seleção múltipla">❤ Aplicar a todos marcados</button>
           </div>
           <div id="tokenListBody"><span class="tc-meta">Nenhum token ainda.</span></div>
         </div>

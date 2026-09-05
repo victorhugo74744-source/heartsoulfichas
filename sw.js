@@ -10,7 +10,7 @@
 // cai por um instante, e permite abrir o app (a tela de login, por
 // exemplo) mesmo sem internet.
 
-const CACHE_NAME = 'heartsoul-shell-v13'; // v13: corrige × do painel de inspecionar e mostra painel também pra tokens que você controla
+const CACHE_NAME = 'heartsoul-shell-v15'; // v15: sistema de consumíveis no inventário (efeitos de Cura/Dano/Buff/Debuff + botão "Usar" na mesa)
 // (lista "Fichas na mesa" e a correção do bug de cache) não apareceriam na página "Novidades" pra quem
 // já visitou o site sem este bump, pelo mesmo motivo das vezes anteriores.
 // v10 (anterior): melhorias na lista "Fichas na mesa" (mesa.html/js/mesa-tokens.js/js/mesa-init.js:
