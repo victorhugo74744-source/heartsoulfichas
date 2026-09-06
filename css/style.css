@@ -641,17 +641,30 @@ textarea.auto-expand{
    melhor aproveitamento tanto no painel largo do master.html quanto na
    coluna estreita da mesa (o grid vira 1 coluna sozinho, sem media query,
    porque a coluna da mesa já é mais estreita que o minmax abaixo). */
+.npc-lib-form-toggle{
+  display:flex; align-items:center; justify-content:space-between; gap:10px; width:100%;
+  font-family:'Cinzel', serif; color:var(--gold); font-size:14.5px; letter-spacing:.02em;
+  background:linear-gradient(180deg, var(--panel), var(--panel-2));
+  border:1px solid var(--hairline-soft); border-radius:var(--radius);
+  padding:11px 14px; cursor:pointer; margin-bottom:0; text-align:left;
+  transition:border-color .15s, color .15s;
+}
+.npc-lib-form-toggle:hover{ border-color:var(--gold-dim); }
+.npc-lib-form-toggle-chevron{ color:var(--ink-mute); font-size:12px; flex:0 0 auto; transition:transform .15s ease; }
+.npc-lib-form-toggle-locked{ cursor:default; }
+/* form aberto gruda embaixo do botão (sem fio dourado duplicado no topo,
+   já que o próprio botão faz esse papel agora); fechado, encolhe a altura
+   a zero sem sumir de repente — dá pra perceber que é a mesma caixa. */
 .npc-lib-form{
   position:relative; overflow:hidden;
   background:linear-gradient(180deg, var(--panel), var(--panel-2));
-  border:1px solid var(--hairline-soft); border-radius:var(--radius);
-  padding:16px; box-shadow:0 8px 20px -14px rgba(0,0,0,.55);
+  border:1px solid var(--hairline-soft); border-top:none; border-radius:0 0 var(--radius) var(--radius);
+  padding:14px 16px 16px; box-shadow:0 8px 20px -14px rgba(0,0,0,.55);
+  max-height:900px; transition:max-height .2s ease, padding .2s ease, opacity .15s ease; opacity:1;
 }
-.npc-lib-form::before{
-  content:''; position:absolute; top:0; left:0; right:0; height:1px;
-  background:linear-gradient(90deg, transparent, var(--gold-dim), transparent); opacity:.6;
+.npc-lib-form.npc-lib-form-collapsed{
+  max-height:0; padding-top:0; padding-bottom:0; opacity:0; border:none; box-shadow:none; pointer-events:none;
 }
-.npc-lib-form-title{ font-family:'Cinzel', serif; color:var(--gold); font-size:14.5px; margin:0 0 12px; }
 .npc-lib-form-grid{ display:flex; gap:14px; align-items:flex-start; }
 .npc-lib-form-grid > div{ flex:1 1 auto; min-width:0; }
 .npc-lib-preview{
@@ -668,44 +681,94 @@ textarea.auto-expand{
 }
 .npc-lib-vision-toggle{ margin-top:12px; }
 .npc-lib-form-actions{ display:flex; gap:10px; margin-top:12px; }
-/* Cabeçalho "📚 Biblioteca" com contador em selo, separando visualmente
-   do formulário acima (troca o <hr> genérico por um divisor com peso). */
+/* Cabeçalho "📚 Biblioteca" com losango dourado (mesmo motivo usado nos
+   títulos de .panel h2 pelo site) em vez do simples texto + linha reta. */
 .npc-lib-section-head{
-  display:flex; align-items:center; gap:10px; margin:20px 0 12px;
-  padding-bottom:8px; border-bottom:1px solid var(--hairline-soft);
+  display:flex; align-items:center; gap:10px; margin:22px 0 14px;
+  padding-bottom:10px; position:relative;
 }
-.npc-lib-section-title{ font-family:'Cinzel', serif; color:var(--gold); font-size:14.5px; }
+.npc-lib-section-head::after{
+  content:''; position:absolute; left:0; right:0; bottom:0; height:1px;
+  background:linear-gradient(90deg, var(--hairline-soft), var(--hairline-soft) 60%, transparent);
+}
+.npc-lib-section-title{
+  font-family:'Cinzel', serif; color:var(--gold); font-size:14.5px;
+  display:flex; align-items:center; gap:8px;
+}
+.npc-lib-section-title::after{
+  content:''; width:6px; height:6px; background:var(--seal-bright); transform:rotate(45deg); flex-shrink:0; opacity:.85;
+}
 .npc-lib-count{
   font-family:'JetBrains Mono', monospace; font-size:11.5px; color:var(--ink-mute);
-  border:1px solid var(--hairline); border-radius:50%; width:22px; height:22px;
-  display:flex; align-items:center; justify-content:center; flex-shrink:0;
+  border:1px solid var(--hairline); border-radius:20px; padding:2px 9px;
+  display:inline-flex; align-items:center; justify-content:center; flex-shrink:0; white-space:nowrap;
 }
+.npc-lib-filter-row{ display:flex; gap:8px; margin-bottom:14px; }
+.npc-lib-search-wrap{ position:relative; flex:1 1 auto; min-width:0; display:flex; align-items:center; }
+.npc-lib-search-icon{
+  position:absolute; left:9px; font-size:12px; opacity:.6; pointer-events:none;
+}
+.npc-lib-filter-row input[type="text"]{
+  width:100%; background:var(--bg-alt); border:1px solid var(--hairline);
+  color:var(--ink); border-radius:20px; padding:7px 10px 7px 28px; font-size:13px;
+  transition:border-color .15s;
+}
+.npc-lib-filter-row select{
+  flex:0 0 auto; background:var(--bg-alt); border:1px solid var(--hairline);
+  color:var(--ink-mute); border-radius:20px; padding:7px 10px; font-size:12px; max-width:118px;
+  transition:border-color .15s;
+}
+.npc-lib-filter-row input[type="text"]:focus, .npc-lib-filter-row select:focus{ border-color:var(--gold-dim); color:var(--ink); outline:none; }
+/* ---- Estado vazio: ícone com leve flutuação (reaproveita @keyframes
+   hs-float já usado no .empty-state genérico do site) ---- */
 .npc-lib-empty{
-  color:var(--ink-mute); font-size:13.5px; font-style:italic; text-align:center;
-  padding:22px 14px; border:1px dashed var(--hairline); border-radius:var(--radius);
+  display:flex; flex-direction:column; align-items:center; gap:10px; text-align:center;
+  color:var(--ink-mute); font-size:13.5px; padding:32px 16px;
+  border:1px dashed var(--hairline); border-radius:var(--radius);
+  background:radial-gradient(ellipse at center, rgba(201,161,92,.04), transparent 70%);
 }
-.npc-lib-list{ display:grid; grid-template-columns:repeat(auto-fill, minmax(230px, 1fr)); gap:10px; }
+.npc-lib-empty-icon{ font-size:30px; opacity:.55; }
+.npc-lib-empty p{ margin:0; line-height:1.5; }
+.npc-lib-list{ display:grid; grid-template-columns:repeat(auto-fill, minmax(230px, 1fr)); gap:11px; }
+/* Cada card ganha uma cor própria (--npc-color, definida inline pelo JS a
+   partir da cor escolhida daquele NPC) — usada no anel do retrato e no
+   brilho de hover, no lugar do friso lateral simples de antes. Entram com
+   um leve fade-up escalonado (reaproveita @keyframes hs-fade-up). */
 .npc-lib-card{
-  display:flex; align-items:center; gap:10px; padding:10px; min-width:0;
-  border:1px solid var(--hairline-soft); border-left:3px solid var(--gold-dim);
-  border-radius:var(--radius); background:var(--bg-alt);
-  transition:border-color .15s, transform .15s, box-shadow .15s;
+  display:flex; align-items:center; gap:11px; padding:10px 12px; min-width:0;
+  border:1px solid var(--hairline-soft); border-radius:var(--radius);
+  background:linear-gradient(135deg, var(--bg-alt), var(--panel-2));
+  transition:border-color .18s, transform .18s, box-shadow .18s;
+  animation:hs-fade-up .28s ease-out backwards;
 }
-.npc-lib-card:hover{ border-color:var(--gold-dim); transform:translateX(2px); box-shadow:0 6px 14px -10px rgba(0,0,0,.55); }
+.npc-lib-card:hover{
+  border-color:var(--npc-color, var(--gold-dim));
+  transform:translateY(-2px);
+  box-shadow:0 8px 18px -10px rgba(0,0,0,.6), 0 0 0 1px color-mix(in srgb, var(--npc-color, var(--gold-dim)) 45%, transparent);
+}
+.npc-lib-thumb-ring{
+  flex:0 0 auto; width:52px; height:52px; border-radius:50%; padding:2px;
+  background:conic-gradient(from 180deg, var(--npc-color, var(--gold-dim)), transparent 40%, transparent 60%, var(--npc-color, var(--gold-dim)));
+  display:flex; align-items:center; justify-content:center;
+  box-shadow:0 3px 10px -4px rgba(0,0,0,.65);
+  transition:transform .18s;
+}
+.npc-lib-card:hover .npc-lib-thumb-ring{ transform:scale(1.06); }
 .npc-lib-thumb{
-  width:46px; height:46px; object-fit:cover; border-radius:var(--radius); flex:0 0 auto;
-  border:1px solid var(--hairline);
+  width:100%; height:100%; object-fit:cover; border-radius:50%;
+  border:2px solid var(--bg-alt);
 }
 .npc-lib-thumb-ph{
+  width:100%; height:100%; border-radius:50%; border:2px solid var(--bg-alt);
   display:flex; align-items:center; justify-content:center; font-size:19px;
-  background:radial-gradient(circle at 35% 30%, rgba(156,43,43,.22), var(--bg-alt) 70%);
+  background:radial-gradient(circle at 35% 30%, color-mix(in srgb, var(--npc-color, var(--gold-dim)) 35%, var(--bg-alt)), var(--bg-alt) 75%);
 }
 .npc-lib-info{ display:flex; flex-direction:column; gap:4px; flex:1 1 auto; min-width:0; }
 .npc-lib-info b{ font-size:13.5px; color:var(--ink); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .npc-lib-badges{ display:flex; flex-wrap:wrap; gap:5px; }
 .npc-lib-badge{
   font-family:'JetBrains Mono', monospace; font-size:10.5px; letter-spacing:.02em;
-  padding:2px 6px; border-radius:20px; background:rgba(255,255,255,.04); color:var(--ink-mute);
+  padding:2px 7px; border-radius:20px; background:rgba(255,255,255,.04); color:var(--ink-mute);
   border:1px solid var(--hairline-soft); white-space:nowrap;
 }
 .npc-lib-badge-hp{ color:var(--seal-bright); border-color:rgba(156,43,43,.35); }
@@ -975,7 +1038,7 @@ textarea.auto-expand{
 .sheet-side{ position:sticky; top:86px; display:flex; flex-direction:column; gap:16px; }
 .sheet-side .panel{ margin-top:0; }
 .sheet-main{ min-width:0; }
-.sheet-main .panel:first-child{ margin-top:0; }
+.sheet-main .panel:first-of-type{ margin-top:0; }
 .sheet-portrait{
   border-radius:var(--radius); border:1px solid var(--gold-dim); overflow:hidden;
   background:var(--bg-alt); flex-shrink:0;
@@ -987,10 +1050,33 @@ textarea.auto-expand{
   font-size:40px; color:var(--ink-mute);
 }
 
+/* Navegação rápida no topo da coluna principal da Ficha (view) — pílulas
+   que levam direto pra cada seção (Perícias, Habilidades, Raça, Traços e,
+   quando existem, Antecedente/Detalhes), grudadas no topo da coluna
+   enquanto ela rola, na mesma altura da coluna lateral (.sheet-side) ao
+   lado. Mesmo espírito da nav lateral do editor (ficha-editor.html), só
+   que horizontal porque aqui é uma lista de atalhos, não etapas em ordem. */
+.sheet-quicknav{
+  position:sticky; top:86px; z-index:5;
+  display:flex; gap:8px; flex-wrap:wrap;
+  background:var(--panel); border:1px solid var(--hairline); border-radius:var(--radius);
+  padding:10px 12px; margin-bottom:22px;
+}
+.sheet-quicknav a{
+  font-family:'EB Garamond', serif; font-size:13.5px; color:var(--ink-dim);
+  padding:5px 13px; border:1px solid var(--hairline); border-radius:20px;
+  text-decoration:none; transition:all .15s; white-space:nowrap;
+}
+.sheet-quicknav a:hover{ border-color:var(--gold-dim); color:var(--gold); }
+.sheet-quicknav a.active{ border-color:var(--seal-bright); color:var(--gold); background:rgba(156,43,43,.08); }
+
 @media (max-width:900px){
   .sheet-layout{ grid-template-columns:1fr; }
   .sheet-side{ position:static; }
   .sheet-portrait{ max-width:220px; margin:0 auto; }
+  /* Sem coluna lateral fixa nesse tamanho de tela, o quicknav não precisa
+     mais grudar embaixo do topbar — só rola junto com o resto. */
+  .sheet-quicknav{ position:static; }
 }
 
 /* ---- Ficha (criação/edição): navegação fixa por etapa ----
@@ -1017,6 +1103,16 @@ textarea.auto-expand{
   display:flex; align-items:center; justify-content:center; transition:all .15s;
 }
 .wizard-nav a.active .wn-num{ border-color:var(--seal-bright); color:var(--seal-bright); }
+/* Agrupa as 9 etapas por finalidade (Fundamentos / Regras de Jogo /
+   Identidade / Finalização) — puramente organizacional, não interfere no
+   destaque de etapa ativa (o script inline abaixo só olha pros <a>, ignora
+   esses <div>) nem no fio dourado (::before mais abaixo), que continua
+   correndo por trás dos rótulos como um trecho "sem conta" do fio. */
+.wizard-nav-group-label{
+  font-family:'Cinzel', serif; font-size:10.5px; letter-spacing:.14em; text-transform:uppercase;
+  color:var(--ink-mute); padding:14px 4px 4px 32px;
+}
+.wizard-nav-group-label:first-child{ padding-top:0; }
 .wizard-main{ min-width:0; }
 .wizard-main .panel[id^="step-"]{ scroll-margin-top:96px; }
 
@@ -1035,6 +1131,9 @@ textarea.auto-expand{
   }
   .wizard-nav a{ flex-shrink:0; border-left:none; border-bottom:2px solid transparent; white-space:nowrap; padding:8px 8px; }
   .wizard-nav a.active{ border-bottom-color:var(--seal-bright); background:none; }
+  /* No mobile o nav vira uma barra horizontal de abas — os rótulos de grupo
+     não cabem nesse formato e a ordem sequencial (1 a 9) já basta. */
+  .wizard-nav-group-label{ display:none; }
 }
 
 /* =====================================================================

@@ -465,20 +465,20 @@ function renderSheet(s, ownerProfile, canManage, sheetId, isMaster, activeTab) {
   `;
 
   const sheetMainHtml = `
-    <div class="panel">
+    <div class="panel" id="sec-pericias">
       <h2>Perícias</h2>
       ${bgSkillsHtml}
       <div class="sheet-item-list">${skillsHtml}</div>
     </div>
 
-    <div class="panel">
+    <div class="panel" id="sec-habilidades">
       <h2>Habilidades e Técnicas</h2>
       <div class="sheet-item-list">${abilitiesHtml}</div>
       <div class="sheet-section-title">Técnicas</div>
       <div class="sheet-item-list">${techniquesHtml}</div>
     </div>
 
-    <div class="panel">
+    <div class="panel" id="sec-raca">
       <h2>Raça — ${escapeHtml(s.raceName)}</h2>
       <div class="sheet-section-title">Traço Fixo</div>
       ${(() => {
@@ -491,13 +491,13 @@ function renderSheet(s, ownerProfile, canManage, sheetId, isMaster, activeTab) {
       ${raceBoughtHtml ? `<div class="sheet-section-title">Traços Extras Comprados (Pontos de Traço)</div><div class="sheet-item-list">${raceBoughtHtml}</div>` : ''}
     </div>
 
-    <div class="panel">
+    <div class="panel" id="sec-tracos">
       <h2>Traços Adicionais</h2>
       <p class="hint" style="margin:-4px 0 12px;">Pontos de Inspiração: <b style="color:var(--gold)">${s.inspirationPoints || 0}</b> · Limite de traço atual: <b style="color:var(--gold)">${traitLimit}</b> (3 Inspiração = 1 Ponto de Traço)</p>
       <div class="sheet-item-list">${traitsHtml}</div>
     </div>
 
-    ${s.backgroundName ? `<div class="panel">
+    ${s.backgroundName ? `<div class="panel" id="sec-antecedente">
       <h2>Antecedente — ${escapeHtml(s.backgroundName)}</h2>
       ${(() => {
         const bgFallback = (!s.backgroundDesc && s.backgroundId) ? DATA_V.backgrounds.find(b => b.id === s.backgroundId) : null;
@@ -507,7 +507,7 @@ function renderSheet(s, ownerProfile, canManage, sheetId, isMaster, activeTab) {
       })()}
     </div>` : ''}
 
-    ${(s.history || (s.inventoryItems && s.inventoryItems.length) || (s.notes && s.notes.length)) ? `<div class="panel">
+    ${(s.history || (s.inventoryItems && s.inventoryItems.length) || (s.notes && s.notes.length)) ? `<div class="panel" id="sec-detalhes">
       <h2>Detalhes</h2>
       ${s.history ? `<div class="sheet-section-title" style="margin-top:0;">História</div><p class="sheet-list" style="white-space:pre-wrap;">${escapeHtml(s.history)}</p>` : ''}
       <div class="sheet-section-title" style="${s.history ? '' : 'margin-top:0;'}">Inventário</div>
@@ -517,10 +517,32 @@ function renderSheet(s, ownerProfile, canManage, sheetId, isMaster, activeTab) {
     </div>` : ''}
   `;
 
+  // ---- Navegação rápida entre as seções da coluna principal ----
+  // A coluna lateral (Retrato/Recursos/Atributos) já fica fixa na tela; isso
+  // dá o mesmo tipo de atalho pro que sobra (Perícias, Habilidades, Raça,
+  // Traços, e Antecedente/Detalhes quando existem) — sem precisar rolar a
+  // ficha inteira pra achar uma seção. Mesmo tratamento visual do .tab-btn
+  // usado nas abas Jogador/Mestre logo acima, só que em pílulas horizontais
+  // que grudam no topo da coluna principal (ver .sheet-quicknav em
+  // style.css) porque aqui são vários links, não 2 estados exclusivos.
+  const quickNavItems = [
+    ['sec-pericias', 'Perícias'],
+    ['sec-habilidades', 'Habilidades'],
+    ['sec-raca', 'Raça'],
+    ['sec-tracos', 'Traços'],
+    ...(s.backgroundName ? [['sec-antecedente', 'Antecedente']] : []),
+    ...((s.history || (s.inventoryItems && s.inventoryItems.length) || (s.notes && s.notes.length)) ? [['sec-detalhes', 'Detalhes']] : []),
+  ];
+  const sheetQuickNavHtml = `
+    <nav class="sheet-quicknav" id="sheetQuickNav">
+      ${quickNavItems.map(([id, label]) => `<a href="#${id}" data-target="${id}">${label}</a>`).join('')}
+    </nav>
+  `;
+
   const playerTabHtml = `
     <div class="sheet-layout">
       <div class="sheet-side">${sheetSideHtml}</div>
-      <div class="sheet-main">${sheetMainHtml}</div>
+      <div class="sheet-main">${sheetQuickNavHtml}${sheetMainHtml}</div>
     </div>
   `;
 
@@ -595,6 +617,39 @@ function renderSheet(s, ownerProfile, canManage, sheetId, isMaster, activeTab) {
       location.href = document.body.dataset.backTo || 'minhas-fichas.html';
     });
   }
+
+  wireSheetQuickNav();
+}
+
+// Handler de scroll do menu de navegação rápida da Ficha (view) — guardado
+// aqui pra poder tirar o "ouvinte" antigo antes de recriar a cada render
+// (renderSheet roda de novo, por ex., depois que o Mestre salva uma
+// anotação), evitando empilhar vários ouvintes de scroll pra mesma página.
+let sheetQuickNavScrollHandler = null;
+
+function wireSheetQuickNav() {
+  if (sheetQuickNavScrollHandler) {
+    window.removeEventListener('scroll', sheetQuickNavScrollHandler);
+    window.removeEventListener('resize', sheetQuickNavScrollHandler);
+    sheetQuickNavScrollHandler = null;
+  }
+  const nav = document.getElementById('sheetQuickNav');
+  if (!nav) return; // não existe na aba Mestre, só na aba Jogador
+  const links = Array.from(nav.querySelectorAll('a'));
+  const sections = links
+    .map(a => document.getElementById(a.dataset.target))
+    .filter(Boolean);
+  if (!sections.length) return;
+
+  sheetQuickNavScrollHandler = function onScroll() {
+    const y = window.scrollY + 130;
+    let current = sections[0];
+    sections.forEach(sec => { if (sec.offsetTop <= y) current = sec; });
+    links.forEach(a => a.classList.toggle('active', a.dataset.target === current.id));
+  };
+  window.addEventListener('scroll', sheetQuickNavScrollHandler, { passive: true });
+  window.addEventListener('resize', sheetQuickNavScrollHandler);
+  sheetQuickNavScrollHandler();
 }
 
 guardPage(null, async (user, profile) => {
