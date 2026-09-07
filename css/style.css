@@ -204,6 +204,14 @@ textarea{ resize:vertical; min-height:70px; }
 .toolbar-row > .field{ margin-bottom:0; flex:1 1 220px; }
 .toolbar-row > .btn{ flex:0 0 auto; }
 
+/* ---- Barra de ações do topo da página (ex: "+ Criar nova ficha" /
+   "Importar" em Minhas Fichas) ---- */
+.page-toolbar{ display:flex; gap:10px; flex-wrap:wrap; margin-bottom:26px; }
+@media (max-width:560px){
+  .page-toolbar{ flex-direction:column; }
+  .page-toolbar > *{ width:100%; text-align:center; }
+}
+
 .btn{
   background:linear-gradient(180deg, var(--seal-bright), var(--seal));
   color:#fff; border:none; padding:12px 22px; border-radius:var(--radius);
@@ -406,16 +414,40 @@ textarea{ resize:vertical; min-height:70px; }
 }
 .chosen-chip button{ background:none; border:none; color:var(--ink-mute); cursor:pointer; font-size:14px; }
 
-/* ===== Sheet view (read-only summary / master view) ===== */
+/* ===== Sheet view (read-only summary / master view) =====
+   Redesenho do cartão de ficha (Minhas Fichas / Painel do Mestre): antes os
+   botões de ação ficavam espremidos no canto superior direito, colados no
+   avatar, e a data de atualização era só uma linha solta embaixo — sem
+   hierarquia visual clara nem alinhamento entre cartões de tamanhos
+   diferentes. Agora o cartão é uma coluna (header com retrato+identidade
+   em cima, rodapé de ações sempre no final) e ganha um leve destaque ao
+   passar o mouse no desktop, pra parecer clicável/interativo. */
 .sheet-card{
+  display:flex; flex-direction:column;
   background:linear-gradient(180deg, var(--panel), var(--panel-2));
-  border:1px solid var(--hairline); border-radius:var(--radius); padding:22px 26px;
+  border:1px solid var(--hairline); border-radius:var(--radius); padding:20px 24px;
   margin-bottom:16px;
+  transition:border-color .18s ease, box-shadow .18s ease, transform .18s ease;
 }
-.sheet-card .sc-head{ display:flex; flex-wrap:wrap; justify-content:space-between; align-items:flex-start; gap:14px; margin-bottom:12px; }
+@media (hover:hover){
+  .sheet-card:hover{
+    border-color:var(--gold-dim);
+    box-shadow:0 14px 30px -16px rgba(0,0,0,.6);
+    transform:translateY(-2px);
+  }
+}
+.sheet-card .sc-head{ display:flex; flex-wrap:wrap; align-items:flex-start; gap:14px; margin-bottom:16px; }
 .sheet-card h3{ font-family:'Cinzel', serif; color:var(--gold); font-size:19px; margin:0; }
-.sheet-card .sc-meta{ color:var(--ink-mute); font-size:13px; }
-.sheet-card .sc-owner{ color:var(--ink-dim); font-size:13px; margin-top:2px; }
+.sheet-card .sc-meta{ color:var(--ink-mute); font-size:13px; margin-top:2px; }
+.sheet-card .sc-owner{ color:var(--ink-dim); font-size:12.5px; }
+/* Rodapé de ações: sempre gruda no fim do cartão (margin-top:auto), mesmo
+   quando cartões vizinhos têm alturas diferentes — assim a linha de
+   botões fica alinhada entre um cartão e outro na mesma fileira do grid. */
+.sc-actions{
+  display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap;
+  gap:10px; margin-top:auto; padding-top:14px; border-top:1px solid var(--hairline-soft);
+}
+.sc-actions .sc-buttons{ display:flex; gap:8px; flex-wrap:wrap; }
 /* auto-fit + minmax em vez de um número fixo de colunas: esta grade só é
    usada dentro de .sheet-side, uma coluna lateral de 290px — com
    "repeat(6,1fr)" o navegador dava a cada célula uma largura mínima baseada
@@ -530,6 +562,21 @@ textarea{ resize:vertical; min-height:70px; }
   font-family:'Cinzel', serif; font-size:14px; border-bottom:2px solid transparent; margin-bottom:-1px;
 }
 .tab-btn.active{ color:var(--gold); border-bottom-color:var(--seal); }
+/* BUG (corrigido): com rótulos curtos (Jogador/Mestre) .tabs nunca dava
+   problema, mas rótulos mais longos (ex: "Configurações da Mesa", no
+   Painel do Mestre) não cabem lado a lado numa tela de celular — sem
+   nowrap, o texto quebrava dentro do próprio botão (rótulo de 2 linhas
+   torto, cortado pela borda inferior ativa). Em vez de encolher o texto
+   até ficar ilegível, deixamos a fileira de abas rolar horizontalmente
+   (like tabs de app), com cada botão mantendo sua largura de conteúdo. */
+@media (max-width:780px){
+  .tabs{
+    overflow-x:auto; overflow-y:hidden; flex-wrap:nowrap;
+    -webkit-overflow-scrolling:touch; scrollbar-width:none;
+  }
+  .tabs::-webkit-scrollbar{ display:none; }
+  .tab-btn{ white-space:nowrap; flex-shrink:0; padding:10px 14px; font-size:13px; }
+}
 
 .footer-note{ text-align:center; color:var(--ink-mute); font-size:12.5px; margin-top:40px; letter-spacing:.02em; }
 
@@ -872,20 +919,44 @@ textarea.auto-expand{
 .attr-manual label{ font-size:9.5px; margin-bottom:3px; }
 .attr-manual input{ padding:5px 6px; font-size:12px; text-align:center; }
 
-/* ---- Painel do Mestre: agrupamento por jogador ---- */
-.player-group{ margin-bottom:30px; }
+/* ---- Painel do Mestre: agrupamento por jogador ----
+   Antes cada grupo era só um título com um traço embaixo — numa mesa com
+   vários jogadores, a página virava uma parede só de cartões, sem deixar
+   claro visualmente onde um jogador termina e o próximo começa. Agora cada
+   grupo é um cartão próprio (fundo levemente diferente do resto da página),
+   o que também aproveita pra dar um respiro (padding) ao redor do avatar
+   e do nome do jogador. */
+.player-group{
+  margin-bottom:22px; background:var(--bg-alt); border:1px solid var(--hairline-soft);
+  border-radius:var(--radius); padding:18px 20px;
+}
 .player-group-head{
   display:flex; align-items:center; justify-content:space-between; gap:10px;
-  margin-bottom:14px; padding-bottom:10px; border-bottom:1px solid var(--hairline); flex-wrap:wrap;
+  margin-bottom:16px; padding-bottom:12px; border-bottom:1px solid var(--hairline); flex-wrap:wrap;
 }
-.player-group-head .count{ font-size:12.5px; color:var(--ink-mute); }
+.player-group-head .count{
+  font-size:12px; color:var(--ink-mute); background:var(--panel-2); border:1px solid var(--hairline);
+  border-radius:20px; padding:3px 11px; flex-shrink:0;
+}
 .folder-badge{
   display:inline-block; margin-top:4px; font-size:11.5px; color:var(--gold-dim);
   border:1px solid var(--hairline); border-radius:20px; padding:2px 9px;
 }
+/* Dentro do cartão-de-grupo, os cartões de ficha usam o fundo normal do
+   site (var(--panel)) pra continuar se destacando do fundo mais escuro
+   do grupo — sem isso os dois fundos ficavam parecidos demais. */
+.player-group .sheet-card{ background:linear-gradient(180deg, var(--panel), var(--panel-2)); }
 
 /* ---- Select de "mover pasta" (card de ficha, Painel do Mestre) ----
-   BUG CORRIGIDO: o padding vinha direto inline (padding:5px 8px), menor que
+   Ganhou um rótulo curto ("Pasta:") e virou uma linha própria separada do
+   rodapé de ações por um traço tracejado — antes era só um <select> solto
+   embaixo do cartão, sem indicar pra que serve antes de abrir o menu. */
+.sc-folder-move{
+  display:flex; align-items:center; gap:8px; margin-top:10px; padding-top:10px;
+  border-top:1px dashed var(--hairline-soft);
+}
+.sc-folder-move .sfm-label{ font-size:12px; color:var(--ink-mute); flex-shrink:0; }
+/* BUG CORRIGIDO: o padding vinha direto inline (padding:5px 8px), menor que
    os 34px de padding-right que todo <select> do site reserva pra caber a
    seta dourada (ver regra global de "select" mais abaixo) — o texto da
    opção mais longa ("Sem pasta / campanha") ficava espremido por baixo da
@@ -893,7 +964,7 @@ textarea.auto-expand{
    largura total do cartão, em vez de "width:auto" (que dependia do texto
    pra decidir a largura e nunca sobrava espaço pra seta nenhuma). */
 .sc-folder-move select{
-  width:100%; font-size:13px; padding:6px 30px 6px 10px;
+  flex:1; min-width:0; font-size:13px; padding:6px 30px 6px 10px;
 }
 
 /* ===== Responsivo (mobile) =====
@@ -938,7 +1009,11 @@ textarea.auto-expand{
 
   .sheet-card{ padding:18px 16px; }
   .sheet-card .sc-head{ flex-wrap:wrap; }
+  .player-group{ padding:14px 14px 16px; }
   .player-group-head{ gap:8px; }
+  .sc-actions{ justify-content:flex-start; }
+  .sc-actions .sc-buttons{ width:100%; }
+  .sc-actions .sc-buttons .btn{ flex:1; }
 
   /* Botões finais do editor de ficha (Salvar/Cancelar) — empilham em telas
      estreitas para não estourar a largura nem ficar apertados ao toque. */
@@ -1025,6 +1100,18 @@ textarea.auto-expand{
   gap:16px; align-items:start; margin-bottom:4px;
 }
 .cards-grid .sheet-card{ margin:0; }
+/* BUG (corrigido): minmax(340px,...) supõe que sempre sobra pelo menos
+   340px pra uma coluna — mas o conteúdo do .shell num Android comum
+   (~360-390px de tela) sobra bem menos que isso depois do padding lateral.
+   O grid então força a coluna a ficar mais larga que o container, e a
+   PÁGINA INTEIRA ganha rolagem horizontal (o efeito era sutil: o site
+   parecia "cortado" à direita e os botões dos cards saíam parcialmente
+   da tela). Abaixo do breakpoint mobile principal do site (780px) o
+   mínimo de 340px não faz sentido mesmo — 1 coluna só já é o esperado
+   nessa largura — então trocamos pra 1fr puro. */
+@media (max-width:780px){
+  .cards-grid{ grid-template-columns:1fr; }
+}
 
 /* ---- Ficha (visualização): retrato + recursos fixos ao lado ----
    A ficha inteira era uma coluna só de painéis empilhados (Recursos,

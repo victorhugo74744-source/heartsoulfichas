@@ -53,10 +53,15 @@ function renderGroups(groups, filter, folderId) {
                   ${s.folderName ? `<div class="folder-badge">${escapeHtml(s.folderName)}</div>` : ''}
                 </div>
               </div>
-              <a href="ficha-view.html?id=${s.id}" class="btn secondary small" style="width:auto;">Ver ficha</a>
             </div>
-            <div class="sc-owner">Atualizada em ${fmtDate(s.updatedAt)}</div>
-            <div class="sc-folder-move" style="margin-top:8px;">
+            <div class="sc-actions">
+              <span class="sc-owner">Atualizada em ${fmtDate(s.updatedAt)}</span>
+              <div class="sc-buttons">
+                <a href="ficha-view.html?id=${s.id}" class="btn secondary small" style="width:auto;">👁️ Ver ficha</a>
+              </div>
+            </div>
+            <div class="sc-folder-move">
+              <span class="sfm-label">📁 Pasta:</span>
               <select data-move-folder="${s.id}">
                 <option value="">Sem pasta / campanha</option>
                 ${allFolders.map(f => `<option value="${f.id}"${(s.folderId || '') === f.id ? ' selected' : ''}>${escapeHtml(f.name)}</option>`).join('')}
