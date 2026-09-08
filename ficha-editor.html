@@ -66,6 +66,7 @@ if ('serviceWorker' in navigator) {
       <a href="#step-8" title="Atalho: Numpad 8"><span class="wn-num">8</span> Antecedente</a>
       <div class="wizard-nav-group-label">Finalização</div>
       <a href="#step-9" title="Atalho: Numpad 9"><span class="wn-num">9</span> Detalhes</a>
+      <a href="#step-10" id="navComplementos" title="Complementos da campanha" style="display:none;"><span class="wn-num">10</span> Complementos</a>
     </nav>
     <p class="wizard-numpad-hint" id="wizardNumpadHint">⌨ Use o <b>Numpad</b> (1–9) para pular direto de etapa</p>
   </div>
@@ -351,6 +352,14 @@ if ('serviceWorker' in navigator) {
     </div>
   </div>
 
+  <!-- 10. Complementos (só aparece se a pasta/campanha escolhida na Etapa 1
+       tiver algum complemento cadastrado pelo Mestre — ver js/complementos.js) -->
+  <div class="panel" id="step-10" style="display:none;">
+    <h2><span class="step-num">10</span> Complementos</h2>
+    <p class="hint">Conteúdo extra liberado pelo Mestre para a campanha/pasta escolhida na Etapa 1.</p>
+    <div id="complementosStepBody"></div>
+  </div>
+
   <div id="bottomMsg"></div>
   <div class="wizard-actions" style="display:flex; gap:12px; margin-top:20px;">
     <button class="btn" id="saveBtn" type="button" style="width:auto; padding:14px 30px;">Salvar Ficha</button>
@@ -375,6 +384,7 @@ if ('serviceWorker' in navigator) {
 <script defer src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
 <script defer src="js/firebase-config.js"></script>
 <script defer src="js/firebase-init.js"></script>
+<script defer src="js/complementos.js"></script>
 <script defer src="js/data/races.js"></script>
 <script defer src="js/data/traits.js"></script>
 <script defer src="js/data/backgrounds.js"></script>
@@ -391,25 +401,40 @@ if ('serviceWorker' in navigator) {
 (function () {
   const nav = document.getElementById('wizardNav');
   if (!nav) return;
-  const links = Array.from(nav.querySelectorAll('a'));
-  const sections = links
-    .map(a => document.querySelector(a.getAttribute('href')))
-    .filter(Boolean);
+  const allLinks = Array.from(nav.querySelectorAll('a'));
+  const allSections = allLinks.map(a => document.querySelector(a.getAttribute('href')));
   const progressFill = document.getElementById('wizardProgressFill');
   const progressLabel = document.getElementById('wizardProgressLabel');
 
+  // A etapa "Complementos" (10) só existe quando a pasta/campanha escolhida
+  // tem algum complemento cadastrado (ver initComplementosUI em
+  // js/complementos.js, que alterna o display do link e do painel). Por
+  // isso "visíveis" é recalculado a cada rolagem, em vez de fixado uma vez
+  // só no carregamento da página — senão a etapa escondida (offsetTop 0)
+  // "vencia" o cálculo de qual seção está atualmente na tela.
+  function visiblePairs() {
+    return allLinks
+      .map((a, i) => ({ a, sec: allSections[i] }))
+      .filter(p => p.sec && p.a.offsetParent !== null);
+  }
+
   function onScroll() {
+    const pairs = visiblePairs();
     const y = window.scrollY + 130;
-    let current = sections[0];
+    let current = pairs[0] && pairs[0].sec;
     let currentIndex = 0;
-    sections.forEach((sec, i) => { if (sec.offsetTop <= y) { current = sec; currentIndex = i; } });
-    links.forEach((a, i) => a.classList.toggle('active', sections[i] === current));
-    if (progressFill) progressFill.style.width = ((currentIndex + 1) / sections.length * 100).toFixed(1) + '%';
-    if (progressLabel) progressLabel.textContent = 'Etapa ' + (currentIndex + 1) + ' de ' + sections.length;
+    pairs.forEach((p, i) => { if (p.sec.offsetTop <= y) { current = p.sec; currentIndex = i; } });
+    allLinks.forEach(a => a.classList.toggle('active', pairs[currentIndex] && pairs[currentIndex].a === a));
+    if (progressFill) progressFill.style.width = ((currentIndex + 1) / pairs.length * 100).toFixed(1) + '%';
+    if (progressLabel) progressLabel.textContent = 'Etapa ' + (currentIndex + 1) + ' de ' + pairs.length;
   }
   window.addEventListener('scroll', onScroll, { passive: true });
   window.addEventListener('resize', onScroll);
   onScroll();
+  // initComplementosUI() (chamado no bootstrap do editor) alterna o display
+  // do painel/link de Complementos depois deste script já ter rodado uma
+  // vez — reavalia o progresso/nav sempre que isso acontecer.
+  window.addEventListener('complementos:visibility-changed', onScroll);
 
   // ---- Atalho Numpad: pressionar 1-9 no teclado numérico pula direto pra
   // etapa correspondente. Ignorado enquanto o foco está num campo editável
@@ -432,7 +457,7 @@ if ('serviceWorker' in navigator) {
     const digit = e.code.replace('Numpad', '');
     if (!/^[1-9]$/.test(digit)) return;
     if (isTypingTarget(document.activeElement)) return;
-    const sec = sections[Number(digit) - 1];
+    const sec = allSections[Number(digit) - 1];
     if (!sec) return;
     e.preventDefault();
     sec.scrollIntoView({ behavior: 'smooth', block: 'start' });

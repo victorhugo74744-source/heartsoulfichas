@@ -169,6 +169,7 @@ async function createFolder() {
     });
     input.value = '';
     await loadFolders();
+    refreshComplementosPanelFolders('complementosPanelMaster');
   } catch (err) {
     msg.innerHTML = `<div class="error-msg">Erro ao criar pasta: ${escapeHtml(err.message)}</div>`;
   } finally {
@@ -186,7 +187,19 @@ async function deleteFolder(folderId) {
   if (!sure) return;
 
   try {
-    const sheetsSnap = await db.collection('sheets').where('folderId', '==', folderId).get();
+    // Importante: a regra de leitura de /sheets depende de "masterId" (não
+    // de "folderId"), e o Firestore recusa uma query de listagem inteira
+    // se não conseguir provar, só pelos filtros usados, que todo documento
+    // retornável passa na regra — um "where" só por folderId não prova
+    // isso e a query inteira caía com "Missing or insufficient permissions"
+    // antes mesmo de tentar apagar qualquer coisa. Filtrando também por
+    // masterId (igual ao padrão já usado em reloadSheets) a query fica
+    // provadamente coberta pela regra `isMaster() && resource.data.masterId
+    // == request.auth.uid`.
+    const sheetsSnap = await db.collection('sheets')
+      .where('folderId', '==', folderId)
+      .where('masterId', '==', auth.currentUser.uid)
+      .get();
     if (!sheetsSnap.empty) {
       const batch = db.batch();
       sheetsSnap.forEach(doc => batch.update(doc.ref, { folderId: null, folderName: null, masterId: null }));

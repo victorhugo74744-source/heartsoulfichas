@@ -359,7 +359,15 @@ async function cleanupMasterOwnedData(uid) {
   const foldersSnap = await db.collection('folders').where('createdBy', '==', uid).get();
   for (const folderDoc of foldersSnap.docs) {
     try {
-      const sheetsSnap = await db.collection('sheets').where('folderId', '==', folderDoc.id).get();
+      // Precisa filtrar também por masterId (não só folderId): a regra de
+      // leitura de /sheets depende de masterId/ownerId, e o Firestore
+      // recusa a query de listagem inteira se não conseguir provar, só
+      // pelos filtros usados, que todo documento retornável passa na
+      // regra (ver mesma correção em js/master.js deleteFolder).
+      const sheetsSnap = await db.collection('sheets')
+        .where('folderId', '==', folderDoc.id)
+        .where('masterId', '==', uid)
+        .get();
       if (!sheetsSnap.empty) {
         const batch = db.batch();
         sheetsSnap.forEach(d => batch.update(d.ref, { folderId: null, folderName: null, masterId: null }));

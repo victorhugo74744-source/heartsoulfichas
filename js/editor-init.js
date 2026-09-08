@@ -22,6 +22,8 @@ guardPage(null, async (user, profile) => {
   initInventoryUI();
   initNotesUI();
   await initFolderUI();
+  await initComplementosUI();
+  document.getElementById('fFolder').addEventListener('change', () => initComplementosUI());
   initAppearanceUI();
   initInspirationUI();
   updateInspirationDisplay();

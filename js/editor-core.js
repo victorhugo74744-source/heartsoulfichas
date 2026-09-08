@@ -141,7 +141,8 @@ let state = {
   resources: emptyResources(),
   inspirationPoints: 0, traitBonusFromInspiration: 0,
   history: '', appearanceImage: '', inventoryItems: [{ name: '', weight: 0, qty: 1 }], notes: [''],
-  folderId: '', folderName: '', masterId: null, loadedFolderId: ''
+  folderId: '', folderName: '', masterId: null, loadedFolderId: '',
+  complementos: {} // ver js/complementos.js — retrato do que foi escolhido/preenchido na Etapa 10
 };
 
 // ================= BÔNUS DE ATRIBUTO VINDOS DE TRAÇOS =================

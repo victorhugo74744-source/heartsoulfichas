@@ -89,6 +89,22 @@ service cloud.firestore {
             get(/databases/$(database)/documents/folders/$(folderId)).data.createdBy == request.auth.uid)
         );
       }
+
+      // Complementos de campanha (js/complementos.js): conteúdo extra que o
+      // Mestre anexa a esta pasta — do tipo "adiciona" (lista de itens
+      // escolhíveis: novo poder, raça, item, ritual...) ou "modifica"
+      // (campos extras que passam a existir na ficha de quem está nesta
+      // pasta). Leitura aberta a qualquer logado, pelo mesmo motivo das
+      // pastas em si: um jogador precisa ler o complemento pra poder
+      // escolher/preencher na própria ficha. Só o Mestre DONO desta pasta
+      // (mesma checagem de update/delete da pasta acima) cria/edita/apaga.
+      match /complementos/{complementoId} {
+        allow read: if isSignedIn();
+        allow create: if isMaster() && request.resource.data.createdBy == request.auth.uid &&
+          get(/databases/$(database)/documents/folders/$(folderId)).data.createdBy == request.auth.uid;
+        allow update, delete: if isSignedIn() &&
+          get(/databases/$(database)/documents/folders/$(folderId)).data.createdBy == request.auth.uid;
+      }
     }
 
     // Fichas de personagem. Cada ficha carrega um campo "masterId" —

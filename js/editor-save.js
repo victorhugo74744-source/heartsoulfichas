@@ -30,6 +30,10 @@ function collectFormIntoState() {
   state.folderName = chosenFolder ? chosenFolder.name : '';
   state.masterId = chosenFolder ? (chosenFolder.createdBy || null) : null;
   state.inspirationPoints = Math.max(0, parseInt(document.getElementById('fInspiration').value) || 0);
+  // Lê o que foi marcado/preenchido na Etapa 10 (Complementos), se ela
+  // estiver visível — ver js/complementos.js. Sem complementos cadastrados
+  // na pasta, editorComplementosCache fica vazio e isso só zera o campo.
+  collectComplementosIntoState();
   if (!state.inventoryItems.length) state.inventoryItems = [];
   if (!state.notes.length) state.notes = [];
 }
@@ -163,6 +167,7 @@ async function saveSheet(user) {
     folderId: state.folderId || null,
     folderName: state.folderName || null,
     masterId: state.masterId || null,
+    complementos: state.complementos || {},
     updatedAt: firebase.firestore.FieldValue.serverTimestamp()
   };
 
@@ -286,8 +291,12 @@ async function loadExistingSheet(id, user, profile) {
   // Guarda a pasta com que a ficha foi carregada, pra saber se ela mudou
   // de pasta ao salvar (ver syncFolderMembership em saveSheet()).
   state.loadedFolderId = s.folderId || '';
+  // Retrato do que foi escolhido/preenchido na Etapa 10 (Complementos),
+  // salvo por collectComplementosIntoState() — ver js/complementos.js.
+  state.complementos = s.complementos || {};
 
   populateFormFromState();
+  await initComplementosUI();
   renderAttrs(); updateAttrPoolDisplay();
   renderSkills(); updateSkillPoolDisplay();
   renderRaceGrid(); renderRaceDetail();

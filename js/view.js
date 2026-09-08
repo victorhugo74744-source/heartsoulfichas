@@ -464,6 +464,11 @@ function renderSheet(s, ownerProfile, canManage, sheetId, isMaster, activeTab) {
     </div>
   `;
 
+  // Complementos de campanha (js/complementos.js) — só existe algo aqui se
+  // o Mestre cadastrou complemento(s) na pasta em que esta ficha estava
+  // quando foi salva; a função já devolve '' nesse caso.
+  const complementosHtml = renderComplementosView(s);
+
   const sheetMainHtml = `
     <div class="panel" id="sec-pericias">
       <h2>Perícias</h2>
@@ -515,6 +520,11 @@ function renderSheet(s, ownerProfile, canManage, sheetId, isMaster, activeTab) {
       <div class="sheet-section-title">Anotações</div>
       ${renderLineListView(s.notes)}
     </div>` : ''}
+
+    ${complementosHtml ? `<div class="panel" id="sec-complementos">
+      <h2>Complementos</h2>
+      ${complementosHtml}
+    </div>` : ''}
   `;
 
   // ---- Navegação rápida entre as seções da coluna principal ----
@@ -532,6 +542,7 @@ function renderSheet(s, ownerProfile, canManage, sheetId, isMaster, activeTab) {
     ['sec-tracos', 'Traços'],
     ...(s.backgroundName ? [['sec-antecedente', 'Antecedente']] : []),
     ...((s.history || (s.inventoryItems && s.inventoryItems.length) || (s.notes && s.notes.length)) ? [['sec-detalhes', 'Detalhes']] : []),
+    ...(complementosHtml ? [['sec-complementos', 'Complementos']] : []),
   ];
   const sheetQuickNavHtml = `
     <nav class="sheet-quicknav" id="sheetQuickNav">

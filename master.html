@@ -105,6 +105,12 @@ if ('serviceWorker' in navigator) {
     </div>
 
     <div class="panel" style="margin-bottom:26px;">
+      <h2 style="margin-top:0;">Complementos</h2>
+      <p class="hint" style="margin-top:-6px;">Conteúdo extra de campanha, anexado a uma pasta: uma ficha só recebe um complemento quando está naquela pasta. "Adiciona" cria uma lista de itens que o jogador escolhe na ficha; "Modifica" cria campos novos na própria ficha.</p>
+      <div id="complementosPanelMaster"></div>
+    </div>
+
+    <div class="panel" style="margin-bottom:26px;">
       <h2 style="margin-top:0;">Biblioteca de NPCs/Monstros</h2>
       <p class="hint" style="margin-top:-6px;">NPCs salvos aqui ficam disponíveis em qualquer uma das suas mesas — na Mesa, use o botão "+ Mesa" pra colocar um na cena atual sem preencher o formulário de NPC de novo.</p>
       <div id="npcLibraryPanelMaster"></div>
@@ -118,6 +124,7 @@ if ('serviceWorker' in navigator) {
 <script src="js/firebase-config.js"></script>
 <script src="js/firebase-init.js"></script>
 <script src="js/npc-library.js"></script>
+<script src="js/complementos.js"></script>
 <script src="js/master.js"></script>
 <script>
 // Alterna entre as duas abas do painel (Fichas dos Jogadores / Configurações
