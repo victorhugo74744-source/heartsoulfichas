@@ -26,7 +26,11 @@ function validateAll() {
     }
   }
   if (traitPoolSpent() > traitPoolMax()) errors.push('Você gastou mais pontos de traço do que tem.');
-  if (!hasMalignTrait()) errors.push('Escolha ao menos 1 Traço Maligno.');
+  // Deadly-Cards: pontos de traço ficam travados em 0 até o Mestre liberar
+  // pela aba Mestre (só existe depois que a ficha já foi salva ao menos uma
+  // vez) — exigir 1 Traço Maligno aqui tornaria impossível salvar a ficha
+  // pela primeira vez. Pula a exigência enquanto o complemento está ativo.
+  if (!dcActive && !hasMalignTrait()) errors.push('Escolha ao menos 1 Traço Maligno.');
   return errors;
 }
 
