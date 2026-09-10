@@ -252,8 +252,13 @@ async function loadExistingSheet(id, user, profile) {
   // catálogo, é porque o Mestre o editou (evolução/fusão) no painel de
   // ficha-view.html — guarda esse texto pra não perdê-lo ao salvar aqui.
   state.raceFixedTraitOverride = (race && s.raceFixedTrait && s.raceFixedTrait !== race.fixedTrait) ? s.raceFixedTrait : null;
-  state.raceOptionalChosen = (s.raceOptionalTraits || []).map(text => race.optionalTraits.indexOf(text)).filter(i => i >= 0);
-  state.raceTraitsBought = (s.raceTraitsBought || []).map(text => race.optionalTraits.indexOf(text)).filter(i => i >= 0);
+  // Deadly-Cards não usa raças (raceId fica vazio na ficha) — sem esse guard,
+  // "race" vem undefined e o .optionalTraits.indexOf(...) abaixo lançava uma
+  // exceção que interrompia loadExistingSheet() no meio, antes de preencher
+  // o resto do formulário e de ligar o botão Salvar. Era por isso que abrir
+  // pra editar uma ficha do Deadly-Cards parecia abrir a tela de criar nova.
+  state.raceOptionalChosen = race ? (s.raceOptionalTraits || []).map(text => race.optionalTraits.indexOf(text)).filter(i => i >= 0) : [];
+  state.raceTraitsBought = race ? (s.raceTraitsBought || []).map(text => race.optionalTraits.indexOf(text)).filter(i => i >= 0) : [];
   // Guarda os arrays exatamente como foram salvos (podem ter sido evoluídos/
   // fundidos pelo Mestre e não bater mais com nenhum item do catálogo — daí
   // o índice não ser encontrado acima) e zera os flags de "mexi nisso nesta
