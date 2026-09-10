@@ -121,12 +121,16 @@ async function saveSheet(user) {
   }
   bottomMsg.innerHTML = '';
 
-  const race = DATA.races.find(r => r.id === state.raceId);
-  const raceOptionalTraitTexts = currentRaceOptionalTexts(race);
-  const raceVariantText = (race.variantChoice && state.raceVariantChosen !== null && state.raceVariantChosen !== undefined)
+  // Deadly-Cards não usa raças (ver js/deadly-cards.js) — state.raceId fica
+  // vazio e "race" nunca é encontrada; todos os campos derivados dela caem
+  // para valores vazios/nulos no payload abaixo.
+  const race = DATA.races.find(r => r.id === state.raceId) || null;
+  const raceOptionalTraitTexts = race ? currentRaceOptionalTexts(race) : [];
+  const raceVariantText = (race && race.variantChoice && state.raceVariantChosen !== null && state.raceVariantChosen !== undefined)
     ? `${race.variantChoice.options[state.raceVariantChosen].name}: ${race.variantChoice.options[state.raceVariantChosen].desc}`
     : null;
   const background = state.backgroundId ? DATA.backgrounds.find(b => b.id === state.backgroundId) : null;
+  const dcActive = typeof isDeadlyCardsActive === 'function' && isDeadlyCardsActive();
 
   const payload = {
     characterName: state.characterName.trim(),
@@ -139,15 +143,15 @@ async function saveSheet(user) {
     xp: state.xp || 0,
     attributes: state.attributes,
     skills: state.skills,
-    raceId: state.raceId,
-    raceName: race.name,
+    raceId: state.raceId || '',
+    raceName: race ? race.name : '',
     // Só reaplica o texto padrão do catálogo se a raça em si mudou desde que
     // a ficha foi carregada; senão preserva a edição do Mestre (evolução/
     // fusão do Traço Fixo feita no painel de ficha-view.html).
-    raceFixedTrait: (state.raceId === state.loadedRaceId && state.raceFixedTraitOverride) ? state.raceFixedTraitOverride : race.fixedTrait,
+    raceFixedTrait: (race && state.raceId === state.loadedRaceId && state.raceFixedTraitOverride) ? state.raceFixedTraitOverride : (race ? race.fixedTrait : ''),
     raceVariantTrait: raceVariantText,
     raceOptionalTraits: raceOptionalTraitTexts,
-    raceTraitsBought: currentRaceBoughtTexts(race),
+    raceTraitsBought: race ? currentRaceBoughtTexts(race) : [],
     backgroundId: state.backgroundId || null,
     backgroundName: background ? background.name : null,
     backgroundDesc: background ? background.desc : null,
@@ -168,6 +172,13 @@ async function saveSheet(user) {
     folderName: state.folderName || null,
     masterId: state.masterId || null,
     complementos: state.complementos || {},
+    // Deadly-Cards (ver js/deadly-cards.js): guardado direto na ficha pra
+    // ficha-view.html/mesa saberem o modo sem precisar recarregar os
+    // complementos da pasta. Os campos que só o Mestre edita (dcCaps,
+    // dcAssimilacao, corruptionLevel, ver painel Mestre em view.js) são
+    // propositalmente OMITIDOS deste payload — como o save usa .update(),
+    // omiti-los preserva o que o Mestre já tiver definido.
+    dcActive,
     updatedAt: firebase.firestore.FieldValue.serverTimestamp()
   };
 

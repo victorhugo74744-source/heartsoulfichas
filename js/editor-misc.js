@@ -8,16 +8,21 @@
 function validateAll() {
   const errors = [];
   if (!state.characterName.trim()) errors.push('Dê um nome ao personagem.');
-  if (!state.energyType) errors.push('Escolha uma energia (Aura, Mana ou Fé).');
+  const dcActive = typeof isDeadlyCardsActive === 'function' && isDeadlyCardsActive();
+  if (!state.energyType) errors.push(dcActive ? 'Energia (Porcentagem) não definida — recarregue a página.' : 'Escolha uma energia (Aura, Mana ou Fé).');
   if (attrPoolSpent() > attrPoolMax()) errors.push('Você gastou mais pontos de atributo do que tem.');
   if (skillPoolSpent() > skillPoolMax()) errors.push('Você gastou mais pontos de perícia do que tem.');
   if (state.skills.some(s => s.points > skillCapPerSkill())) errors.push(`Nenhuma perícia pode ultrapassar +${skillCapPerSkill()} no seu nível atual.`);
-  if (!state.raceId) errors.push('Escolha uma raça.');
-  else if (state.raceOptionalChosen.length !== 2) errors.push('Escolha exatamente 2 traços raciais opcionais.');
-  else {
-    const raceCheck = DATA.races.find(r => r.id === state.raceId);
-    if (raceCheck && raceCheck.variantChoice && (state.raceVariantChosen === null || state.raceVariantChosen === undefined)) {
-      errors.push(`Escolha uma opção em "${raceCheck.variantChoice.label}".`);
+  // Deadly-Cards não usa raças (ver js/deadly-cards.js) — pula a validação
+  // inteira de raça quando o complemento está ativo na pasta da ficha.
+  if (!dcActive) {
+    if (!state.raceId) errors.push('Escolha uma raça.');
+    else if (state.raceOptionalChosen.length !== 2) errors.push('Escolha exatamente 2 traços raciais opcionais.');
+    else {
+      const raceCheck = DATA.races.find(r => r.id === state.raceId);
+      if (raceCheck && raceCheck.variantChoice && (state.raceVariantChosen === null || state.raceVariantChosen === undefined)) {
+        errors.push(`Escolha uma opção em "${raceCheck.variantChoice.label}".`);
+      }
     }
   }
   if (traitPoolSpent() > traitPoolMax()) errors.push('Você gastou mais pontos de traço do que tem.');

@@ -50,12 +50,25 @@ const BODY_PART_BASE_HP = {
 const FAIRY_BODY_PART_BASE_HP = {
   cabeca: 6, tronco: 9, braco_esq: 5, braco_dir: 5, perna_esq: 6, perna_dir: 6
 };
+// Deadly-Cards (ver js/deadly-cards.js): fórmula própria de HP — valores-base
+// fixos diferentes do sistema normal, somando o MODIFICADOR de Constituição
+// (não o valor total do atributo).
+const DC_BODY_PART_BASE_HP = {
+  cabeca: 12, tronco: 16, braco_esq: 10, braco_dir: 10, perna_esq: 14, perna_dir: 14
+};
 function bodyPartBaseHp(key) {
+  if (typeof isDeadlyCardsActive === 'function' && isDeadlyCardsActive()) return DC_BODY_PART_BASE_HP[key];
   const table = (state.raceId === 'raca-fada') ? FAIRY_BODY_PART_BASE_HP : BODY_PART_BASE_HP;
   return table[key];
 }
 function hpMaxForPart(key) {
   const bonus = (state.resources && state.resources.hpDieBonus) || 0;
+  // Deadly-Cards: soma o MODIFICADOR de Constituição (não o valor total do
+  // atributo) aos valores-base próprios da fórmula (ver DC_BODY_PART_BASE_HP
+  // acima) — o dado de vida por nível (bonus) continua valendo igual.
+  if (typeof isDeadlyCardsActive === 'function' && isDeadlyCardsActive()) {
+    return bodyPartBaseHp(key) + attrMod(attrTotalValue('constituicao')) + bonus;
+  }
   return bodyPartBaseHp(key) + attrTotalValue('constituicao') + bonus;
 }
 
@@ -330,8 +343,19 @@ function initXPUI() {
 }
 
 // ---- Limites que escalam com o nível ----
-function attrPoolMax() { return ATTR_POOL_BASE + ATTR_PER_LEVEL * (charLevel() - 1); }
-function skillPoolMax() { return SKILL_POOL_BASE + SKILL_PER_LEVEL * (charLevel() - 1); }
+// Quando o complemento Deadly-Cards está ativo (ver js/deadly-cards.js), os
+// pools normais (base + por nível) deixam de valer: o total disponível vem
+// só do que o Mestre liberou manualmente nesta ficha (state.dcCaps), editado
+// pela aba Mestre em ficha-view.html. Sem raças/pontos ilimitados = tudo sob
+// controle do Mestre, inclusive o "quanto" o jogador pode distribuir.
+function attrPoolMax() {
+  if (typeof isDeadlyCardsActive === 'function' && isDeadlyCardsActive()) return dcCaps().attr;
+  return ATTR_POOL_BASE + ATTR_PER_LEVEL * (charLevel() - 1);
+}
+function skillPoolMax() {
+  if (typeof isDeadlyCardsActive === 'function' && isDeadlyCardsActive()) return dcCaps().skill;
+  return SKILL_POOL_BASE + SKILL_PER_LEVEL * (charLevel() - 1);
+}
 // Limite máximo de bônus que UMA perícia pode ter, conforme a tabela de progressão do livro.
 function skillCapPerSkill() {
   const L = charLevel();
@@ -341,7 +365,10 @@ function skillCapPerSkill() {
   if (L >= 5) return 4;
   return 3;
 }
-function traitPoolMax() { return TRAIT_POOL_BASE + (state.traitBonusFromInspiration || 0); }
+function traitPoolMax() {
+  if (typeof isDeadlyCardsActive === 'function' && isDeadlyCardsActive()) return dcCaps().trait;
+  return TRAIT_POOL_BASE + (state.traitBonusFromInspiration || 0);
+}
 
 function attrPoolSpent() {
   return ATTR_KEYS.reduce((sum, [k]) => sum + (state.attributes[k] - 1), 0);

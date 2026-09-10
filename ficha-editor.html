@@ -145,7 +145,7 @@ if ('serviceWorker' in navigator) {
   <div class="panel" id="step-2">
     <h2><span class="step-num">2</span> Recursos</h2>
     <div class="sheet-section-title" style="margin-top:0;">HP por partes do corpo</div>
-    <p class="hint" style="margin:0 0 10px;">O máximo de cada parte é calculado automaticamente (Cabeça: 14 + Constituição · Tronco: 18 + Constituição · Braços: 10 + Constituição cada · Pernas: 12 + Constituição cada), mais o bônus acumulado do dado de vida por nível. Fadas usam os valores reduzidos do próprio traço racial. Ajuste apenas o valor atual conforme o dano sofrido.</p>
+    <p class="hint" style="margin:0 0 10px;">O máximo de cada parte é calculado automaticamente (Cabeça: 14 + Constituição · Tronco: 18 + Constituição · Braços: 10 + Constituição cada · Pernas: 12 + Constituição cada), mais o bônus acumulado do dado de vida por nível. Fadas usam os valores reduzidos do próprio traço racial. Ajuste apenas o valor atual conforme o dano sofrido. <span class="dc-only-hint">No complemento Deadly-Cards, a fórmula muda para Cabeça: 12 + mod. Constituição · Tronco: 16 + mod. Constituição · Braços: 10 + mod. Constituição cada · Pernas: 14 + mod. Constituição cada.</span></p>
     <div id="hpDiceRow"></div>
     <div id="hpMilestonesBox"></div>
     <div id="hpPartsBox"></div>
@@ -153,11 +153,11 @@ if ('serviceWorker' in navigator) {
     <p class="hint" style="margin:0 0 10px;">Calculada automaticamente: 10 + modificador de Vontade.</p>
     <div id="sanityBox"></div>
     <div class="sheet-section-title">Estamina</div>
-    <p class="hint" style="margin:0 0 10px;">Na criação, role 1d15 + Constituição para definir seu máximo (você pode rolar novamente até 2 vezes no total). Depois de criada a ficha, o dado fica fixo, mas o total volta a subir junto com a Constituição quando ela evoluir, mais o bônus acumulado do dado de nível (1d10 a cada nível ganho).</p>
+    <p class="hint" style="margin:0 0 10px;" id="estaminaHint">Na criação, role 1d15 + Constituição para definir seu máximo (você pode rolar novamente até 2 vezes no total). Depois de criada a ficha, o dado fica fixo, mas o total volta a subir junto com a Constituição quando ela evoluir, mais o bônus acumulado do dado de nível (1d10 a cada nível ganho).</p>
     <div id="estaminaDiceRow"></div>
     <div id="estaminaBox"></div>
-    <div class="sheet-section-title">Energia</div>
-    <p class="hint" style="margin:0 0 10px;">Na criação, role 1d12 + Vontade (Fé) / Intelecto (Mana) / Constituição (Aura), conforme a energia escolhida (você pode rolar novamente até 2 vezes no total). Depois de criada a ficha, o dado fica fixo, mas o total volta a subir junto com o atributo correspondente quando ele evoluir, mais o bônus acumulado do dado de nível (1d10 a cada nível ganho).</p>
+    <div class="sheet-section-title" id="vigorSectionTitle">Energia</div>
+    <p class="hint" style="margin:0 0 10px;" id="vigorHint">Na criação, role 1d12 + Vontade (Fé) / Intelecto (Mana) / Constituição (Aura), conforme a energia escolhida (você pode rolar novamente até 2 vezes no total). Depois de criada a ficha, o dado fica fixo, mas o total volta a subir junto com o atributo correspondente quando ele evoluir, mais o bônus acumulado do dado de nível (1d10 a cada nível ganho).</p>
     <div id="vigorDiceRow"></div>
     <div id="vigorBox"></div>
 
@@ -385,6 +385,7 @@ if ('serviceWorker' in navigator) {
 <script defer src="js/firebase-config.js"></script>
 <script defer src="js/firebase-init.js"></script>
 <script defer src="js/complementos.js"></script>
+<script defer src="js/deadly-cards.js"></script>
 <script defer src="js/data/races.js"></script>
 <script defer src="js/data/traits.js"></script>
 <script defer src="js/data/backgrounds.js"></script>

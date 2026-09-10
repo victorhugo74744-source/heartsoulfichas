@@ -13,6 +13,12 @@
 //    (texto curto, número, texto longo ou marcador), preenchidos pelo
 //    jogador — usado quando uma regra da campanha muda o MODELO da
 //    ficha, não só adiciona uma opção de escolha.
+//  - "sistema": ativa um RULESET alternativo embutido no próprio código
+//    (não configurável pelo formulário, ao contrário dos outros dois
+//    tipos) — troca mecânicas centrais da ficha inteira (energia, classe,
+//    raças, fórmulas de recurso, pools de pontos). Ver SISTEMAS_EMBUTIDOS
+//    logo abaixo e js/deadly-cards.js para o único sistema hoje ("Deadly-
+//    Cards"). Uma pasta só deve ter um complemento "sistema" ativo.
 //
 // Guardado em /folders/{folderId}/complementos/{id}. Este arquivo é
 // carregado em 3 páginas:
@@ -61,6 +67,18 @@ const COMPLEMENTO_CAMPO_TIPOS = [
   ['textarea', 'Texto longo'],
   ['checkbox', 'Marcador (sim/não)']
 ];
+
+// Registro dos sistemas alternativos embutidos disponíveis pro tipo
+// "sistema". Pra adicionar um novo sistema no futuro: implementar a lógica
+// dele num js/<nome>.js próprio (nos mesmos moldes de js/deadly-cards.js) e
+// só then registrar aqui a entrada correspondente.
+const SISTEMAS_EMBUTIDOS = {
+  'deadly-cards': {
+    nome: 'Deadly-Cards',
+    icone: 'assets/deadly-cards-icon-256.png',
+    desc: 'Sem raças · classe vira carta (Ás–Rei) · energia única "Porcentagem"/"Assimilação" · pontos de atributo/perícia/traço liberados só pelo Mestre.'
+  }
+};
 
 // ============================================================
 // PAINEL DO MESTRE (master.html) — gerenciar complementos por pasta
@@ -161,14 +179,18 @@ function renderComplementosListUI(box) {
       <button type="button" class="btn small" id="cplNewBtn">+ Novo complemento</button>
     </div>
     ${cplList.length ? `<div class="complemento-list">${cplList.map(c => `
-      <div class="complemento-card ${c.tipo === 'modifica' ? 'modifica' : ''}">
+      <div class="complemento-card ${c.tipo === 'modifica' ? 'modifica' : ''} ${c.tipo === 'sistema' ? 'sistema' : ''}">
         <div class="complemento-card-head">
-          <span class="complemento-card-icon">${c.tipo === 'modifica' ? '📝' : '➕'}</span>
+          ${c.tipo === 'sistema'
+            ? `<img class="complemento-card-icon" src="${escapeHtml(c.icone || '')}" alt="">`
+            : `<span class="complemento-card-icon-emoji">${c.tipo === 'modifica' ? '📝' : '➕'}</span>`}
           <span class="complemento-card-name" title="${escapeHtml(c.nome || '(sem nome)')}">${escapeHtml(c.nome || '(sem nome)')}</span>
         </div>
         <p class="complemento-card-meta">${c.tipo === 'modifica'
           ? `${(c.campos || []).length} campo${(c.campos || []).length === 1 ? '' : 's'} extra na ficha`
-          : `${(c.itens || []).length} ite${(c.itens || []).length === 1 ? 'm' : 'ns'} escolhível${(c.itens || []).length === 1 ? '' : 'is'}${c.limite ? ' · limite ' + c.limite : ''}`}</p>
+          : c.tipo === 'sistema'
+            ? `Sistema alternativo de ficha (${escapeHtml((SISTEMAS_EMBUTIDOS[c.sistemaId] || {}).nome || c.sistemaId || '?')})`
+            : `${(c.itens || []).length} ite${(c.itens || []).length === 1 ? 'm' : 'ns'} escolhível${(c.itens || []).length === 1 ? '' : 'is'}${c.limite ? ' · limite ' + c.limite : ''}`}</p>
         <div class="complemento-card-actions">
           <button type="button" class="btn secondary small" data-cpl-edit="${c.id}">Editar</button>
           <button type="button" class="btn secondary small" data-cpl-del="${c.id}">Excluir</button>
@@ -233,6 +255,11 @@ function renderComplementoForm(box, existing) {
             <span class="cpl-type-label">📝 Modifica a ficha</span>
             <span class="cpl-type-desc">Campos novos que passam a existir na própria ficha.</span>
           </label>
+          <label class="cpl-type-opt ${cplFormTipo === 'sistema' ? 'selected' : ''}">
+            <input type="radio" name="cplTipo" value="sistema" ${cplFormTipo === 'sistema' ? 'checked' : ''}>
+            <span class="cpl-type-label">🎴 Sistema alternativo</span>
+            <span class="cpl-type-desc">Ativa um ruleset embutido que troca mecânicas centrais da ficha inteira nesta pasta.</span>
+          </label>
         </div>
       </div>
       <div id="cplTipoBody"></div>
@@ -262,6 +289,23 @@ function renderComplementoForm(box, existing) {
 
 function renderComplementoTipoBody(formBox) {
   const bodyBox = formBox.querySelector('#cplTipoBody');
+  if (cplFormTipo === 'sistema') {
+    const existing = cplList.find(c => c.id === cplEditingId);
+    const currentSistemaId = (existing && existing.sistemaId) || Object.keys(SISTEMAS_EMBUTIDOS)[0];
+    bodyBox.innerHTML = `
+      <div class="field" style="max-width:280px;">
+        <label>Sistema embutido</label>
+        <select id="cplSistemaId">
+          ${Object.keys(SISTEMAS_EMBUTIDOS).map(sid => `<option value="${sid}"${sid === currentSistemaId ? ' selected' : ''}>${escapeHtml(SISTEMAS_EMBUTIDOS[sid].nome)}</option>`).join('')}
+        </select>
+        <p class="hint" style="margin:6px 0 0;">As regras deste sistema são fixas no código (não dá pra configurar itens/campos aqui) — ele só liga/desliga pra esta pasta.</p>
+      </div>
+      <div id="cplSistemaPreview"></div>
+    `;
+    renderCplSistemaPreview(bodyBox);
+    bodyBox.querySelector('#cplSistemaId').addEventListener('change', () => renderCplSistemaPreview(bodyBox));
+    return;
+  }
   if (cplFormTipo === 'adiciona') {
     bodyBox.innerHTML = `
       <div class="field" style="max-width:200px;">
@@ -290,6 +334,17 @@ function renderComplementoTipoBody(formBox) {
       renderCplCamposRows(bodyBox);
     });
   }
+}
+
+function renderCplSistemaPreview(bodyBox) {
+  const sel = bodyBox.querySelector('#cplSistemaId');
+  const sys = SISTEMAS_EMBUTIDOS[sel.value];
+  const box = bodyBox.querySelector('#cplSistemaPreview');
+  box.innerHTML = `
+    <div class="cpl-sistema-preview">
+      <img src="${sys.icone}" alt="">
+      <p>${escapeHtml(sys.desc)}</p>
+    </div>`;
 }
 
 function renderCplItensRows(bodyBox) {
@@ -352,7 +407,12 @@ async function saveComplementoForm(box, existing) {
   if (!nome) { msg.innerHTML = '<div class="error-msg">Dê um nome ao complemento.</div>'; return; }
 
   let data;
-  if (cplFormTipo === 'adiciona') {
+  if (cplFormTipo === 'sistema') {
+    const sistemaId = formBox.querySelector('#cplSistemaId').value;
+    const sys = SISTEMAS_EMBUTIDOS[sistemaId];
+    if (!sys) { msg.innerHTML = '<div class="error-msg">Escolha um sistema válido.</div>'; return; }
+    data = { nome, tipo: 'sistema', sistemaId, icone: sys.icone };
+  } else if (cplFormTipo === 'adiciona') {
     const itens = cplFormItens.map(it => ({ id: it.id, nome: (it.nome || '').trim(), custo: (it.custo || '').trim(), desc: (it.desc || '').trim() }))
       .filter(it => it.nome);
     if (!itens.length) { msg.innerHTML = '<div class="error-msg">Adicione pelo menos um item com nome.</div>'; return; }
@@ -389,6 +449,17 @@ async function saveComplementoForm(box, existing) {
 // collectComplementosIntoState() (ver js/editor-save.js).
 let editorComplementosCache = [];
 
+// Complemento tipo "sistema" ativo na pasta carregada no editor (ver
+// SISTEMAS_EMBUTIDOS acima) — no máximo um por pasta é esperado; se houver
+// mais de um por engano, vale o primeiro encontrado.
+function activeSistemaComplemento() {
+  return editorComplementosCache.find(c => c.tipo === 'sistema');
+}
+function isDeadlyCardsActive() {
+  const c = activeSistemaComplemento();
+  return !!c && c.sistemaId === 'deadly-cards';
+}
+
 // Chamada em editor-init.js (após a pasta ser conhecida) e de novo sempre
 // que o campo "Campanha" muda de valor. Lê o folderId direto do <select>
 // pra refletir a escolha em tempo real, mesmo antes de salvar a ficha.
@@ -398,6 +469,11 @@ async function initComplementosUI() {
   const stepEl = document.getElementById('step-10');
   const navEl = document.getElementById('navComplementos');
   editorComplementosCache = await getComplementos(folderId);
+
+  // O tipo "sistema" (ex.: Deadly-Cards) muda mecânicas centrais da ficha
+  // inteira, então roda independentemente de haver ou não outros
+  // complementos de escolha nesta pasta (ver js/deadly-cards.js).
+  if (typeof applyDeadlyCardsMode === 'function') applyDeadlyCardsMode();
 
   if (!editorComplementosCache.length) {
     if (stepEl) stepEl.style.display = 'none';
@@ -416,6 +492,15 @@ function renderComplementosStep() {
   const box = document.getElementById('complementosStepBody');
   if (!box) return;
   box.innerHTML = editorComplementosCache.map(c => {
+    if (c.tipo === 'sistema') {
+      const sys = SISTEMAS_EMBUTIDOS[c.sistemaId] || {};
+      return `
+        <div class="sheet-section-title" style="margin-top:18px;">${escapeHtml(c.nome)}</div>
+        <div class="cpl-sistema-preview">
+          <img src="${escapeHtml(c.icone || sys.icone || '')}" alt="">
+          <p>${escapeHtml(sys.desc || 'Sistema alternativo ativo nesta campanha.')}</p>
+        </div>`;
+    }
     if (c.tipo === 'modifica') {
       return `
         <div class="sheet-section-title" style="margin-top:18px;">${escapeHtml(c.nome)}</div>
@@ -512,7 +597,11 @@ function populateComplementosFromState() {
 function collectComplementosIntoState() {
   const result = {};
   editorComplementosCache.forEach(c => {
-    if (c.tipo === 'adiciona') {
+    if (c.tipo === 'sistema') {
+      // Sem itens/campos escolhíveis — só guarda o retrato pra ficha-view.html
+      // saber mostrar o aviso do sistema mesmo que o complemento mude depois.
+      result[c.id] = { nome: c.nome, tipo: 'sistema', sistemaId: c.sistemaId, icone: c.icone };
+    } else if (c.tipo === 'adiciona') {
       const wrap = document.querySelector(`.complemento-itens[data-complemento="${c.id}"]`);
       if (!wrap) return;
       const chosen = Array.from(wrap.querySelectorAll('.selected')).map(card => {
@@ -547,6 +636,15 @@ function renderComplementosView(s) {
   if (!ids.length) return '';
   return ids.map(id => {
     const c = data[id];
+    if (c.tipo === 'sistema') {
+      const sys = SISTEMAS_EMBUTIDOS[c.sistemaId] || {};
+      return `
+        <div class="sheet-section-title" style="margin-top:18px;">${escapeHtml(c.nome)}</div>
+        <div class="cpl-sistema-preview">
+          <img src="${escapeHtml(c.icone || sys.icone || '')}" alt="">
+          <p>${escapeHtml(sys.desc || 'Sistema alternativo ativo nesta campanha.')}</p>
+        </div>`;
+    }
     if (c.tipo === 'modifica') {
       const camposHtml = (c.campos || [])
         .filter(cp => cp.tipo === 'checkbox' ? true : (cp.valor !== '' && cp.valor !== null && cp.valor !== undefined))

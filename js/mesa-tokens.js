@@ -182,7 +182,9 @@ function renderMyResourcesBox() {
   const sheet = (tok && tok.sheetId) ? mySheets.find(s => s.id === tok.sheetId) : null;
   if (!sheet) { box.innerHTML = ''; return; }
   const res = sheet.resources || {};
-  const energyLabel = sheet.energyType ? `Energia (${sheet.energyType})` : 'Energia';
+  // Deadly-Cards (js/deadly-cards.js): a energia é a própria "Porcentagem"/
+  // "Assimilação" — não faz sentido rotular como "Energia (Porcentagem)".
+  const energyLabel = sheet.dcActive ? (sheet.energyType || 'Porcentagem') : (sheet.energyType ? `Energia (${sheet.energyType})` : 'Energia');
   box.innerHTML = `
     <div class="my-resources-box">
       <h4>Seus recursos</h4>

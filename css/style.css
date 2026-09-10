@@ -1737,7 +1737,7 @@ select option{ background:var(--bg-alt); color:var(--ink); }
 .complemento-card:hover{ border-color:var(--gold-dim); transform:translateY(-2px); box-shadow:0 10px 18px -12px rgba(0,0,0,.55); }
 .complemento-card.modifica{ border-left-color:var(--seal); }
 .complemento-card-head{ display:flex; align-items:center; gap:8px; }
-.complemento-card-icon{ font-size:15px; flex-shrink:0; line-height:1; }
+.complemento-card-icon-emoji{ font-size:15px; flex-shrink:0; line-height:1; }
 .complemento-card-name{ color:var(--gold); font-weight:600; font-size:15px; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .complemento-card-meta{ font-size:13px; color:var(--ink-mute); margin:8px 0 12px; }
 .complemento-card-actions{ display:flex; gap:8px; margin-top:auto; }
@@ -1796,3 +1796,22 @@ select option{ background:var(--bg-alt); color:var(--ink); }
 .cpl-add-row-btn{ margin-top:6px; }
 .cpl-form-panel{ background:rgba(0,0,0,.15); }
 .cpl-form-title{ margin-top:0; font-family:'Cinzel',serif; font-size:15px; color:var(--gold-dim); }
+
+/* ===== Complemento "Deadly-Cards" (js/deadly-cards.js) ===== */
+.dc-only-hint{ display:none; }
+body.dc-active .dc-only-hint{ display:inline; color:var(--gold-dim); }
+.dc-banner{
+  display:flex; align-items:center; gap:14px; margin:0 0 18px; padding:12px 14px;
+  background:rgba(196,67,60,.08); border:1px solid var(--malign); border-radius:8px;
+}
+.dc-banner img{ width:46px; height:46px; border-radius:6px; object-fit:cover; flex:0 0 auto; box-shadow:0 0 0 1px var(--hairline); }
+.dc-banner b{ color:var(--gold); font-family:'Cinzel',serif; font-size:13px; letter-spacing:.03em; }
+.dc-banner p{ margin:4px 0 0; font-size:12.5px; color:var(--ink-mute); line-height:1.5; }
+.dc-energy-fixed{ margin-top:6px; }
+.dc-energy-fixed input{ opacity:.75; font-style:italic; }
+.dc-master-panel{ border-left:3px solid var(--malign); }
+.complemento-card-icon{ width:28px; height:28px; border-radius:6px; object-fit:cover; margin-right:8px; vertical-align:middle; box-shadow:0 0 0 1px var(--hairline); }
+.complemento-card.sistema{ border-left-color:var(--malign); }
+.cpl-sistema-preview{ display:flex; align-items:center; gap:12px; padding:10px; border:1px solid var(--hairline); border-radius:8px; background:rgba(0,0,0,.15); margin-top:10px; }
+.cpl-sistema-preview img{ width:44px; height:44px; border-radius:6px; object-fit:cover; flex:0 0 auto; }
+.cpl-sistema-preview p{ margin:0; font-size:12.5px; color:var(--ink-mute); line-height:1.5; }

@@ -451,7 +451,7 @@ function renderSheet(s, ownerProfile, canManage, sheetId, isMaster, activeTab) {
       ${resourceLineHtml(sanityCurV, sanityMaxV)}
       <div class="sheet-section-title">Estamina</div>
       ${resourceLineHtml(res.estaminaCur || 0, res.estaminaMax || 0)}
-      <div class="sheet-section-title">Energia</div>
+      <div class="sheet-section-title">${escapeHtml(s.dcActive ? (s.energyType || 'Porcentagem') : 'Energia')}</div>
       ${resourceLineHtml(res.vigorCur || 0, res.vigorMax || 0)}
       <div class="sheet-section-title">Economia</div>
       <div class="sheet-summary-grid">${COIN_TYPES_V.map(([k, label]) => `<div class="sum-attr"><div class="sa-name">${label}</div><div class="sa-val" style="font-size:15px;">${(econ[k] || 0)}</div></div>`).join('')}</div>
@@ -566,11 +566,15 @@ function renderSheet(s, ownerProfile, canManage, sheetId, isMaster, activeTab) {
       <span id="masterNotesMsg" style="margin-left:10px; font-size:13px; color:var(--benign);"></span>
     </div>
     ${masterTraitEditorHtml(s)}
+    ${s.dcActive && typeof dcMasterPanelHtml === 'function' ? dcMasterPanelHtml(s) : ''}
   `;
 
   el.innerHTML = `
     <div class="page-head">
-      <div class="eyebrow">${escapeHtml(s.raceName)} · Nível ${s.level} · ${escapeHtml(s.energyType || '')}${s.currentClass ? ` · ${escapeHtml(s.currentClass)}` : ''}</div>
+      <div class="eyebrow">${s.dcActive
+        ? `${escapeHtml(DC_LEVELS[Number.isInteger(s.corruptionLevel) ? s.corruptionLevel : 0])} · Nível ${s.level} · ${escapeHtml(s.energyType || 'Porcentagem')}${s.currentClass ? ` · Carta: ${escapeHtml(s.currentClass)}` : ''}`
+        : `${escapeHtml(s.raceName)} · Nível ${s.level} · ${escapeHtml(s.energyType || '')}${s.currentClass ? ` · ${escapeHtml(s.currentClass)}` : ''}`
+      }</div>
       <h1>${escapeHtml(s.characterName)}</h1>
       <p>${s.height ? `Altura: <b style="color:var(--gold)">${escapeHtml(s.height)}</b>` : ''}${s.height && (s.age !== null && s.age !== undefined) ? ' · ' : ''}${(s.age !== null && s.age !== undefined) ? `Idade: <b style="color:var(--gold)">${escapeHtml(String(s.age))}</b>` : ''}${(s.height || (s.age !== null && s.age !== undefined)) ? ' · ' : ''}XP: <b style="color:var(--gold)">${s.xp || 0} / ${s.level >= 20 ? '—' : (800 * (s.level || 1))}</b></p>
       ${ownerProfile ? `<p>Jogador: <b style="color:var(--gold)">${escapeHtml(ownerProfile.name)}</b></p>` : ''}
@@ -619,6 +623,11 @@ function renderSheet(s, ownerProfile, canManage, sheetId, isMaster, activeTab) {
       // que foi de lá que a ação de salvar partiu.
       renderSheet(updatedS, ownerProfile, canManage, sheetId, isMaster, 'mestre');
     });
+    if (s.dcActive && typeof wireDcMasterPanel === 'function') {
+      wireDcMasterPanel(s, sheetId, (updatedS) => {
+        renderSheet(updatedS, ownerProfile, canManage, sheetId, isMaster, 'mestre');
+      });
+    }
   }
 
   if (canManage) {

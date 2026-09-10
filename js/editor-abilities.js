@@ -265,15 +265,25 @@ function renderSanityBox() {
 //  - Fichas criadas antes desta atualização não têm dado registrado
 //    (die === null): elas continuam com os campos numéricos antigos,
 //    editáveis à mão, para não perder os valores já salvos.
-// energyBonusEnabled: só true pra Energia (Mana/Fé/Aura) — soma o bônus de
-// traço racial ao reservatório (ver traitEnergyBonus() em editor-core.js).
-// Não se aplica à Estamina, que não é "energia de classe".
-function renderResourceDiceRow({ boxId, curField, dieField, rollsField, sides, attrKey, label, formulaLabel, missingAttrHint, levelBonusField, levelRollsField, energyBonusEnabled }) {
+// energyBonusEnabled: só true pra Energia (Mana/Fé/Aura/Porcentagem) — soma o
+// bônus de traço racial ao reservatório (ver traitEnergyBonus() em
+// editor-core.js). Não se aplica à Estamina, que não é "energia de classe".
+// diceCount (padrão 1) e maxRerolls (padrão 2) permitem reaproveitar esta
+// mesma função pras fórmulas multi-dado do complemento Deadly-Cards (2d20
+// Vida, 2d10 Estamina, 3d6 Porcentagem com 3 rerolls) sem duplicar a lógica.
+// noAttrOk: quando true, permite rolar mesmo sem attrKey (dado puro, sem
+// atributo somado) — usado pela Vida e pela Porcentagem do Deadly-Cards.
+// flatDisplay: quando true, este dado não tem "atual/máximo" próprio (o
+// resultado é usado por fora, ex.: somado nas partes do corpo) — mostra só
+// o valor rolado e o botão de rerolar, sem os inputs de atual/máximo.
+function renderResourceDiceRow({ boxId, curField, dieField, rollsField, sides, diceCount, maxRerolls, attrKey, label, formulaLabel, missingAttrHint, levelBonusField, levelRollsField, energyBonusEnabled, noAttrOk, flatDisplay }) {
   const box = document.getElementById(boxId);
   if (!box) return;
+  diceCount = diceCount || 1;
+  maxRerolls = maxRerolls === undefined ? 2 : maxRerolls;
   const res = state.resources;
   const die = res[dieField];
-  const levelBonus = res[levelBonusField] || 0;
+  const levelBonus = levelBonusField ? (res[levelBonusField] || 0) : 0;
   const energyBonus = energyBonusEnabled ? traitEnergyBonus() : null;
   // O percentual (Reservatório Ampliado) é aplicado por último, sobre o
   // total já com dado + atributo + dado de nível + bônus fixo de traço —
@@ -291,11 +301,16 @@ function renderResourceDiceRow({ boxId, curField, dieField, rollsField, sides, a
     return ` + ${parts.join(' ')} (traço)`;
   }
 
+  const diceLabel = diceCount > 1 ? `${diceCount}d${sides}` : `1d${sides}`;
+  const rollTheDice = () => (diceCount > 1 ? rollDice(diceCount, sides) : rollDie(sides));
+
   if (die === null || die === undefined) {
     if (!editingSheetId) {
       // Criação da ficha: ainda não rolou. Se não há atributo de energia
-      // definido ainda (ex.: energia não escolhida), avisa em vez de rolar.
-      if (!attrKey) {
+      // definido ainda (ex.: energia não escolhida) e o dado exige um
+      // atributo, avisa em vez de rolar. noAttrOk libera dados "puros" sem
+      // atributo (Vida/Porcentagem do Deadly-Cards).
+      if (!attrKey && !noAttrOk) {
         box.innerHTML = `
           <div class="resource-row">
             <span class="resource-label">${label}</span>
@@ -307,15 +322,17 @@ function renderResourceDiceRow({ boxId, curField, dieField, rollsField, sides, a
         <div class="resource-row">
           <span class="resource-label">${label} — ${formulaLabel}</span>
           <div class="resource-inputs">
-            <button type="button" class="btn secondary small" id="${boxId}RollBtn" style="width:auto;">🎲 Rolar 1d${sides}</button>
+            <button type="button" class="btn secondary small" id="${boxId}RollBtn" style="width:auto;">🎲 Rolar ${diceLabel}</button>
           </div>
         </div>`;
       document.getElementById(`${boxId}RollBtn`).addEventListener('click', () => {
-        res[dieField] = rollDie(sides);
+        res[dieField] = rollTheDice();
         res[rollsField] = 1;
-        const max = applyEnergyBonus(res[dieField] + attrTotalValue(attrKey) + levelBonus);
-        res[curField.max] = max;
-        res[curField.cur] = max;
+        if (!flatDisplay) {
+          const max = applyEnergyBonus(res[dieField] + (attrKey ? attrTotalValue(attrKey) : 0) + levelBonus);
+          res[curField.max] = max;
+          res[curField.cur] = max;
+        }
         renderStaminaVigorBox();
       });
     } else {
@@ -337,33 +354,44 @@ function renderResourceDiceRow({ boxId, curField, dieField, rollsField, sides, a
 
   // Dado já rolado: o máximo é sempre recalculado (dado fixo + atributo atual + bônus de nível + bônus de traço de energia, se houver).
   const max = applyEnergyBonus(die + (attrKey ? attrTotalValue(attrKey) : 0) + levelBonus);
-  res[curField.max] = max;
-  if (res[curField.cur] === undefined || res[curField.cur] === null) res[curField.cur] = max;
+  if (!flatDisplay) {
+    res[curField.max] = max;
+    if (res[curField.cur] === undefined || res[curField.cur] === null) res[curField.cur] = max;
+  }
   const rolls = res[rollsField] || 0;
-  const canReroll = !editingSheetId && rolls < 2;
-  box.innerHTML = `
+  const canReroll = !editingSheetId && rolls < maxRerolls;
+  const rerollBtnHtml = canReroll ? `<button type="button" class="btn secondary small" id="${boxId}RerollBtn" style="width:auto; margin-left:8px;">🎲 Rolar de novo (${maxRerolls - rolls}/${maxRerolls})</button>` : '';
+  box.innerHTML = flatDisplay ? `
     <div class="resource-row">
-      <span class="resource-label">${label} — 1d${sides} (rolado: ${die}) + ${attrKeyLabel(attrKey)}${levelBonus ? ` + ${levelBonus} (dado de nível)` : ''}${energyBonusLabel()}</span>
+      <span class="resource-label">${label} — ${diceLabel} (resultado: ${die})</span>
+      <div class="resource-inputs">${rerollBtnHtml || '<span class="hint" style="margin:0;">Sem rerolls restantes.</span>'}</div>
+    </div>` : `
+    <div class="resource-row">
+      <span class="resource-label">${label} — ${diceLabel} (rolado: ${die})${attrKey ? ` + ${attrKeyLabel(attrKey)}` : ''}${levelBonus ? ` + ${levelBonus} (dado de nível)` : ''}${energyBonusLabel()}</span>
       <div class="resource-inputs">
         <input type="number" id="${boxId}CurInput" min="0" max="${max}" value="${res[curField.cur]}">
         <span>/ ${max} (máx.)</span>
-        ${canReroll ? `<button type="button" class="btn secondary small" id="${boxId}RerollBtn" style="width:auto; margin-left:8px;">🎲 Rolar de novo (${2 - rolls}/2)</button>` : ''}
+        ${rerollBtnHtml}
       </div>
     </div>`;
-  document.getElementById(`${boxId}CurInput`).addEventListener('input', e => {
-    let v = parseInt(e.target.value) || 0;
-    if (v > max) v = max;
-    if (v < 0) v = 0;
-    e.target.value = v;
-    res[curField.cur] = v;
-  });
+  if (!flatDisplay) {
+    document.getElementById(`${boxId}CurInput`).addEventListener('input', e => {
+      let v = parseInt(e.target.value) || 0;
+      if (v > max) v = max;
+      if (v < 0) v = 0;
+      e.target.value = v;
+      res[curField.cur] = v;
+    });
+  }
   if (canReroll) {
     document.getElementById(`${boxId}RerollBtn`).addEventListener('click', () => {
-      res[dieField] = rollDie(sides);
+      res[dieField] = rollTheDice();
       res[rollsField] = rolls + 1;
-      const newMax = applyEnergyBonus(res[dieField] + (attrKey ? attrTotalValue(attrKey) : 0) + levelBonus);
-      res[curField.max] = newMax;
-      res[curField.cur] = newMax;
+      if (!flatDisplay) {
+        const newMax = applyEnergyBonus(res[dieField] + (attrKey ? attrTotalValue(attrKey) : 0) + levelBonus);
+        res[curField.max] = newMax;
+        res[curField.cur] = newMax;
+      }
       renderStaminaVigorBox();
     });
   }
@@ -402,6 +430,19 @@ function renderLevelDiceRow({ rowId, bonusField, rollsField, curField, label }) 
   });
 }
 function renderStaminaVigorBox() {
+  const dc = typeof isDeadlyCardsActive === 'function' && isDeadlyCardsActive();
+
+  const estaminaHint = document.getElementById('estaminaHint');
+  if (estaminaHint) estaminaHint.textContent = dc
+    ? 'Na criação (Deadly-Cards), role 2d10 + Constituição para definir seu máximo (você pode rolar novamente até 2 vezes no total).'
+    : 'Na criação, role 1d15 + Constituição para definir seu máximo (você pode rolar novamente até 2 vezes no total). Depois de criada a ficha, o dado fica fixo, mas o total volta a subir junto com a Constituição quando ela evoluir, mais o bônus acumulado do dado de nível (1d10 a cada nível ganho).';
+  const vigorTitle = document.getElementById('vigorSectionTitle');
+  if (vigorTitle) vigorTitle.textContent = dc ? dcEnergyLabel(state.dcAssimilacao) : 'Energia';
+  const vigorHint = document.getElementById('vigorHint');
+  if (vigorHint) vigorHint.textContent = dc
+    ? `Na criação, role 3d6 para definir o máximo de ${dcEnergyLabel(state.dcAssimilacao)} (você tem direito a 3 rerolls — depois disso, o resultado fica travado).`
+    : 'Na criação, role 1d12 + Vontade (Fé) / Intelecto (Mana) / Constituição (Aura), conforme a energia escolhida (você pode rolar novamente até 2 vezes no total). Depois de criada a ficha, o dado fica fixo, mas o total volta a subir junto com o atributo correspondente quando ele evoluir, mais o bônus acumulado do dado de nível (1d10 a cada nível ganho).';
+
   renderLevelDiceRow({
     rowId: 'estaminaDiceRow', bonusField: 'estaminaLevelBonus', rollsField: 'estaminaLevelRolls',
     curField: 'estaminaCur', label: 'Estamina'
@@ -409,19 +450,21 @@ function renderStaminaVigorBox() {
   renderResourceDiceRow({
     boxId: 'estaminaBox', curField: { cur: 'estaminaCur', max: 'estaminaMax' },
     dieField: 'estaminaDie', rollsField: 'estaminaRolls',
-    sides: 15, attrKey: 'constituicao', label: 'Estamina',
-    formulaLabel: '1d15 + Constituição', missingAttrHint: '',
+    sides: dc ? 10 : 15, diceCount: dc ? 2 : 1, attrKey: 'constituicao', label: 'Estamina',
+    formulaLabel: dc ? '2d10 + Constituição' : '1d15 + Constituição', missingAttrHint: '',
     levelBonusField: 'estaminaLevelBonus', levelRollsField: 'estaminaLevelRolls'
   });
   renderLevelDiceRow({
     rowId: 'vigorDiceRow', bonusField: 'vigorLevelBonus', rollsField: 'vigorLevelRolls',
-    curField: 'vigorCur', label: 'Energia'
+    curField: 'vigorCur', label: dc ? dcEnergyLabel(state.dcAssimilacao) : 'Energia'
   });
   renderResourceDiceRow({
     boxId: 'vigorBox', curField: { cur: 'vigorCur', max: 'vigorMax' },
     dieField: 'vigorDie', rollsField: 'vigorRolls',
-    sides: 12, attrKey: energyAttrKey(), label: 'Energia',
-    formulaLabel: `1d12 + ${energyAttrLabel()}`,
+    sides: dc ? 6 : 12, diceCount: dc ? 3 : 1, maxRerolls: dc ? 3 : 2,
+    attrKey: dc ? null : energyAttrKey(), noAttrOk: dc,
+    label: dc ? dcEnergyLabel(state.dcAssimilacao) : 'Energia',
+    formulaLabel: dc ? '3d6' : `1d12 + ${energyAttrLabel()}`,
     missingAttrHint: 'Escolha uma energia (Aura, Mana ou Fé) na etapa 1 para poder rolar a Energia.',
     levelBonusField: 'vigorLevelBonus', levelRollsField: 'vigorLevelRolls',
     energyBonusEnabled: true

@@ -22,6 +22,14 @@ const QUICK_DICE = [4, 6, 8, 10, 12, 20, 100];
 let rollHistory = [];
 
 function rollDie(sides) { return 1 + Math.floor(Math.random() * sides); }
+// Soma de N dados iguais (ex.: 2d20, 3d6) — usado pelas fórmulas de recurso
+// do complemento Deadly-Cards (ver js/deadly-cards.js e renderResourceDiceRow
+// em js/editor-abilities.js).
+function rollDice(count, sides) {
+  let total = 0;
+  for (let i = 0; i < count; i++) total += rollDie(sides);
+  return total;
+}
 
 const SYNTAX_HELP = 'Exemplos válidos: d20, 2d6+3, 1d5+1d6+3+1d4, 2#d20, 4#d6kl2, 2#5d20, 2d20+2#1d20.';
 
