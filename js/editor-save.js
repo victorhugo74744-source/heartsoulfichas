@@ -267,7 +267,9 @@ async function loadExistingSheet(id, user, profile) {
   state.raceTraitsBoughtLoaded = s.raceTraitsBought || [];
   state.raceOptionalTouched = false;
   state.raceBoughtTouched = false;
-  if (race.variantChoice && s.raceVariantTrait) {
+  // Mesmo problema de "race" undefined em fichas Deadly-Cards (ver comentário
+  // acima) — esse if também faltava o guard e continuava travando o load.
+  if (race && race.variantChoice && s.raceVariantTrait) {
     const vIdx = race.variantChoice.options.findIndex(v => `${v.name}: ${v.desc}` === s.raceVariantTrait);
     state.raceVariantChosen = vIdx >= 0 ? vIdx : null;
   } else {
