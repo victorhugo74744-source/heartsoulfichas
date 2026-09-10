@@ -347,6 +347,7 @@ guardPage('master', async (user, profile) => {
 
   try {
     await loadFolders();
+    initComplementosPanel('complementosPanelMaster', { getFolders: () => allFolders });
     await reloadSheets();
   } catch (err) {
     listEl.classList.remove('center-loading');
