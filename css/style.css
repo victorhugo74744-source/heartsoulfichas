@@ -1798,8 +1798,8 @@ select option{ background:var(--bg-alt); color:var(--ink); }
 .trait-cat-title[data-cat-toggle$="_malign"]{ border-left:2px solid var(--malign); padding-left:8px; }
 
 /* ---- Sistema de Complementos (js/complementos.js) ----
-   Cartões de complemento no Painel do Mestre (lista + form de itens/campos
-   repetíveis). Reaproveita as mesmas variáveis de cor/painel do resto do
+   Cartões de complemento no Painel do Mestre (lista + form de sistema
+   embutido). Reaproveita as mesmas variáveis de cor/painel do resto do
    site e a mesma linguagem visual do .trait-pick/.sheet-item (friso lateral
    colorido, elevação leve no hover) em vez de caixas genéricas com estilo
    inline espalhado pelo JS. */
@@ -1820,9 +1820,7 @@ select option{ background:var(--bg-alt); color:var(--ink); }
   transition:border-color .15s, transform .15s, box-shadow .15s;
 }
 .complemento-card:hover{ border-color:var(--gold-dim); transform:translateY(-2px); box-shadow:0 10px 18px -12px rgba(0,0,0,.55); }
-.complemento-card.modifica{ border-left-color:var(--seal); }
 .complemento-card-head{ display:flex; align-items:center; gap:8px; }
-.complemento-card-icon-emoji{ font-size:15px; flex-shrink:0; line-height:1; }
 .complemento-card-name{ color:var(--gold); font-weight:600; font-size:15px; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .complemento-card-meta{ font-size:13px; color:var(--ink-mute); margin:8px 0 12px; }
 .complemento-card-actions{ display:flex; gap:8px; margin-top:auto; }
@@ -1836,50 +1834,7 @@ select option{ background:var(--bg-alt); color:var(--ink); }
 }
 .complemento-empty .es-icon{ font-size:26px; display:block; margin-bottom:8px; opacity:.6; }
 
-/* Seletor de tipo (Adiciona ao sistema / Modifica a ficha) — antes dois
-   <input type="radio"> soltos com um label ao lado; agora dois cartões
-   clicáveis, mesmo espírito do .race-card, com o radio escondido dentro
-   (mantém semântica de formulário e navegação por teclado). */
-.cpl-type-toggle{ display:grid; grid-template-columns:repeat(3, 1fr); gap:10px; margin-top:6px; }
-@media (max-width:760px){ .cpl-type-toggle{ grid-template-columns:1fr 1fr; } }
-@media (max-width:520px){ .cpl-type-toggle{ grid-template-columns:1fr; } }
-.cpl-type-opt{
-  display:flex; flex-direction:column; gap:4px; cursor:pointer;
-  border:1px solid var(--hairline); border-radius:var(--radius); padding:11px 13px;
-  background:var(--bg-alt); transition:border-color .15s, background .15s, transform .15s;
-}
-.cpl-type-opt:hover{ border-color:var(--gold-dim); transform:translateY(-1px); }
-.cpl-type-opt input{ position:absolute; opacity:0; pointer-events:none; }
-.cpl-type-opt .cpl-type-label{ display:flex; align-items:center; gap:7px; color:var(--ink); font-weight:600; font-size:14px; }
-.cpl-type-opt .cpl-type-desc{ font-size:12.5px; color:var(--ink-mute); font-style:italic; line-height:1.4; }
-.cpl-type-opt.selected{ border-color:var(--seal-bright); background:rgba(156,43,43,.06); }
-.cpl-type-opt.selected .cpl-type-label{ color:var(--gold); }
-
-/* Linhas repetíveis (itens de "adiciona" / campos de "modifica") dentro
-   do formulário — cada uma ganha um selo numerado ("Item 1", "Campo 1")
-   pra ficar claro qual é qual numa lista longa, e o "x" de remover fica
-   alinhado ao selo em vez de flutuar solto no canto. */
-.complemento-row{
-  position:relative; border:1px solid var(--hairline); border-radius:var(--radius);
-  padding:16px 38px 12px 14px; margin-bottom:14px; background:rgba(0,0,0,.12);
-  transition:border-color .15s;
-}
-.complemento-row:hover{ border-color:var(--hairline-soft); }
-.complemento-row-num{
-  position:absolute; top:-9px; left:10px; background:var(--panel); border:1px solid var(--hairline);
-  border-radius:20px; padding:1px 9px; font-size:10px; letter-spacing:.06em; text-transform:uppercase;
-  color:var(--ink-mute);
-}
-.complemento-row-remove{
-  position:absolute; top:11px; right:10px; width:22px; height:22px; border-radius:50%;
-  border:1px solid var(--hairline); background:transparent; color:var(--ink-mute);
-  cursor:pointer; font-size:12px; line-height:1; display:flex; align-items:center; justify-content:center;
-  transition:border-color .15s, color .15s, transform .15s;
-}
-.complemento-row-remove:hover{ border-color:var(--seal-bright); color:var(--seal-bright); transform:scale(1.08); }
-.complemento-itens{ display:flex; flex-direction:column; gap:8px; }
 .cpl-form-actions{ display:flex; gap:8px; margin-top:14px; }
-.cpl-add-row-btn{ margin-top:6px; }
 .cpl-form-panel{ background:rgba(0,0,0,.15); }
 .cpl-form-title{ margin-top:0; font-family:'Cinzel',serif; font-size:15px; color:var(--gold-dim); }
 
