@@ -145,6 +145,17 @@ function energyAttrLabel() {
   return found ? found[1] : '';
 }
 function rollDie(sides) { return 1 + Math.floor(Math.random() * sides); }
+// Soma de N dados iguais (ex.: 2d10, 3d6) — usado pelas fórmulas de recurso
+// do complemento Deadly-Cards (Estamina 2d10, Porcentagem 3d6), onde
+// diceCount > 1 em renderResourceDiceRow. Réplica da versão em js/dice.js:
+// esse arquivo não é carregado em ficha-editor.html, então a função
+// precisa existir aqui também, ou a rolagem quebra (rollDice is not
+// defined) sempre que o Deadly-Cards estiver ativo.
+function rollDice(count, sides) {
+  let total = 0;
+  for (let i = 0; i < count; i++) total += rollDie(sides);
+  return total;
+}
 
 // Botão de rolar o dado de vida por nível: soma o valor rolado a TODAS as
 // partes do corpo ao mesmo tempo. Libera 1 rolagem por nível ganho.
