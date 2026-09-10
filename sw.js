@@ -10,7 +10,8 @@
 // cai por um instante, e permite abrir o app (a tela de login, por
 // exemplo) mesmo sem internet.
 
-const CACHE_NAME = 'heartsoul-shell-v18'; // v18: visual da biblioteca de NPCs/Monstros mais refinado — retrato em medalhão circular com brilho na cor do próprio NPC, título com losango dourado (mesmo motivo dos painéis), busca com ícone embutido e estado vazio com ícone flutuante — js/npc-library.js/css/style.css
+const CACHE_NAME = 'heartsoul-shell-v19'; // v19: complemento "Deadly-Cards" — novo tipo de complemento "sistema" no Painel do Mestre (js/complementos.js), novo js/deadly-cards.js, e ajustes de CSS (css/style.css) não apareceriam pra quem já visitou o site sem este bump, pelo mesmo motivo das vezes anteriores.
+// v18 (anterior): visual da biblioteca de NPCs/Monstros mais refinado — retrato em medalhão circular com brilho na cor do próprio NPC, título com losango dourado (mesmo motivo dos painéis), busca com ícone embutido e estado vazio com ícone flutuante — js/npc-library.js/css/style.css
 // v17 (anterior): biblioteca de NPCs/Monstros ganhou busca por nome, ordenação por HP e formulário "Novo NPC" retrátil (recolhido por padrão quando já há NPCs salvos) — js/npc-library.js/css/style.css
 // v16 (anterior): painel "Colocar tokens na mesa" virou sub-sanfonas retráteis (mesa.html/mesa-tokens.js/mesa-tools.js) + redesign da Biblioteca de NPCs/Monstros (npc-library.js/style.css)
 // v15 (anterior): sistema de consumíveis no inventário (efeitos de Cura/Dano/Buff/Debuff + botão "Usar" na mesa)

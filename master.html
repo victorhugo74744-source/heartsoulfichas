@@ -71,15 +71,18 @@ if ('serviceWorker' in navigator) {
   </div>
 
   <div id="masterTabFichas">
-    <div class="toolbar-row" style="margin-bottom:26px;">
-      <div class="field" style="max-width:400px;">
-        <input type="text" id="searchBox" placeholder="Buscar por nome de jogador ou personagem…">
+    <div class="master-toolbar">
+      <div class="toolbar-row">
+        <div class="field" style="max-width:400px;">
+          <input type="text" id="searchBox" placeholder="🔍 Buscar por nome de jogador ou personagem…">
+        </div>
+        <div class="field" style="max-width:280px;">
+          <select id="folderFilter">
+            <option value="">📁 Todas as pastas</option>
+          </select>
+        </div>
       </div>
-      <div class="field" style="max-width:280px;">
-        <select id="folderFilter">
-          <option value="">Todas as pastas</option>
-        </select>
-      </div>
+      <div class="master-summary" id="masterSummary"></div>
     </div>
 
     <div id="masterList" class="center-loading">Carregando fichas…</div>

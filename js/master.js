@@ -21,13 +21,15 @@ function renderGroups(groups, filter, folderId) {
     })
     .filter(g => (f === '' && !folderId) || g.sheets.length > 0 || (f !== '' && g.player.name.toLowerCase().includes(f)));
 
+  updateMasterSummary(filtered);
+
   if (filtered.length === 0) {
     listEl.innerHTML = `<div class="empty-state"><div class="es-icon">🗺</div><p>Nenhuma ficha encontrada.</p></div>`;
     return;
   }
 
   listEl.innerHTML = filtered.map(g => `
-    <div class="player-group">
+    <div class="player-group${g.player.role === 'master' ? ' is-self' : ''}">
       <div class="player-group-head">
         <div style="display:flex; align-items:center; gap:10px;">
           ${g.player.avatarImage
@@ -49,7 +51,11 @@ function renderGroups(groups, filter, folderId) {
                   : `<div class="avatar-circle-placeholder">👤</div>`}
                 <div>
                   <h3>${escapeHtml(s.characterName || 'Sem nome')}</h3>
-                  <div class="sc-meta">${escapeHtml(s.raceName || '—')} · Nível ${s.level || 1} · ${escapeHtml(s.energyType || '')}</div>
+                  <div class="sc-meta-chips">
+                    <span class="sc-chip">${escapeHtml(s.raceName || '—')}</span>
+                    <span class="sc-chip level">Nível ${s.level || 1}</span>
+                    ${s.energyType ? `<span class="sc-chip">${escapeHtml(s.energyType)}</span>` : ''}
+                  </div>
                   ${s.folderName ? `<div class="folder-badge">${escapeHtml(s.folderName)}</div>` : ''}
                 </div>
               </div>
@@ -74,6 +80,18 @@ function renderGroups(groups, filter, folderId) {
   listEl.querySelectorAll('[data-move-folder]').forEach(sel => {
     sel.addEventListener('change', () => moveSheetToFolder(sel.dataset.moveFolder, sel.value));
   });
+}
+
+// Resumo no topo da barra de filtro ("N jogadores · N fichas") — reflete
+// sempre o que está VISÍVEL no momento (já filtrado por busca/pasta), não
+// o total geral, pra confirmar visualmente que um filtro ativo realmente
+// restringiu a lista.
+function updateMasterSummary(filtered) {
+  const el = document.getElementById('masterSummary');
+  if (!el) return;
+  const playerCount = filtered.length;
+  const sheetCount = filtered.reduce((sum, g) => sum + g.sheets.length, 0);
+  el.textContent = `${playerCount} jogador${playerCount === 1 ? '' : 'es'} · ${sheetCount} ficha${sheetCount === 1 ? '' : 's'}`;
 }
 
 // Move (ou remove) uma ficha de pasta direto pelo painel do Mestre, sem
@@ -131,7 +149,7 @@ function renderFolderList() {
   }
 
   const prevValue = filterSel.value;
-  filterSel.innerHTML = '<option value="">Todas as pastas</option>' +
+  filterSel.innerHTML = '<option value="">📁 Todas as pastas</option>' +
     allFolders.map(f => `<option value="${f.id}">${escapeHtml(f.name)}</option>`).join('');
   filterSel.value = allFolders.some(f => f.id === prevValue) ? prevValue : '';
 }

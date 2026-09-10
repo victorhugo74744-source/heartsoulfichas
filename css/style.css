@@ -855,14 +855,59 @@ textarea.auto-expand{
 .my-inventory-box .inv-weight, .my-inventory-box .inv-qty{ padding:6px 4px; font-size:12.5px; }
 .my-inventory-box .inv-name{ padding:6px 8px; font-size:12.5px; }
 
-/* ---- Edição de Traços pelo Mestre ---- */
-.master-trait-editor .field-row{ gap:14px 18px; }
-.master-trait-row{
-  padding:14px 0; border-bottom:1px dashed var(--hairline-soft);
+/* ---- Edição de Traços pelo Mestre ----
+   Antes as 4 sub-seções (Traço Fixo / Opcionais / Extras / Adicionais)
+   eram só empilhadas soltas, separadas apenas por um título pequeno com
+   linha em cima — difícil notar onde uma seção termina e a próxima
+   começa numa ficha com muitos traços. Agora cada sub-seção ganha uma
+   caixa própria (.master-trait-group), e os traços dentro dela (tanto os
+   raciais em texto livre quanto os "Traços Adicionais" estruturados)
+   viram pequenos cartões, no mesmo espírito visual do .sheet-item usado
+   na aba Jogador (mesma ficha, modo leitura) — friso colorido à esquerda
+   pra identificar a natureza (dourado = racial, verde/vermelho =
+   benigno/maligno), então editar aqui já "parece" com o que o jogador vê.
+*/
+.master-trait-group{
+  background:var(--bg-alt); border:1px solid var(--hairline-soft); border-radius:var(--radius);
+  padding:16px 18px 18px; margin-bottom:16px;
 }
-.master-trait-row:first-child{ padding-top:0; }
+.master-trait-editor .master-trait-group .sheet-section-title{ margin-top:0; }
+.master-trait-editor .field-row{ gap:14px 18px; }
+
+/* Traços raciais opcionais/comprados (texto livre): cada item vira um
+   cartão com friso dourado (mesma cor do .sheet-item.race, na ficha em
+   modo leitura) e um cabeçalho curto com o número do traço + o botão de
+   remover — antes o botão ficava solto embaixo de um textarea de largura
+   total, sem parecer um "item de lista". */
+.master-trait-row-string{
+  background:var(--panel); border:1px solid var(--hairline-soft); border-left:3px solid var(--gold-dim);
+  border-radius:var(--radius); padding:10px 12px 12px; margin-bottom:10px;
+}
+.master-trait-row-string:last-of-type{ margin-bottom:0; }
+.mtrs-head{ display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:8px; }
+.mtrs-index{ font-family:'Cinzel', serif; font-size:11.5px; color:var(--gold-dim); text-transform:uppercase; letter-spacing:.05em; }
+
+/* Traços Adicionais (nome/custo/descrição/natureza): cada linha vira um
+   cartão fechado (era só uma faixa separada por linha tracejada embaixo),
+   com o friso lateral trocando de cor ao vivo conforme a Natureza
+   escolhida (ver o listener de "change" do select em js/view.js). */
+.master-trait-row{
+  background:var(--panel); border:1px solid var(--hairline-soft); border-left:3px solid var(--hairline);
+  border-radius:var(--radius); padding:14px 16px; margin-bottom:12px;
+}
+.master-trait-row:last-of-type{ margin-bottom:0; }
+.master-trait-row.benign{ border-left-color:var(--benign); }
+.master-trait-row.malign{ border-left-color:var(--malign); }
 .master-trait-row .field{ margin-bottom:12px; }
+.master-trait-row .field:last-child, .master-trait-row .field-row:last-child .field{ margin-bottom:0; }
 #masterTraitRows{ margin-bottom:14px; }
+
+/* Rodapé "Salvar Traços" — separado do último grupo por uma linha, igual
+   ao rodapé de ações já usado em .sc-actions (cartão de ficha). */
+.master-trait-actions{
+  display:flex; align-items:center; gap:14px; flex-wrap:wrap;
+  padding-top:16px; border-top:1px dashed var(--hairline-soft);
+}
 
 /* ---- Traços: acordeão por categoria ---- */
 .trait-cat-title{
@@ -966,6 +1011,46 @@ textarea.auto-expand{
 .sc-folder-move select{
   flex:1; min-width:0; font-size:13px; padding:6px 30px 6px 10px;
 }
+
+/* ---- Barra de filtro do Painel do Mestre (aba "Fichas dos Jogadores") ----
+   Antes a busca e o select de pasta ficavam soltos direto no fundo da
+   página, sem nenhuma moldura — pareciam dois campos esquecidos ali, sem
+   relação clara com a lista embaixo. Agora os dois moram dentro de um
+   cartão só, com um resumo (quantos jogadores/fichas estão visíveis no
+   momento) alinhado à direita, que se atualiza junto com a busca/filtro. */
+.master-toolbar{
+  display:flex; flex-direction:column; gap:8px;
+  background:var(--panel); border:1px solid var(--hairline); border-radius:var(--radius);
+  padding:16px 18px 14px; margin-bottom:26px;
+}
+.master-toolbar .toolbar-row{ margin:0; }
+.master-summary{
+  font-size:12.5px; color:var(--ink-mute); text-align:right; padding-top:2px;
+  border-top:1px dashed var(--hairline-soft);
+}
+@media (max-width:780px){
+  .master-summary{ text-align:left; }
+}
+
+/* ---- Chips de metadado do cartão de ficha (raça / nível / energia) ----
+   Substitui a linha corrida "Raça · Nível N · Energia" (texto solto,
+   difícil de escanear rápido numa lista com vários jogadores) por
+   pequenas etiquetas separadas — mesmo princípio visual do .folder-badge
+   e do .chosen-chip que o site já usa em outros lugares. */
+.sc-meta-chips{ display:flex; flex-wrap:wrap; gap:6px; margin-top:6px; }
+.sc-chip{
+  display:inline-block; background:var(--bg-alt); border:1px solid var(--hairline-soft);
+  color:var(--ink-dim); font-size:11.5px; padding:2px 10px; border-radius:20px;
+}
+.sc-chip.level{ color:var(--gold); border-color:var(--gold-dim); }
+
+/* ---- Grupo do próprio Mestre, na lista de fichas ----
+   O Mestre sempre aparece primeiro na lista (ver reloadSheets em
+   master.js), mas antes só se diferenciava dos jogadores pelo badge
+   "Mestre" ao lado do nome — fácil de não notar. Uma friso dourado à
+   esquerda do cartão do grupo deixa essa diferença visível já no
+   primeiro relance, sem precisar ler o badge. */
+.player-group.is-self{ border-left:3px solid var(--gold-dim); padding-left:17px; }
 
 /* ===== Responsivo (mobile) =====
    O topbar é a peça mais crítica: sozinho ele tem saudação, avatar, 4 links
@@ -1755,7 +1840,8 @@ select option{ background:var(--bg-alt); color:var(--ink); }
    <input type="radio"> soltos com um label ao lado; agora dois cartões
    clicáveis, mesmo espírito do .race-card, com o radio escondido dentro
    (mantém semântica de formulário e navegação por teclado). */
-.cpl-type-toggle{ display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:6px; }
+.cpl-type-toggle{ display:grid; grid-template-columns:repeat(3, 1fr); gap:10px; margin-top:6px; }
+@media (max-width:760px){ .cpl-type-toggle{ grid-template-columns:1fr 1fr; } }
 @media (max-width:520px){ .cpl-type-toggle{ grid-template-columns:1fr; } }
 .cpl-type-opt{
   display:flex; flex-direction:column; gap:4px; cursor:pointer;

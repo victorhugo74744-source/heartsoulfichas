@@ -170,11 +170,12 @@ function newMasterTrait() {
 function masterStringListHtml(list, kind) {
   if (!list.length) return '<p class="hint" style="margin:0 0 10px;">Nenhum traço aqui ainda.</p>';
   return list.map((val, i) => `
-    <div class="master-trait-row">
-      <div class="field" style="margin-bottom:8px;">
-        <textarea data-mstr="${kind}:${i}" placeholder="Nome: Descrição do traço racial" style="min-height:70px;">${escapeHtml(val)}</textarea>
+    <div class="master-trait-row-string">
+      <div class="mtrs-head">
+        <span class="mtrs-index">Traço ${i + 1}</span>
+        <button type="button" class="btn danger small" data-mstr-remove="${kind}:${i}" style="width:auto;">Remover</button>
       </div>
-      <button type="button" class="btn danger small" data-mstr-remove="${kind}:${i}" style="width:auto;">Remover</button>
+      <textarea data-mstr="${kind}:${i}" placeholder="Nome: Descrição do traço racial" style="min-height:70px;">${escapeHtml(val)}</textarea>
     </div>`).join('');
 }
 
@@ -185,7 +186,7 @@ function masterTraitEditorHtml(s) {
   if (!masterRaceBoughtDraft) masterRaceBoughtDraft = (s.raceTraitsBought || []).slice();
 
   const rows = masterTraitDraft.map((t, i) => `
-    <div class="master-trait-row" data-trait-row="${i}">
+    <div class="master-trait-row ${(t.cat || '').endsWith('_malign') ? 'malign' : 'benign'}" data-trait-row="${i}">
       <div class="field-row">
         <div class="field">
           <label>Nome do traço</label>
@@ -217,24 +218,32 @@ function masterTraitEditorHtml(s) {
       <h2>Editar Traços (Mestre)</h2>
       <p class="hint" style="margin-top:-10px;">Visível e editável apenas pelo Mestre. Use quando um traço evoluir ou se fundir com outro durante o RPG — os bônus de atributo do personagem são recalculados sozinhos a partir do texto de cada traço.</p>
 
-      <div class="sheet-section-title" style="margin-top:0;">Traço Fixo da Raça</div>
-      <div class="field">
-        <textarea id="masterFixedTraitInput" style="min-height:100px;">${escapeHtml(masterFixedTraitDraft)}</textarea>
+      <div class="master-trait-group">
+        <div class="sheet-section-title">Traço Fixo da Raça</div>
+        <div class="field" style="margin-bottom:0;">
+          <textarea id="masterFixedTraitInput" style="min-height:100px;">${escapeHtml(masterFixedTraitDraft)}</textarea>
+        </div>
       </div>
 
-      <div class="sheet-section-title">Traços Raciais Opcionais (escolhidos na criação)</div>
-      <div id="masterRaceOptRows">${masterStringListHtml(masterRaceOptDraft, 'opt')}</div>
-      <button type="button" class="btn secondary small" id="masterAddRaceOptBtn" style="width:auto;">+ Adicionar traço opcional</button>
+      <div class="master-trait-group">
+        <div class="sheet-section-title">Traços Raciais Opcionais (escolhidos na criação)</div>
+        <div id="masterRaceOptRows">${masterStringListHtml(masterRaceOptDraft, 'opt')}</div>
+        <button type="button" class="btn secondary small" id="masterAddRaceOptBtn" style="width:auto;">+ Adicionar traço opcional</button>
+      </div>
 
-      <div class="sheet-section-title">Traços Raciais Extras (comprados com Pontos de Traço)</div>
-      <div id="masterRaceBoughtRows">${masterStringListHtml(masterRaceBoughtDraft, 'bought')}</div>
-      <button type="button" class="btn secondary small" id="masterAddRaceBoughtBtn" style="width:auto;">+ Adicionar traço comprado</button>
+      <div class="master-trait-group">
+        <div class="sheet-section-title">Traços Raciais Extras (comprados com Pontos de Traço)</div>
+        <div id="masterRaceBoughtRows">${masterStringListHtml(masterRaceBoughtDraft, 'bought')}</div>
+        <button type="button" class="btn secondary small" id="masterAddRaceBoughtBtn" style="width:auto;">+ Adicionar traço comprado</button>
+      </div>
 
-      <div class="sheet-section-title">Traços Adicionais</div>
-      <div id="masterTraitRows">${rows || '<p class="hint" style="margin:0 0 12px;">Nenhum traço adicional ainda.</p>'}</div>
-      <button type="button" class="btn secondary small" id="masterAddTraitBtn" style="width:auto;">+ Adicionar traço</button>
+      <div class="master-trait-group">
+        <div class="sheet-section-title">Traços Adicionais</div>
+        <div id="masterTraitRows">${rows || '<p class="hint" style="margin:0 0 12px;">Nenhum traço adicional ainda.</p>'}</div>
+        <button type="button" class="btn secondary small" id="masterAddTraitBtn" style="width:auto;">+ Adicionar traço</button>
+      </div>
 
-      <div style="margin-top:18px; display:flex; align-items:center; gap:14px; flex-wrap:wrap;">
+      <div class="master-trait-actions">
         <button type="button" class="btn small" id="masterSaveTraitsBtn" style="width:auto;">Salvar Traços</button>
         <span id="masterTraitsMsg" style="font-size:13px; color:var(--benign);"></span>
       </div>
@@ -301,6 +310,13 @@ function wireMasterTraitEditor(s, sheetId, onSaved) {
       // traço novo criado aqui já nasce com a categoria genérica "mestre_*".
       const base = (masterTraitDraft[i].cat || 'mestre_benign').replace(/_(benign|malign)$/, '');
       masterTraitDraft[i].cat = `${base}_${sel.value}`;
+      // Reflete a cor do friso lateral do cartão na hora, sem precisar
+      // re-renderizar o editor inteiro (o que perderia o foco do usuário).
+      const row = sel.closest('.master-trait-row');
+      if (row) {
+        row.classList.toggle('benign', sel.value === 'benign');
+        row.classList.toggle('malign', sel.value === 'malign');
+      }
     });
   });
   box.querySelectorAll('[data-mt-remove]').forEach(btn => {
