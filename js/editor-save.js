@@ -7,7 +7,14 @@
 // ================= LOAD / SAVE =================
 function collectFormIntoState() {
   state.characterName = document.getElementById('fCharName').value;
-  state.energyType = document.getElementById('fEnergy').value;
+  // Deadly-Cards: o campo #fEnergy fica escondido e nunca reflete a energia
+  // fixa "Porcentagem"/"Assimilação" (só applyDcEnergyField, em
+  // js/deadly-cards.js, mantém isso certo em state.energyType). Ler o select
+  // escondido aqui por cima apagava esse valor bem antes de validateAll()
+  // rodar, disparando "Energia não definida" mesmo com tudo certo — daí o
+  // bug de pedir reload (e perder o progresso) na hora de salvar.
+  const dcActiveNow = typeof isDeadlyCardsActive === 'function' && isDeadlyCardsActive();
+  state.energyType = dcActiveNow ? dcEnergyLabel(state.dcAssimilacao) : document.getElementById('fEnergy').value;
   state.level = parseInt(document.getElementById('fLevel').value) || 1;
   state.hand = document.getElementById('fHand').value;
   state.height = document.getElementById('fHeight').value;
