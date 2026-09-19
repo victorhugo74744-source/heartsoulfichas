@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Mesa — Heartsoul</title>
+<link rel="icon" href="assets/favicon-32.png" type="image/png">
+<link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#120F0C">
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').catch(() => {});
+  });
+}
+</script>
+<link rel="preconnect" href="https://www.gstatic.com">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,600;1,400&family=Cinzel:wght@500;600&family=JetBrains+Mono&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+<link rel="stylesheet" href="css/mesa.css">
+</head>
+<body>
+
+<div class="topbar">
+  <div class="brand">
+    <svg class="seal-icon" viewBox="0 0 120 120" fill="none">
+      <circle cx="60" cy="60" r="54" stroke="#C9A15C" stroke-width="2" opacity="0.5"/>
+      <circle cx="60" cy="60" r="4" fill="#C9A15C"/>
+      <path d="M60 24 L84 60 L60 96 L36 60 Z" stroke="#9C2B2B" stroke-width="2" opacity="0.55" fill="none"/>
+    </svg>
+    <div>
+      <div class="brand-title">HEARTSOUL</div>
+      <div class="brand-sub">Mesa</div>
+    </div>
+  </div>
+  <div class="topbar-right" id="topbarRight"></div>
+</div>
+
+<div class="shell">
+
+  <!-- ===================== LOBBY ===================== -->
+  <div id="lobbyView">
+    <div class="page-head">
+      <div class="eyebrow">Tabletop</div>
+      <h1 class="h-font">Mesas de Jogo</h1>
+      <p class="lede">Entre em uma mesa para mover sua ficha sobre o tabuleiro, ou, se for mestre, crie uma nova mesa e gere um mapa.</p>
+    </div>
+
+    <div id="createTableBox"></div>
+
+    <div id="tablesList" class="center-loading">Carregando mesas…</div>
+  </div>
+
+  <!-- ===================== BOARD ===================== -->
+  <div id="boardView">
+    <div class="page-head" style="margin-bottom:14px;" id="boardTitleRow">
+      <button class="btn-link" id="backToLobbyBtn" style="margin-bottom:10px;">← Voltar às mesas</button>
+      <h1 class="h-font" id="boardTitle" style="font-size:24px;">Mesa</h1>
+      <div class="tc-meta" id="boardSceneLabel"></div>
+    </div>
+
+    <div class="board-toolbar">
+      <div class="zoom-group">
+        <button type="button" id="zoomOutBtn" title="Diminuir zoom">−</button>
+        <span class="zoom-label" id="zoomLabel">100%</span>
+        <button type="button" id="zoomInBtn" title="Aumentar zoom">+</button>
+      </div>
+      <button type="button" id="zoomFitBtn">Ajustar à tela</button>
+      <button type="button" id="zoomResetBtn">100%</button>
+      <div class="spacer"></div>
+      <span class="tc-meta board-hint">Arraste para mover · roda do mouse / pinça para zoom</span>
+      <button type="button" id="fullscreenBtn">⛶ Expandir mesa</button>
+    </div>
+
+    <div class="board-layout">
+      <div class="tools-panel" id="toolsPanel">
+        <button type="button" class="tools-panel-toggle" id="toolsPanelToggle" title="Recolher/expandir ferramentas" aria-label="Recolher/expandir ferramentas">
+          <span class="tp-toggle-icon">◂</span>
+          <span class="tp-toggle-label">Ferramentas</span>
+        </button>
+        <div class="tool-toolbar" id="toolToolbar"></div>
+      </div>
+
+      <div class="board-wrap" id="boardWrap">
+        <div class="board-surface" id="boardSurface"></div>
+        <div class="dice-toast-layer" id="diceToastLayer" aria-live="polite"></div>
+        <div class="token-inspect-panel hidden" id="tokenInspectPanel"></div>
+      </div>
+
+      <div class="board-side">
+        <button type="button" class="board-side-toggle" id="boardSideToggle" title="Recolher/expandir painel" aria-label="Recolher/expandir painel">
+          <span class="bs-toggle-icon">▸</span>
+          <span class="bs-toggle-label">Painel</span>
+        </button>
+        <div class="side-panel" id="myTokenPanel"></div>
+        <div class="side-group-label hidden" id="sideGroupCena">Cena</div>
+        <div class="side-panel hidden" id="scenePanel"></div>
+        <div class="side-panel" id="masterMapPanel"></div>
+        <div class="side-group-label" id="sideGroupJogo">Em jogo</div>
+        <div class="side-panel" id="dicePanel">
+          <h4>🎲 Dados</h4>
+
+          <div class="dice-quick-row" id="diceQuickRow"></div>
+          <div class="dice-cmd-row">
+            <input type="text" id="diceCmdInput" placeholder="ex.: d20, 2d6+3, 2#d20">
+            <label class="dice-hide-toggle" for="diceHideChk" title="Ocultar esta rolagem dos outros jogadores (só você e o Mestre veem)">
+              <input type="checkbox" id="diceHideChk">
+              <span>🙈</span>
+            </label>
+            <button class="btn small" id="diceRollBtn">🎲 Rolar</button>
+          </div>
+          <div class="dice-hide-hint" id="diceHideHint">🙈 Esta rolagem vai ficar oculta — só você e o Mestre verão o resultado.</div>
+          <div class="dice-err" id="diceErr"></div>
+
+          <div class="dice-target-group" id="diceTargetGroup">
+            <div class="dice-section-label">🎯 Aplicar em um alvo <span class="dice-section-label-opt">(opcional)</span></div>
+            <div class="dice-target-row" id="diceTargetRow">
+              <select id="diceTargetSelect" title="Alvo do ataque/cura">
+                <option value="">— sem alvo (rolagem livre) —</option>
+              </select>
+            </div>
+            <div class="dice-target-empty hidden" id="diceTargetEmpty">Nenhum token na cena ainda — coloque um em "Fichas na mesa" para poder mirar dano ou cura nele.</div>
+            <div class="dice-part-row hidden" id="dicePartRow">
+              <div class="dice-part-checks" id="diceBodyPartChecks" title="Partes do corpo">
+                <label class="dice-part-check-item"><input type="checkbox" value="cabeca" checked><span>Cabeça</span></label>
+                <label class="dice-part-check-item"><input type="checkbox" value="tronco"><span>Tronco</span></label>
+                <label class="dice-part-check-item"><input type="checkbox" value="braco_esq"><span>Braço Esq.</span></label>
+                <label class="dice-part-check-item"><input type="checkbox" value="braco_dir"><span>Braço Dir.</span></label>
+                <label class="dice-part-check-item"><input type="checkbox" value="perna_esq"><span>Perna Esq.</span></label>
+                <label class="dice-part-check-item"><input type="checkbox" value="perna_dir"><span>Perna Dir.</span></label>
+              </div>
+              <div class="dice-action-toggle" id="diceActionToggle">
+                <label class="dice-action-opt dmg">
+                  <input type="radio" name="diceAction" value="damage" checked><span>⚔️ Dano</span>
+                </label>
+                <label class="dice-action-opt heal">
+                  <input type="radio" name="diceAction" value="heal"><span>❤️ Curar</span>
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <button type="button" class="dice-section-label dice-log-label" id="diceLogToggle"
+                  aria-expanded="true" aria-controls="diceLog" title="Mostrar/ocultar o histórico de rolagens">
+            <span class="dll-title">📜 Histórico</span>
+            <span class="dll-count" id="diceLogCount"></span>
+            <span class="dll-caret">▾</span>
+          </button>
+          <div class="dice-log" id="diceLog"><div class="dice-empty">Nenhuma rolagem ainda.</div></div>
+        </div>
+        <div class="side-panel" id="tokenListPanel">
+          <h4>📋 Fichas na mesa</h4>
+          <div class="tl-toolbar">
+            <input type="text" id="tokenListSearchInput" class="tl-search-input" placeholder="🔎 Buscar por nome…">
+            <select id="tokenListSortSelect" class="tl-sort-select" title="Ordenar lista">
+              <option value="default">Ordem padrão</option>
+              <option value="name">Nome (A–Z)</option>
+              <option value="hp">HP (mais ferido primeiro)</option>
+              <option value="init">Iniciativa</option>
+            </select>
+          </div>
+          <div class="tl-bulk-hp hidden" id="tokenListBulkHp">
+            <span id="tokenListBulkHpCount" class="tc-meta"></span>
+            <input type="number" min="0" id="tokenListBulkHpInput" class="hp-quick-input" placeholder="HP" title="Define esta vida (máxima e atual) em todas as 6 partes do corpo de todos os tokens marcados de uma vez">
+            <button id="tokenListBulkHpApply" title="Aplicar este HP a todos os tokens marcados com a ferramenta 🔲 Seleção múltipla">❤ Aplicar a todos marcados</button>
+          </div>
+          <div id="tokenListBody"><span class="tc-meta">Nenhum token ainda.</span></div>
+        </div>
+        <div class="side-panel" id="initiativePanel"></div>
+        <div class="side-group-label hidden" id="sideGroupMesa">Mesa</div>
+        <div class="side-panel hidden" id="presencePanel">
+          <h4>👁 Quem está na mesa</h4>
+          <div id="presenceBody"><span class="tc-meta">Ninguém além de você, por enquanto.</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ===================== MODAL: VER FICHA ===================== -->
+<div class="sheet-modal-overlay" id="sheetModalOverlay">
+  <div class="sheet-modal-box">
+    <button type="button" class="sheet-modal-close" id="sheetModalClose">✕</button>
+    <iframe id="sheetModalFrame" src="about:blank"></iframe>
+  </div>
+</div>
+
+<!-- ===================== CHAT DA MESA ===================== -->
+<!-- Só aparece com uma mesa aberta (ver showChatFab/hideChatUi em mesa.js). -->
+<button type="button" class="chat-fab hidden" id="chatFabBtn" title="Chat da mesa" aria-label="Abrir chat da mesa">
+  💬<span class="chat-fab-badge hidden" id="chatFabBadge">0</span>
+</button>
+
+<div class="chat-popup hidden" id="chatPopup" role="dialog" aria-label="Chat da mesa">
+  <div class="chat-popup-head">
+    <div class="chat-popup-title-row">
+      <div class="chat-popup-title" id="chatPopupTitle">Chat da mesa</div>
+      <div class="chat-head-actions">
+        <button type="button" class="chat-min-btn" id="chatMinBtn" title="Minimizar">–</button>
+        <button type="button" class="chat-close-btn" id="chatCloseBtn" title="Fechar">✕</button>
+      </div>
+    </div>
+    <div class="chat-tabs" id="chatTabs">
+      <button type="button" class="chat-tab active" data-chat-type="general">📣 Geral<span class="chat-tab-dot hidden" id="chatDotGeneral"></span></button>
+      <button type="button" class="chat-tab" data-chat-type="whisper">🤫 Sussurro<span class="chat-tab-dot hidden" id="chatDotWhisper"></span></button>
+    </div>
+  </div>
+  <div class="chat-target-row hidden" id="chatTargetRow">
+    <select id="chatTargetSelect"><option value="">Selecione…</option></select>
+  </div>
+  <div class="chat-messages" id="chatMessages"><div class="chat-empty">Nenhuma mensagem ainda.</div></div>
+  <div class="chat-hint hidden" id="chatHint"></div>
+  <div class="chat-typing hidden" id="chatTyping"></div>
+  <div class="chat-input-row">
+    <button type="button" class="chat-emoji-btn" id="chatEmojiBtn" title="Emojis" aria-label="Inserir emoji">😊</button>
+    <div class="chat-input-wrap">
+      <input type="text" id="chatInput" maxlength="1000" placeholder="Escreva uma mensagem…" autocomplete="off">
+      <div class="chat-mention-menu hidden" id="chatMentionMenu"></div>
+      <div class="chat-emoji-menu hidden" id="chatEmojiMenu"></div>
+    </div>
+    <button type="button" class="chat-send-btn" id="chatSendBtn" title="Enviar" aria-label="Enviar mensagem">➤</button>
+  </div>
+  <div class="chat-err hidden" id="chatErr"></div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+<script src="js/firebase-config.js"></script>
+<script src="js/firebase-init.js"></script>
+<script src="js/mapgen.js"></script>
+<!-- mesa.js foi dividido em 6 arquivos para facilitar manutenção.
+     A ordem abaixo importa: mesa-board.js declara o estado/funções
+     compartilhadas que os outros usam, então tem que vir primeiro. -->
+<script src="js/mesa-board.js"></script>
+<script src="js/mesa-tools.js"></script>
+<script src="js/npc-library.js"></script>
+<script src="js/mesa-tokens.js"></script>
+<script src="js/mesa-dice.js"></script>
+<script src="js/mesa-chat.js"></script>
+<script src="js/mesa-init.js"></script>
+</body>
+</html>

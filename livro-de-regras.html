@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Heartsoul — Sistema de RPG</title>
+<link rel="icon" href="assets/favicon-32.png" type="image/png">
+<link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#120F0C">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,600;1,400&family=Cinzel:wght@500;600&family=Cinzel+Decorative:wght@700;900&family=JetBrains+Mono&display=swap" rel="stylesheet">
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').catch(() => {});
+  });
+}
+</script>
+<link rel="stylesheet" href="css/livro-de-regras.css">
+</head>
+<body>
+<div class="app">
+  <div class="scrim" id="scrim"></div>
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-head">
+      <a class="brand" id="brandHome">
+        <svg width="30" height="30" viewBox="0 0 30 30" fill="none">
+          <circle cx="15" cy="15" r="13" stroke="#C9A15C" stroke-width="1"/>
+          <path d="M15 5 L23 15 L15 25 L7 15 Z" stroke="#9C2B2B" stroke-width="1"/>
+          <circle cx="15" cy="15" r="2.2" fill="#C9A15C"/>
+        </svg>
+        <div class="brand-text">
+          <span class="brand-title">Heartsoul</span>
+          <span class="brand-sub">Compêndio de Regras</span>
+        </div>
+      </a>
+      <div class="search-wrap">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#82735c" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+        <input id="searchInput" type="text" placeholder="Buscar traços, raças, regras… (/)" autocomplete="off">
+        <span class="search-clear" id="searchClear" title="Limpar busca">×</span>
+      </div>
+      <div class="font-ctrl">
+        <button id="fontDown" title="Diminuir fonte" aria-label="Diminuir fonte">A−</button>
+        <button id="fontReset" title="Tamanho padrão" aria-label="Tamanho padrão de fonte">•</button>
+        <button id="fontUp" title="Aumentar fonte" aria-label="Aumentar fonte">A+</button>
+        <span>Leitura</span>
+      </div>
+    </div>
+    <nav class="sidebar-nav" id="sidebarNav"></nav>
+    <div class="sidebar-foot">
+      <a href="index.html" style="color:var(--gold-dim); text-decoration:none;">🧾 Ir para as Fichas</a>
+      <div style="margin-top:4px;">Sistema de RPG de mesa · uso na campanha</div>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="reading-progress" id="readingProgress"></div>
+    <div class="topbar">
+      <button class="menu-btn" id="menuBtn" aria-label="Menu">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+      </button>
+      <span class="topbar-title" id="topbarTitle">Heartsoul</span>
+    </div>
+    <div class="content" id="content"></div>
+    <button class="back-to-top" id="backToTop" title="Voltar ao topo" aria-label="Voltar ao topo">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
+    </button>
+  </main>
+  <button class="sidebar-toggle" id="sidebarToggle" title="Mostrar/ocultar menu" aria-label="Mostrar/ocultar menu">
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M15 5l-7 7 7 7"/></svg>
+  </button>
+</div>
+
+
+
+<script src="js/livro-de-regras.js" defer></script>
+<script>
+document.getElementById('brandHome').addEventListener('click', () => { location.hash=''; window.dispatchEvent(new HashChangeEvent('hashchange')); });
+</script>
+</body>
+</html>

@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Painel do Mestre — Heartsoul</title>
+<link rel="icon" href="assets/favicon-32.png" type="image/png">
+<link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#120F0C">
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').catch(() => {});
+  });
+}
+</script>
+<link rel="preconnect" href="https://www.gstatic.com">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,600;1,400&family=Cinzel:wght@500;600&family=JetBrains+Mono&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+<style>
+  .player-group{ margin-bottom:28px; }
+  /* Mesmo acabamento do cabeçalho de pasta em minhas-fichas.html: losango
+     do selo antes do título e linha que esmaece à direita, no lugar do
+     título simples com régua reta. */
+  .player-group-head{
+    position:relative;
+    display:flex; align-items:center; gap:10px; margin-bottom:12px; padding-bottom:9px;
+    border-bottom:none; flex-wrap:wrap;
+  }
+  .player-group-head::after{
+    content:''; position:absolute; left:0; right:0; bottom:0; height:1px;
+    background:linear-gradient(90deg, var(--hairline), var(--hairline) 55%, transparent);
+  }
+  .player-group-head h3{
+    font-family:'Cinzel',serif; color:var(--gold); font-size:17px; margin:0; min-width:0;
+    display:flex; align-items:center; gap:9px;
+  }
+  .player-group-head h3::before{
+    content:''; width:6px; height:6px; flex-shrink:0;
+    background:var(--seal-bright); transform:rotate(45deg); opacity:.85;
+  }
+  .player-group-head .count{ font-size:12.5px; color:var(--ink-mute); }
+  .folder-chip{
+    display:inline-flex; align-items:center; gap:8px; background:var(--panel-2); border:1px solid var(--hairline);
+    border-radius:20px; padding:6px 8px 6px 14px; font-size:13.5px; color:var(--ink-dim);
+  }
+  .folder-chip button{ background:none; border:none; color:var(--ink-mute); cursor:pointer; font-size:13px; }
+  .folder-badge{
+    display:inline-block; background:rgba(201,161,92,.12); border:1px solid var(--gold-dim); color:var(--gold);
+    font-size:11.5px; padding:2px 9px; border-radius:20px; margin-top:6px;
+  }
+  /* As duas abas do painel (Fichas / Configurações) usam o componente
+     .tabs/.tab-btn que já existe em style.css (mesmo usado em ficha-view.html
+     pra alternar entre a visão do Jogador e a do Mestre) — sem CSS novo aqui,
+     só reaproveitando o que o site já tem. */
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="brand">
+    <svg class="seal-icon" viewBox="0 0 120 120" fill="none">
+      <circle cx="60" cy="60" r="54" stroke="#C9A15C" stroke-width="2" opacity="0.5"/>
+      <circle cx="60" cy="60" r="4" fill="#C9A15C"/>
+      <path d="M60 24 L84 60 L60 96 L36 60 Z" stroke="#9C2B2B" stroke-width="2" opacity="0.55" fill="none"/>
+    </svg>
+    <div>
+      <div class="brand-title">HEARTSOUL</div>
+      <div class="brand-sub">Painel do Mestre</div>
+    </div>
+  </div>
+  <div class="topbar-right" id="topbarRight"></div>
+</div>
+
+<div class="shell wide">
+  <div class="page-head">
+    <div class="eyebrow">Visão do Mestre</div>
+    <h1>Painel do Mestre</h1>
+    <p>Acompanhe as fichas dos jogadores ou ajuste as configurações da mesa (pastas, acesso, NPCs).</p>
+  </div>
+
+  <div class="tabs">
+    <button type="button" class="tab-btn active" id="masterTabBtnFichas" data-tab="fichas">Fichas dos Jogadores</button>
+    <button type="button" class="tab-btn" id="masterTabBtnConfig" data-tab="config">Configurações da Mesa</button>
+  </div>
+
+  <div id="masterTabFichas">
+    <div class="master-toolbar">
+      <div class="toolbar-row">
+        <div class="field" style="max-width:400px;">
+          <input type="text" id="searchBox" placeholder="🔍 Buscar por nome de jogador ou personagem…">
+        </div>
+        <div class="field" style="max-width:280px;">
+          <select id="folderFilter">
+            <option value="">📁 Todas as pastas</option>
+          </select>
+        </div>
+      </div>
+      <div class="master-summary" id="masterSummary"></div>
+    </div>
+
+    <div id="masterList" class="center-loading">Carregando fichas…</div>
+  </div>
+
+  <div id="masterTabConfig" style="display:none;">
+    <div class="panel" style="margin-bottom:26px;">
+      <h2 style="margin-top:0;">Pastas de Campanha</h2>
+      <p class="hint" style="margin-top:-6px;">Crie uma pasta para cada campanha/mesa. Seus jogadores poderão escolher a pasta certa ao salvar a ficha deles.</p>
+      <div class="toolbar-row">
+        <div class="field">
+          <input type="text" id="newFolderName" placeholder="Nome da campanha (ex.: Águas Negras)">
+        </div>
+        <button class="btn" id="createFolderBtn" type="button" style="width:auto;">Criar pasta</button>
+      </div>
+      <div id="folderMsg"></div>
+      <div id="folderList" style="display:flex; flex-wrap:wrap; gap:10px; margin-top:14px;"></div>
+      <div style="margin-top:18px; padding-top:16px; border-top:1px solid var(--hairline);">
+        <p class="hint" style="margin-top:0;">Algum jogador com ficha numa campanha não está vendo a mesa dela? Use o botão abaixo para reparar o acesso de todo mundo de uma vez.</p>
+        <button class="btn secondary" id="repairAccessBtn" type="button" style="width:auto;">Corrigir acesso às mesas</button>
+        <div id="repairAccessMsg" style="margin-top:10px;"></div>
+      </div>
+    </div>
+
+    <div class="panel" style="margin-bottom:26px;">
+      <h2 style="margin-top:0;">Complementos</h2>
+      <p class="hint" style="margin-top:-6px;">Conteúdo extra de campanha, anexado a uma pasta: uma ficha só recebe um complemento quando está naquela pasta. "Adiciona" cria uma lista de itens que o jogador escolhe na ficha; "Modifica" cria campos novos na própria ficha.</p>
+      <div id="complementosPanelMaster"></div>
+    </div>
+
+    <div class="panel" style="margin-bottom:26px;">
+      <h2 style="margin-top:0;">Biblioteca de NPCs/Monstros</h2>
+      <p class="hint" style="margin-top:-6px;">NPCs salvos aqui ficam disponíveis em qualquer uma das suas mesas — na Mesa, use o botão "+ Mesa" pra colocar um na cena atual sem preencher o formulário de NPC de novo.</p>
+      <div id="npcLibraryPanelMaster"></div>
+    </div>
+  </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+<script src="js/firebase-config.js"></script>
+<script src="js/firebase-init.js"></script>
+<script src="js/npc-library.js"></script>
+<script src="js/complementos.js"></script>
+<script src="js/deadly-cards.js"></script>
+<script src="js/master.js"></script>
+<script>
+// Alterna entre as duas abas do painel (Fichas dos Jogadores / Configurações
+// da Mesa). Mesmo padrão de .tab-btn usado em ficha-view.html (js/view.js).
+// Puramente visual — não afeta o carregamento dos dados de cada aba.
+(function () {
+  const fichasBtn = document.getElementById('masterTabBtnFichas');
+  const configBtn = document.getElementById('masterTabBtnConfig');
+  const fichasPanel = document.getElementById('masterTabFichas');
+  const configPanel = document.getElementById('masterTabConfig');
+  function showTab(tab) {
+    fichasBtn.classList.toggle('active', tab === 'fichas');
+    configBtn.classList.toggle('active', tab === 'config');
+    fichasPanel.style.display = tab === 'fichas' ? '' : 'none';
+    configPanel.style.display = tab === 'config' ? '' : 'none';
+  }
+  fichasBtn.addEventListener('click', () => showTab('fichas'));
+  configBtn.addEventListener('click', () => showTab('config'));
+})();
+</script>
+</body>
+</html>

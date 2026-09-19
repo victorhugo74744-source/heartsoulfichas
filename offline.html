@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sem conexão — Heartsoul</title>
+<link rel="icon" href="assets/favicon-32.png" type="image/png">
+<style>
+  /* Esta página é servida pelo service worker quando não há internet, então
+     precisa ser 100% autossuficiente: nada de CSS externo nem fonte da web
+     (as famílias abaixo são usadas se já estiverem em cache e caem no serif
+     do sistema se não). Por isso as variáveis e ornamentos do site são
+     repetidos aqui em vez de importados de css/style.css. */
+  :root{
+    --bg:#120F0C; --panel:#1B1611; --panel-2:#201A14;
+    --ink:#E9DFC7; --ink-dim:#b4a688; --ink-mute:#a08d6a;
+    --gold:#C9A15C; --gold-dim:#8f7a4c; --seal:#9C2B2B; --seal-bright:#C4433C;
+    --hairline:#3A2E22;
+  }
+  *{ box-sizing:border-box; }
+  body{
+    margin:0; min-height:100vh; display:flex; align-items:center; justify-content:center;
+    color:var(--ink); font-family:'EB Garamond', Georgia, serif;
+    padding:24px; text-align:center;
+    background-color:var(--bg);
+    background-image:
+      radial-gradient(ellipse 1200px 800px at 15% -10%, rgba(156,43,43,0.08), transparent 60%),
+      radial-gradient(ellipse 900px 700px at 100% 10%, rgba(201,161,92,0.06), transparent 55%),
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.035'/%3E%3C/svg%3E");
+  }
+  /* Mesma moldura de cantos em "L" do cartão de login (index.html) */
+  .card{
+    position:relative; max-width:430px; width:100%;
+    background:linear-gradient(180deg, var(--panel), var(--panel-2));
+    border:1px solid var(--hairline); border-radius:6px; padding:40px 32px 34px;
+    box-shadow:0 24px 60px -24px rgba(0,0,0,.7), 0 8px 20px -14px rgba(0,0,0,.6);
+  }
+  .card::before, .card::after, .corner-bl, .corner-br{
+    content:''; position:absolute; width:22px; height:22px; pointer-events:none;
+  }
+  .card::before{ top:10px; left:10px; border-top:1px solid var(--gold-dim); border-left:1px solid var(--gold-dim); }
+  .card::after{ top:10px; right:10px; border-top:1px solid var(--gold-dim); border-right:1px solid var(--gold-dim); }
+  .corner-bl{ bottom:10px; left:10px; border-bottom:1px solid var(--gold-dim); border-left:1px solid var(--gold-dim); }
+  .corner-br{ bottom:10px; right:10px; border-bottom:1px solid var(--gold-dim); border-right:1px solid var(--gold-dim); }
+  .seal{ display:block; margin:0 auto 18px; opacity:.9; }
+  h1{
+    font-family:'Cinzel', serif; color:var(--gold); font-size:23px; letter-spacing:.06em;
+    margin:0 0 6px; text-shadow:0 0 26px rgba(201,161,92,.22);
+  }
+  /* Ornamento sob o título — o mesmo de .page-head h1::after no site */
+  h1::after{
+    content:''; display:block; width:88px; height:9px; margin:12px auto 0;
+    background:
+      linear-gradient(var(--gold-dim), var(--gold-dim)) left center / 34px 1px no-repeat,
+      linear-gradient(var(--gold-dim), var(--gold-dim)) right center / 34px 1px no-repeat,
+      linear-gradient(45deg, var(--gold-dim), var(--gold-dim)) center / 7px 7px no-repeat;
+    opacity:.75;
+  }
+  p{ color:var(--ink-dim); line-height:1.6; margin:16px 0 24px; font-size:15px; }
+  /* Botão no mesmo idioma do .btn primário do site (degradê do selo,
+     elevação no hover, afunda no clique) em vez do bloco dourado chapado. */
+  button{
+    font-family:'Cinzel', serif; font-size:14px; letter-spacing:.03em;
+    background:linear-gradient(180deg, var(--seal-bright), var(--seal));
+    color:#fff; border:none; padding:12px 26px; border-radius:3px; cursor:pointer;
+    box-shadow:0 6px 16px -8px rgba(156,43,43,.45);
+    transition:filter .15s, transform .12s, box-shadow .15s;
+  }
+  button:hover{ filter:brightness(1.1); transform:translateY(-1px); box-shadow:0 10px 20px -8px rgba(156,43,43,.55); }
+  button:active{ transform:translateY(0); filter:brightness(.97); }
+  button:focus-visible{ outline:2px solid var(--gold); outline-offset:2px; }
+  .hint{ margin:20px 0 0; font-size:12.5px; color:var(--ink-mute); font-style:italic; }
+  @media (prefers-reduced-motion: reduce){
+    button{ transition:none; }
+  }
+</style>
+</head>
+<body>
+  <div class="card">
+    <span class="corner-bl"></span><span class="corner-br"></span>
+    <svg class="seal" width="54" height="54" viewBox="0 0 120 120" fill="none" aria-hidden="true">
+      <circle cx="60" cy="60" r="54" stroke="#C9A15C" stroke-width="2" opacity="0.5"/>
+      <circle cx="60" cy="60" r="4" fill="#C9A15C"/>
+      <path d="M60 24 L84 60 L60 96 L36 60 Z" stroke="#9C2B2B" stroke-width="2" opacity="0.55" fill="none"/>
+    </svg>
+    <h1>Sem conexão</h1>
+    <p>Esta página ainda não tinha sido aberta antes, então não está disponível offline. Assim que a internet voltar, tente novamente.</p>
+    <button onclick="location.reload()">Tentar de novo</button>
+    <p class="hint">As páginas que você já visitou continuam abrindo normalmente.</p>
+  </div>
+</body>
+</html>
