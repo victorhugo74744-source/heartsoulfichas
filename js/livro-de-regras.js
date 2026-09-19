@@ -164,10 +164,31 @@ if(activeEl) activeEl.scrollIntoView({block:'nearest'});
 function paraIsLabel(p){
 return p.length < 60 && /[:：]$/.test(p.trim());
 }
+function ruleList(items){
+return `<ul class="rule-list">${items.map(i => `<li>${mdBold(i)}</li>`).join('')}</ul>`;
+}
 function renderEntryParagraphs(paragraphs, headingsOut, nature){
 let html = '';
 const usedIds = new Set();
+// Marcadores no JSON: "> Título: texto" = destaque; "- item" = lista (itens seguidos entram no destaque anterior, se houver)
+const blocks = [];
 paragraphs.forEach(p => {
+const c = p.match(/^>\s+(.+)$/s), li = p.match(/^-\s+(.+)$/s), last = blocks[blocks.length - 1];
+if(c){ blocks.push({ kind:'callout', text:c[1], items:[] }); }
+else if(li){
+if(last && (last.kind === 'callout' || last.kind === 'list')) last.items.push(li[1]);
+else blocks.push({ kind:'list', items:[li[1]] });
+}
+else blocks.push({ kind:'p', text:p });
+});
+blocks.forEach(b => {
+if(b.kind === 'callout'){
+const cm = b.text.match(/^([^:]{2,40}):\s+(.+)$/s);
+html += `<aside class="callout">${cm ? `<div class="callout-title">${escapeHtml(cm[1])}</div>` : ''}<div class="callout-body">${mdBold(cm ? cm[2] : b.text)}</div>${b.items.length ? ruleList(b.items) : ''}</aside>`;
+return;
+}
+if(b.kind === 'list'){ html += ruleList(b.items); return; }
+const p = b.text;
 const heading = p.match(/^##\s*(.+)$/) ||
 (p.trim().length <= 60 && /^[A-ZÀ-Ý][\wÀ-ÿ'\-]*(?:\s+(?:(?:de|da|do|das|dos|e|em|a|o|ou|com|para|por|no|na|ao|à|às)\s+)?[A-ZÀ-Ý][\wÀ-ÿ'\-]*){0,5}$/.test(p.trim())
 ? [null, p.trim()] : null);
@@ -478,6 +499,7 @@ if(block.title && matchesAll(block.title.toLowerCase())){
 hits.push({ chapterId: c.id, subId: block.id, chapterTitle: c.title, snippet: markTokens(escapeHtml(block.title), tokens), isTitle:true });
 }
 (block.paragraphs||[]).forEach(p => {
+p = p.replace(/^(?:>|-)\s+/, '');
 const pLower = p.toLowerCase();
 if(matchesAll(pLower)){
 const firstIdx = pLower.indexOf(tokens[0]);
