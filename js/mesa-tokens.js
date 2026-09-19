@@ -205,7 +205,7 @@ bonuses[key] = (bonuses[key] || 0) + parseInt(m[1]);
 }
 return bonuses;
 }
-function traitAttrBonusesQuick(sheet) {
+function traitTextsQuick(sheet) {
 const texts = [];
 if (sheet.raceFixedTrait) texts.push(sheet.raceFixedTrait);
 if (sheet.raceVariantTrait) texts.push(sheet.raceVariantTrait);
@@ -213,6 +213,10 @@ if (sheet.raceVariantTrait) texts.push(sheet.raceVariantTrait);
 (sheet.raceTraitsBought || []).forEach(t => texts.push(t));
 if (sheet.backgroundAtributos) texts.push(sheet.backgroundAtributos);
 (sheet.extraTraits || []).forEach(t => texts.push(t && t.desc));
+return texts;
+}
+function traitAttrBonusesQuick(sheet) {
+const texts = traitTextsQuick(sheet);
 const total = { forca: 0, foco: 0, vontade: 0, intelecto: 0, destreza: 0, constituicao: 0 };
 texts.map(parseAttrBonusesFromTextQuick).forEach(b => {
 Object.keys(b).forEach(k => { total[k] += b[k]; });
@@ -220,11 +224,36 @@ Object.keys(b).forEach(k => { total[k] += b[k]; });
 return total;
 }
 function attrModQuick(v) { return Math.floor(v / 2); }
+// Traço que dobra a capacidade de carga — mesma regra do editor (textDoublesCarry em editor-core.js).
+function textDoublesCarryQuick(text) {
+if (!text) return false;
+return String(text).split(/[.!?]+\s+/).some(s => /(?:capacidade\s+de\s+carg(?:a|ar)|peso\s+que\s+(?:voc[êe]\s+)?(?:pode|consegue)\s+carregar)/i.test(s) && /\bdobr\w*|\bdupl\w*/i.test(s));
+}
+function carryMultiplierQuick(sheet) { return traitTextsQuick(sheet).some(textDoublesCarryQuick) ? 2 : 1; }
+// Traço que dá "+N de Constituição" só para a capacidade de carga (ex.: "Capacidade de carga como se tivesse +2 adicionais de
+// Constituição."): entra na conta de 15 + mod. de Constituição, mas NÃO altera o atributo (HP etc.). Aceita também o texto antigo
+// "…de Força", já salvo em fichas antigas.
+function textCarryConBonusQuick(text) {
+if (!text) return 0;
+let bonus = 0;
+String(text).split(/[.!?]+\s+/).forEach(s => {
+if (!/capacidade\s+de\s+carg(?:a|ar)/i.test(s)) return;
+const m = s.match(/\+(\d+)\s+(?:adicionais?\s+)?(?:de\s+)?(?:Constitui[çc][ãa]o|For[çc]a)\b/i);
+if (m) bonus += parseInt(m[1], 10);
+});
+return bonus;
+}
+function carryConBonusQuick(sheet) { return traitTextsQuick(sheet).reduce((sum, t) => sum + textCarryConBonusQuick(t), 0); }
+function carryNoteQuick(sheet) {
+const b = carryConBonusQuick(sheet);
+return (b ? ` <small title="Constituição +${b} por traço, só para a capacidade de carga">+${b} Con</small>` : '')
++ (carryMultiplierQuick(sheet) > 1 ? ' <small title="Capacidade dobrada por traço">×2</small>' : '');
+}
 function carryCapacityQuick(sheet) {
 const attrs = sheet.attributes || {};
 const traitBonus = traitAttrBonusesQuick(sheet).constituicao || 0;
 const manual = (sheet.attrManualBonus && sheet.attrManualBonus.constituicao) || 0;
-return 15 + attrModQuick((attrs.constituicao || 0) + traitBonus + manual);
+return (15 + attrModQuick((attrs.constituicao || 0) + traitBonus + manual + carryConBonusQuick(sheet))) * carryMultiplierQuick(sheet);
 }
 function ensureInventoryItemShapeQuick(it) {
 if (typeof it === 'string') return { name: it, weight: 0, qty: 1, consumable: false, effectType: '', effectValue: '', effectDesc: '', armor: false, armorEquipped: false, armorParts: {} };
@@ -358,7 +387,7 @@ ${ARMOR_PARTS_LIST_Q.map(([k, label]) => `
 </div>`).join('')}
 <button type="button" class="btn secondary small line-list-add" data-mi-add style="width:auto;">+ Adicionar item</button>
 <div class="weight-summary-row" style="margin-top:8px;">
-<span>Peso: <b style="color:var(--gold);">${total}</b> / ${capacity}</span>
+<span>Peso: <b style="color:var(--gold);">${total}</b> / ${capacity}${carryNoteQuick(sheet)}</span>
 <span class="tag ${tagClass}">${st.label}</span>
 </div>
 <div class="weight-gauge"><span class="weight-gauge-fill ${tagClass}" style="width:${capacity > 0 ? Math.max(0, Math.min(100, (total / capacity) * 100)) : 0}%;"></span></div>

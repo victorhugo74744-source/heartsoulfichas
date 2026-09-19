@@ -31,7 +31,7 @@ bonuses[key] = (bonuses[key] || 0) + parseInt(m[1]);
 }
 return bonuses;
 }
-function traitAttrBonusesV(s) {
+function traitTextsV(s) {
 const texts = [];
 if (s.raceFixedTrait) texts.push(s.raceFixedTrait);
 if (s.raceVariantTrait) texts.push(s.raceVariantTrait);
@@ -44,6 +44,10 @@ bgAtributos = bgFallback && bgFallback.atributos;
 }
 if (bgAtributos) texts.push(bgAtributos);
 (s.extraTraits || []).forEach(t => texts.push(t.desc));
+return texts;
+}
+function traitAttrBonusesV(s) {
+const texts = traitTextsV(s);
 const total = { forca: 0, foco: 0, vontade: 0, intelecto: 0, destreza: 0, constituicao: 0 };
 texts.map(parseAttrBonusesFromTextV).forEach(b => {
 Object.keys(b).forEach(k => { total[k] += b[k]; });
@@ -86,7 +90,34 @@ return Object.keys(ARMOR_PARTS_LABELS_V)
 .join(', ');
 }
 const CONSUMABLE_EFFECT_LABELS_V = { cura: '💚 Cura', dano: '⚔️ Dano', buff: '✨ Buff', debuff: '☠️ Debuff', estamina: '🏃 Recuperar Estamina', energia: '⚡ Recuperar Energia' };
-function carryCapacityV(constTotal) { return 15 + attrModV(constTotal); }
+// Traço que dobra a capacidade de carga — mesma regra do editor (textDoublesCarry em editor-core.js).
+function textDoublesCarryV(text) {
+if (!text) return false;
+return String(text).split(/[.!?]+\s+/).some(s => /(?:capacidade\s+de\s+carg(?:a|ar)|peso\s+que\s+(?:voc[êe]\s+)?(?:pode|consegue)\s+carregar)/i.test(s) && /\bdobr\w*|\bdupl\w*/i.test(s));
+}
+function carryMultiplierV(s) { return s && traitTextsV(s).some(textDoublesCarryV) ? 2 : 1; }
+// Traço que dá "+N de Constituição" só para a capacidade de carga (ex.: "Capacidade de carga como se tivesse +2 adicionais de
+// Constituição."): entra na conta de 15 + mod. de Constituição, mas NÃO altera o atributo (HP etc.). Aceita também o texto antigo
+// "…de Força", já salvo em fichas antigas.
+function textCarryConBonusV(text) {
+if (!text) return 0;
+let bonus = 0;
+String(text).split(/[.!?]+\s+/).forEach(s => {
+if (!/capacidade\s+de\s+carg(?:a|ar)/i.test(s)) return;
+const m = s.match(/\+(\d+)\s+(?:adicionais?\s+)?(?:de\s+)?(?:Constitui[çc][ãa]o|For[çc]a)\b/i);
+if (m) bonus += parseInt(m[1], 10);
+});
+return bonus;
+}
+function carryConBonusV(s) { return s ? traitTextsV(s).reduce((sum, t) => sum + textCarryConBonusV(t), 0) : 0; }
+function carryNoteV(s) {
+const parts = [];
+const b = carryConBonusV(s);
+if (b) parts.push('Constituição +' + b + ' por traço');
+if (carryMultiplierV(s) > 1) parts.push('dobrada por traço');
+return parts.length ? ' · ' + parts.join(' · ') : '';
+}
+function carryCapacityV(constTotal, s) { return (15 + attrModV(constTotal + carryConBonusV(s))) * carryMultiplierV(s); }
 function inventoryTotalWeightV(items) {
 return items.reduce((sum, it) => {
 const w = parseFloat(it.weight) || 0;
@@ -108,9 +139,10 @@ if (total === cap) return { key: 'maxima', label: 'Carga Máxima', penalty: -5, 
 if (total >= cap * 0.5) return { key: 'pesada', label: 'Carga Pesada', penalty: -2, note: '' };
 return { key: 'normal', label: 'Normal', penalty: 0, note: '' };
 }
-function renderInventoryView(rawItems, constTotal) {
+function renderInventoryView(rawItems, constTotal, sheet) {
 const items = (rawItems || []).map(ensureInventoryItemShapeV).filter(it => it.name.trim());
-const capacity = carryCapacityV(constTotal);
+const capacity = carryCapacityV(constTotal, sheet);
+const capNote = carryNoteV(sheet);
 const total = inventoryTotalWeightV(items);
 const st = weightStatusV(total, capacity);
 const tagClass = st.key === 'normal' ? 'benign' : (st.key === 'pesada' ? 'info' : 'malign');
@@ -130,7 +162,7 @@ return `
 ${tableHtml}
 <div class="weight-summary" style="margin-top:10px;">
 <div class="weight-summary-row">
-<span>Peso total: <b style="color:var(--gold);">${total}</b> / ${capacity} (Capacidade de Carga)</span>
+<span>Peso total: <b style="color:var(--gold);">${total}</b> / ${capacity} (Capacidade de Carga${capNote})</span>
 <span class="tag ${tagClass}">${st.label}</span>
 </div>
 ${st.penalty ? `<p class="hint" style="margin:6px 0 0;">${st.penalty} em todos os testes físicos (Força, Destreza e Constituição)${st.note ? ' · ' + st.note : ''}</p>` : ''}
@@ -460,7 +492,7 @@ ${(s.history || (s.inventoryItems && s.inventoryItems.length) || (s.notes && s.n
 <h2>Detalhes</h2>
 ${s.history ? `<div class="sheet-section-title" style="margin-top:0;">História</div><p class="sheet-list" style="white-space:pre-wrap;">${escapeHtml(s.history)}</p>` : ''}
 <div class="sheet-section-title" style="${s.history ? '' : 'margin-top:0;'}">Inventário</div>
-${renderInventoryView(s.inventoryItems, constTotalV)}
+${renderInventoryView(s.inventoryItems, constTotalV, s)}
 <div class="sheet-section-title">Anotações</div>
 ${renderLineListView(s.notes)}
 </div>` : ''}

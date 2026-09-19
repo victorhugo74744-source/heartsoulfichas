@@ -2712,7 +2712,7 @@
           "Determinação Implacável: A vida de rejeição forjou um espírito difícil de quebrar. Quando o mundo tenta oprimi-lo, você resiste com unhas e dentes. Uma vez por cena, ao sofrer um efeito de status negativo (medo, confusão, paralisia), teste de Vontade (CD 12) para reduzir a duração do efeito em 3 turnos. Além disso, quando o HP de uma parte vital (cabeça ou tronco) chegar a 0, faça um teste de Constituição (CD 16): se passar, permanece com 1 HP nessa parte e continua consciente. Uma vez por combate.",
           "Traços Opcionais (escolha dois):",
           "Fúria Contida: A herança orc se manifesta em momentos de raiva controlada. Você não perde o controle, você o usa. Uma vez por combate, ao entrar em fúria (ação livre): +2 em testes de ataque corpo a corpo por 2 rodadas. Após isso, sofre -1 em defesa por 1 rodada.",
-          "Força Desproporcional: Mesmo para seu tamanho, você é anormalmente forte. Seus músculos parecem subestimar a gravidade. +2 Força. Capacidade de carga como se tivesse +2 adicionais de Força.",
+          "Força Desproporcional: Mesmo para seu tamanho, você é anormalmente forte. Seus músculos parecem subestimar a gravidade. +2 Força. Capacidade de carga como se tivesse +2 adicionais de Constituição.",
           "Golpe Ancestral: O instinto de combate orc guia sua mão, mesmo que de forma menos brutal. Uma vez por combate, ao acertar um ataque corpo a corpo: +1d4 de dano extra. Este dano não dobra em críticos.",
           "Pele Curtida: Sua pele herdou parte da resistência orc, endurecida pela vida à margem. +1 Constituição. Uma vez por descanso curto, você pode endurecer sua pele por 2 rodadas: reduz 1 ponto de dano físico recebido.",
           "Sangue Guerreiro: O instinto de sobrevivência herdado dos orcs mantém você de pé quando outros já teriam caído. Uma vez por dia, ao zerar o HP de uma parte não-vital (braços ou pernas): ignora os efeitos de inutilização por 2 rodadas.",
@@ -2734,7 +2734,7 @@
           "Resistência a Magia: Os anões sempre foram teimosos contra encantamentos. +1 Vontade. +2 em testes de resistência contra magia e efeitos arcanos.",
           "Orgulho dos Ancestrais: Quando você cai, os espíritos da montanha o erguem. Uma vez por dia, ao falhar em um teste, você pode invocar seus ancestrais e repetir o teste com +2.",
           "Fígado de Ferro: Seu fígado é lendário, capaz de processar qualquer substância tóxica sem efeito. +1 Constituição. Vantagem em testes de resistência contra venenos e efeitos de embriaguez. Você pode beber qualquer quantidade de álcool sem sofrer penalidades (narrativamente, você nunca fica bêbado a menos que queira).",
-          "Força de Três Anões: Sua força é desproporcional ao seu tamanho, como se três anões vivessem em seu corpo. +1 Força. Sua capacidade de carga é calculada como se você tivesse +2 de Força adicional. Você pode carregar um aliado caído sem sofrer penalidades de movimento."
+          "Força de Três Anões: Sua força é desproporcional ao seu tamanho, como se três anões vivessem em seu corpo. +1 Força. Sua capacidade de carga é calculada como se você tivesse +2 de Constituição adicional. Você pode carregar um aliado caído sem sofrer penalidades de movimento."
         ]
       },
       {
@@ -2835,7 +2835,7 @@
           "Traço Fixo (obrigatório):",
           "Sangue dos Gigantes: Seu corpo carrega a herança inegável dos gigantes ancestrais. Você é maior, mais denso e mais resistente do que as outras raças. +2 Constituição. Seu deslocamento base é de 8 metros (em vez de 5 metros). Sua altura e peso são o dobro da média humana.",
           "Traços Opcionais (escolha dois):",
-          "Força das Montanhas: Seus músculos são fibras de aço forjadas nas altitudes. Você levanta pesos que fariam outros desabarem. +2 Força. Capacidade de carga e dobrada.",
+          "Força das Montanhas: Seus músculos são fibras de aço forjadas nas altitudes. Você levanta pesos que fariam outros desabarem. +2 Força. Capacidade de carga é dobrada.",
           "Resistência ao Frio: Nascido nos picos onde o ar gela os ossos, você simplesmente ignora temperaturas que matariam outros. Imune aos efeitos de frio ambiental (não sofre dano ou penalidades por baixas temperaturas). +2 em testes de Constituição contra dano Gélido e Congelamento.",
           "Atleta Implacável: Seu corpo não é apenas forte, é uma máquina de movimento. Escalar uma encosta é como andar para você. +1 Força, +1 Destreza. Vantagem em testes de Atletismo para escalar, saltar ou nadar.",
           "Presença Esmagadora: Não são apenas seus músculos que intimidam, é a certeza de que você pode esmagar qualquer um. +2 Vontade. Vantagem em testes de Intimidação. Se passar no teste, o alvo sofre -2 em seu próximo ataque contra você.",

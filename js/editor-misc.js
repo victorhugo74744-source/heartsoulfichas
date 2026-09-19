@@ -264,7 +264,7 @@ const tagClass = st.key === 'normal' ? 'benign' : (st.key === 'pesada' ? 'info' 
 const pct = capacity > 0 ? Math.max(0, Math.min(100, (total / capacity) * 100)) : 0;
 el.innerHTML = `
 <div class="weight-summary-row">
-<span>Peso total: <b style="color:var(--gold);">${total}</b> / ${capacity} (Capacidade de Carga)</span>
+<span>Peso total: <b style="color:var(--gold);">${total}</b> / ${capacity} (Capacidade de Carga${carryCapacityNote()})</span>
 <span class="tag ${tagClass}">${st.label}</span>
 </div>
 <div class="weight-gauge"><span class="weight-gauge-fill ${tagClass}" style="width:${pct}%;"></span></div>

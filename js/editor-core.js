@@ -254,8 +254,41 @@ function attrPoolSpent() {
 return ATTR_KEYS.reduce((sum, [k]) => sum + (state.attributes[k] - 1), 0);
 }
 function attrMod(v) { return Math.floor(v / 2); }
+// Traço que dobra a capacidade de carga (ex.: "Capacidade de carga é dobrada."): a frase precisa citar a capacidade de carga
+// e "dobra/dobrada/dobro/duplica". Aplica uma vez, sobre o valor final (15 + mod. de Constituição), então os limites de
+// Carga Pesada / Máxima / Sobrecarga acompanham.
+function textDoublesCarry(text) {
+if (!text) return false;
+return String(text).split(/[.!?]+\s+/).some(s => /(?:capacidade\s+de\s+carg(?:a|ar)|peso\s+que\s+(?:voc[êe]\s+)?(?:pode|consegue)\s+carregar)/i.test(s) && /\bdobr\w*|\bdupl\w*/i.test(s));
+}
+function carryCapacityMultiplier() {
+return traitTextsList().some(textDoublesCarry) ? 2 : 1;
+}
+// Traço que dá "+N de Constituição" só para a capacidade de carga (ex.: "Capacidade de carga como se tivesse +2 adicionais de
+// Constituição."): entra na conta de 15 + mod. de Constituição, mas NÃO altera o atributo (HP etc.). Aceita também o texto antigo
+// "…de Força", já salvo em fichas antigas.
+function textCarryConBonus(text) {
+if (!text) return 0;
+let bonus = 0;
+String(text).split(/[.!?]+\s+/).forEach(s => {
+if (!/capacidade\s+de\s+carg(?:a|ar)/i.test(s)) return;
+const m = s.match(/\+(\d+)\s+(?:adicionais?\s+)?(?:de\s+)?(?:Constitui[çc][ãa]o|For[çc]a)\b/i);
+if (m) bonus += parseInt(m[1], 10);
+});
+return bonus;
+}
+function carryConBonus() {
+return traitTextsList().reduce((sum, t) => sum + textCarryConBonus(t), 0);
+}
+function carryCapacityNote() {
+const parts = [];
+const b = carryConBonus();
+if (b) parts.push('Constituição +' + b + ' por traço');
+if (carryCapacityMultiplier() > 1) parts.push('dobrada por traço');
+return parts.length ? ' · ' + parts.join(' · ') : '';
+}
 function carryCapacity() {
-return 15 + attrMod(attrTotalValue('constituicao'));
+return (15 + attrMod(attrTotalValue('constituicao') + carryConBonus())) * carryCapacityMultiplier();
 }
 function inventoryTotalWeight() {
 return (state.inventoryItems || []).reduce((sum, it) => {
