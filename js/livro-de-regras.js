@@ -270,7 +270,7 @@ return `<div class="kingdom-card" data-accordion id="sub-${k.id}">
 }
 function renderLoreChapter(chapter){
 let html = '';
-if(chapter.intro && chapter.intro.length) html += renderEntryParagraphs(chapter.intro);
+// A introdução (chapter.intro) já é desenhada por renderChapter, acima do corpo; repetir aqui duplicava o texto do Panteão.
 html += `<div class="subsection-title" id="sub-panteao-deuses">🌟 Os Doze Deuses da Alma</div>`;
 if(chapter.pantheon.gods_intro) html += renderEntryParagraphs(chapter.pantheon.gods_intro);
 html += `<div class="deity-grid">${chapter.pantheon.gods.map(g => renderDeityCard(g,'divine')).join('')}</div>`;
