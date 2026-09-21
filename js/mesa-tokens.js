@@ -194,6 +194,33 @@ const ATTR_NAME_TO_KEY_QUICK = {
 'Força': 'forca', 'Foco': 'foco', 'Vontade': 'vontade',
 'Intelecto': 'intelecto', 'Destreza': 'destreza', 'Constituição': 'constituicao'
 };
+// "+N em todos os atributos, exceto X (e Y)": soma N em cada um dos 6 atributos, menos nos citados como exceção.
+// Aceita "exceto", "com exceção de/do/da/dos", "menos" e "salvo"; sem exceção, vale para os 6.
+const ATTR_ALL_KEYSQuick = ['forca', 'foco', 'vontade', 'intelecto', 'destreza', 'constituicao'];
+const ATTR_ANY_NAMEQuick = 'For[cç]a|Foco|Vontade|Intelecto|Destreza|Constitui[cç][aã]o';
+const ATTR_ALL_RE_SRCQuick = '\\+(\\d+)\\s*(?:em\\s+|a\\s+|para\\s+)?todos\\s+(?:os\\s+)?atributos(?![\\p{L}])'
++ '(?:\\s*[,(]?\\s*(?:exceto|com\\s+exce[cç][aã]o\\s+d[eoa]s?|menos|salvo)\\s+((?:' + ATTR_ANY_NAMEQuick + ')'
++ '(?:(?:\\s*,\\s*(?:e\\s+|ou\\s+)?|\\s+e\\s+|\\s+ou\\s+)(?:' + ATTR_ANY_NAMEQuick + '))*))?';
+function attrKeyFromAnyNameQuick(name) {
+const n = String(name).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+return ATTR_ALL_KEYSQuick.includes(n) ? n : null;
+}
+function addAllAttrBonusesQuick(text, bonuses) {
+const re = new RegExp(ATTR_ALL_RE_SRCQuick, 'giu');
+let m;
+while ((m = re.exec(text))) {
+const excluded = new Set();
+if (m[2]) {
+(m[2].match(new RegExp(ATTR_ANY_NAMEQuick, 'giu')) || []).forEach(n => {
+const k = attrKeyFromAnyNameQuick(n);
+if (k) excluded.add(k);
+});
+}
+ATTR_ALL_KEYSQuick.forEach(k => {
+if (!excluded.has(k)) bonuses[k] = (bonuses[k] || 0) + parseInt(m[1]);
+});
+}
+}
 function parseAttrBonusesFromTextQuick(text) {
 const bonuses = {};
 if (!text) return bonuses;
@@ -203,6 +230,7 @@ while ((m = re.exec(text))) {
 const key = ATTR_NAME_TO_KEY_QUICK[m[2]];
 bonuses[key] = (bonuses[key] || 0) + parseInt(m[1]);
 }
+addAllAttrBonusesQuick(text, bonuses);
 return bonuses;
 }
 function traitTextsQuick(sheet) {
