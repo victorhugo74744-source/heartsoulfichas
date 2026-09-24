@@ -382,9 +382,9 @@ ${p.cur < p.max ? `<button type="button" class="btn secondary small apr-repair" 
 ${items.map((it, i) => `
 <div class="inventory-item-block">
 <div class="inventory-item">
-<input type="text" class="inv-name" data-mi-name="${i}" placeholder="Nome do item" value="${escapeHtml(it.name)}">
-<input type="number" class="inv-weight" data-mi-weight="${i}" placeholder="Peso" min="0" step="0.5" value="${it.weight}">
-<input type="number" class="inv-qty" data-mi-qty="${i}" placeholder="Qtd" min="0" step="1" value="${it.qty}">
+<label class="inv-field inv-field-name"><span>Item</span><input type="text" class="inv-name" data-mi-name="${i}" placeholder="Nome do item" value="${escapeHtml(it.name)}"></label>
+<label class="inv-field inv-field-weight"><span>Peso</span><input type="number" class="inv-weight" data-mi-weight="${i}" placeholder="Peso" min="0" step="0.5" value="${it.weight}"></label>
+<label class="inv-field inv-field-qty"><span>Qtd.</span><input type="number" class="inv-qty" data-mi-qty="${i}" placeholder="Qtd" min="0" step="1" value="${it.qty}"></label>
 <button type="button" class="skill-remove" data-mi-remove="${i}" ${items.length <= 1 ? 'style="visibility:hidden;"' : ''}>✕</button>
 </div>
 <div class="item-type-row">
@@ -429,6 +429,10 @@ ${ARMOR_PARTS_LIST_Q.map(([k, label]) => `
 </label>`).join('')}
 </div>
 </div>` : ''}
+<div class="inv-card-foot">
+<span class="inv-card-kind">${it.armor ? '🛡️ Armadura' : (it.backpack ? '🎒 Mochila' : (it.consumable ? '🧪 Consumível' : '📦 Item comum'))}</span>
+<span>Subtotal <b>${Math.round((parseFloat(it.weight) || 0) * (parseInt(it.qty, 10) || 0) * 100) / 100}</b></span>
+</div>
 </div>`).join('')}
 <button type="button" class="btn secondary small line-list-add" data-mi-add style="width:auto;">+ Adicionar item</button>
 <div class="weight-summary-row" style="margin-top:8px;">

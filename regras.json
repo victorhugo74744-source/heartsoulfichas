@@ -420,7 +420,17 @@
       "Carga Pesada (50% a 99% da capacidade): Você está sobrecarregado, mas ainda consegue se mover. -2 em todos os testes físicos (Força, Destreza e Constituição). Exemplo: Para uma capacidade de 17, isso ocorre entre 9 e 16 pontos de peso.",
       "Carga Máxima (100% da capacidade): Você atingiu o limite. -5 em todos os testes físicos. Movimento reduzido em 2 metros. Exemplo: Exatamente 17 pontos de peso.",
       "Sobrecarga (acima da capacidade): Você pode carregar até 5 pontos de peso além do limite máximo, mas paga um preço alto. Para cada ponto de peso excedente, sofre -2 adicional em testes físicos (acumulativo com os -5 anteriores). Além disso, seu deslocamento cai para metade e você não pode correr ou esquivar. Exemplo: Se sua capacidade é 17 e você carrega 20, está com 3 pontos de sobrecarga. Penalidade total: -5 (carga máxima) + (-2 × 3) = -11 em testes físicos.",
-      "Itens muito volumosos ou mal acondicionados podem aumentar o peso efetivo a critério do mestre. Personagens com traços como Força Surpreendente ou Braços Fortes podem receber bônus na capacidade de carga (conforme descrito nos traços)."
+      "Itens muito volumosos ou mal acondicionados podem aumentar o peso efetivo a critério do mestre. Personagens com traços como Força Surpreendente ou Braços Fortes podem receber bônus na capacidade de carga (conforme descrito nos traços).",
+      "Mochilas e Bolsas",
+      "Mochilas, bolsas, alforjes e outros recipientes de carga aumentam a sua Capacidade de Carga, desde que estejam equipados — ou seja, de fato carregados por você. O que a mochila permite carregar é somado ao seu limite de peso; o que ela guarda continua contando no total.",
+      "Bônus de capacidade: Cada mochila ou bolsa tem um valor de peso extra que ela permite carregar, definido pelo mestre ou pela lista de equipamentos. Exemplo: uma bolsa de cinto pequena pode dar +3, enquanto uma mochila de viagem pode dar +10.",
+      "Fórmula com mochila: (15 + modificador de Constituição) + bônus de todas as mochilas e bolsas equipadas. Se você tiver um traço que dobra a capacidade de carga, ele dobra apenas a parte base (15 + modificador); o bônus das mochilas é somado depois, sem ser dobrado.",
+      "Equipada ou guardada: A mochila só aumenta sua capacidade enquanto estiver equipada. Uma mochila deixada no acampamento, na montaria ou guardada dentro de outro recipiente não soma nada — e o peso do que você retirou dela deixa de contar.",
+      "Peso da própria mochila: A mochila também é um item e tem o seu peso, que entra no peso total. O ganho real de capacidade é o bônus dela menos o seu próprio peso.",
+      "Várias mochilas e bolsas: Você pode equipar mais de uma (por exemplo, uma mochila nas costas e uma bolsa no cinto) e os bônus se somam. O mestre pode limitar quantas fazem sentido carregar ao mesmo tempo.",
+      "Exemplo: Constituição 5 (capacidade base 17) e uma mochila equipada com bônus +10 resultam em capacidade 27. Carga Pesada passa a valer entre 14 e 26 pontos de peso, e a Carga Máxima ocorre em exatamente 27.",
+      "Perder ou tirar a mochila: Se você largar, perder ou tiver a mochila destruída, a capacidade cai na hora. Se o peso que sobrar com você ficar acima do novo limite, aplicam-se normalmente as penalidades de Carga Pesada, Carga Máxima ou Sobrecarga.",
+      "> Na ficha: No inventário, marque o item como 🎒 Mochila, informe a Capacidade extra de peso e ative Equipada agora. A capacidade e a barra de peso passam a somar o bônus automaticamente."
     ],
     "start": 42,
     "end": 46
