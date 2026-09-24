@@ -176,36 +176,58 @@ if (total === cap) return { key: 'maxima', label: 'Carga Máxima', penalty: -5, 
 if (total >= cap * 0.5) return { key: 'pesada', label: 'Carga Pesada', penalty: -2, note: '' };
 return { key: 'normal', label: 'Normal', penalty: 0, note: '' };
 }
+function fmtNumV(n) { return String(Math.round((parseFloat(n) || 0) * 100) / 100).replace('.', ','); }
 function renderInventoryView(rawItems, constTotal, sheet) {
 const items = (rawItems || []).map(ensureInventoryItemShapeV).filter(it => it.name.trim());
 const capacity = carryCapacityV(constTotal, sheet);
-const capNote = carryNoteV(sheet);
+const capNote = carryNoteV(sheet).replace(/^\s*·\s*/, '');
 const total = inventoryTotalWeightV(items);
 const st = weightStatusV(total, capacity);
 const tagClass = st.key === 'normal' ? 'benign' : (st.key === 'pesada' ? 'info' : 'malign');
-const tableHtml = items.length
-? `<table class="sheet-inventory-table">
-<thead><tr><th>Item</th><th>Peso</th><th>Qtd.</th><th>Subtotal</th></tr></thead>
-<tbody>${items.map(it => `<tr><td>${escapeHtml(it.name)}${it.consumable ? `
-<span class="effect-tag ${escapeHtml(it.effectType || '')}">${CONSUMABLE_EFFECT_LABELS_V[it.effectType] || '🧪 Consumível'}</span>
-${(it.effectValue || it.effectDesc) ? `<span class="item-effect-detail">${it.effectValue ? escapeHtml(it.effectValue) : ''}${it.effectValue && it.effectDesc ? ' · ' : ''}${it.effectDesc ? escapeHtml(it.effectDesc) : ''}</span>` : ''}
-` : ''}${it.armor ? `
-<span class="effect-tag armor">🛡️ Armadura${it.armorEquipped ? ' (equipada)' : ' (guardada)'}</span>
-${armorPartsSummaryV(it.armorParts) ? `<span class="item-effect-detail">${escapeHtml(armorPartsSummaryV(it.armorParts))}</span>` : ''}
-` : ''}${it.backpack ? `
-<span class="effect-tag backpack">🎒 Mochila${it.backpackEquipped ? ' (equipada)' : ' (guardada)'}</span>
-${it.backpackBonus ? `<span class="item-effect-detail">+${escapeHtml(String(it.backpackBonus))} de capacidade de carga</span>` : ''}
-` : ''}</td><td>${it.weight}</td><td>${it.qty}</td><td>${(it.weight * it.qty)}</td></tr>`).join('')}</tbody>
-</table>`
-: '<p class="hint" style="margin:0;">Nada registrado ainda.</p>';
+const pct = capacity > 0 ? Math.max(0, Math.min(100, (total / capacity) * 100)) : 0;
+const cardHtml = it => {
+const sub = (parseFloat(it.weight) || 0) * (isNaN(parseInt(it.qty, 10)) ? 1 : parseInt(it.qty, 10));
+let kind = '', icon = '📦', tags = '', detail = '', equipped = false;
+if (it.consumable) {
+kind = 'is-consumable'; icon = '🧪';
+tags = `<span class="effect-tag ${escapeHtml(it.effectType || '')}">${CONSUMABLE_EFFECT_LABELS_V[it.effectType] || '🧪 Consumível'}</span>`;
+if (it.effectValue || it.effectDesc) detail = `<div class="inv-card-detail">${it.effectValue ? `<code class="inv-dice">${escapeHtml(it.effectValue)}</code>` : ''}${it.effectDesc ? `<span>${escapeHtml(it.effectDesc)}</span>` : ''}</div>`;
+} else if (it.armor) {
+kind = 'is-armor'; icon = '🛡️'; equipped = it.armorEquipped;
+tags = `<span class="effect-tag armor">🛡️ Armadura</span>`;
+const parts = Object.keys(ARMOR_PARTS_LABELS_V).filter(k => (it.armorParts[k] || 0) > 0);
+if (parts.length) detail = `<div class="inv-card-parts">${parts.map(k => `<span class="inv-part"><em>${ARMOR_PARTS_LABELS_V[k]}</em><b>+${escapeHtml(String(it.armorParts[k]))}</b></span>`).join('')}</div>`;
+} else if (it.backpack) {
+kind = 'is-backpack'; icon = '🎒'; equipped = it.backpackEquipped;
+tags = `<span class="effect-tag backpack">🎒 Mochila</span>`;
+if (it.backpackBonus) detail = `<div class="inv-card-detail"><span>+${escapeHtml(fmtNumV(it.backpackBonus))} de capacidade de carga${it.backpackEquipped ? '' : ' (só vale equipada)'}</span></div>`;
+}
+if (kind === 'is-armor' || kind === 'is-backpack') tags += `<span class="inv-state ${equipped ? 'on' : 'off'}">${equipped ? 'Equipada' : 'Guardada'}</span>`;
+return `<li class="inv-card ${kind}${equipped ? ' is-equipped' : ''}">
+<div class="inv-card-icon" aria-hidden="true">${icon}</div>
+<div class="inv-card-body">
+<div class="inv-card-name">${escapeHtml(it.name)}</div>
+${tags ? `<div class="inv-card-tags">${tags}</div>` : ''}
+${detail}
+</div>
+<div class="inv-card-nums" title="Peso unitário × quantidade">
+<span class="inv-card-sub">${fmtNumV(sub)}<small> peso</small></span>
+<span class="inv-card-calc">${fmtNumV(it.weight)} × ${escapeHtml(String(it.qty))}</span>
+</div>
+</li>`;
+};
 return `
-${tableHtml}
-<div class="weight-summary" style="margin-top:10px;">
-<div class="weight-summary-row">
-<span>Peso total: <b style="color:var(--gold);">${total}</b> / ${capacity} (Capacidade de Carga${capNote})</span>
+<div class="inv-view">
+<div class="inv-summary ${tagClass}">
+<div class="inv-summary-top">
+<div class="inv-summary-load"><span class="inv-summary-label">Carga</span><span class="inv-summary-num"><b>${fmtNumV(total)}</b><small> / ${fmtNumV(capacity)}</small></span></div>
 <span class="tag ${tagClass}">${st.label}</span>
 </div>
-${st.penalty ? `<p class="hint" style="margin:6px 0 0;">${st.penalty} em todos os testes físicos (Força, Destreza e Constituição)${st.note ? ' · ' + st.note : ''}</p>` : ''}
+<div class="weight-gauge"><span class="weight-gauge-fill ${tagClass}" style="width:${pct}%;"></span></div>
+${capNote ? `<p class="inv-summary-note">Capacidade de Carga · ${escapeHtml(capNote)}</p>` : ''}
+${st.penalty ? `<p class="inv-summary-note warn">${st.penalty} em todos os testes físicos (Força, Destreza e Constituição)${st.note ? ' · ' + escapeHtml(st.note) : ''}</p>` : ''}
+</div>
+${items.length ? `<ul class="inv-grid">${items.map(cardHtml).join('')}</ul>` : '<p class="hint" style="margin:0;">Nada registrado ainda.</p>'}
 </div>`;
 }
 let masterFixedTraitDraft = null;
