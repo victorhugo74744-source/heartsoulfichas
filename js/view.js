@@ -96,7 +96,7 @@ if (!cleaned.length) return '<p class="hint" style="margin:0;">Nada registrado a
 return `<div class="sheet-line-list">${cleaned.map(v => `<div class="li">${escapeHtml(v)}</div>`).join('')}</div>`;
 }
 function ensureInventoryItemShapeV(it) {
-if (typeof it === 'string') return { name: it, weight: 0, qty: 1, consumable: false, effectType: '', effectValue: '', effectDesc: '', armor: false, armorEquipped: false, armorParts: {} };
+if (typeof it === 'string') return { name: it, weight: 0, qty: 1, consumable: false, effectType: '', effectValue: '', effectDesc: '', armor: false, armorEquipped: false, armorParts: {}, backpack: false, backpackEquipped: false, backpackBonus: 0 };
 return {
 name: (it && it.name) || '',
 weight: (it && it.weight !== undefined && it.weight !== null) ? it.weight : 0,
@@ -107,7 +107,10 @@ effectValue: (it && it.effectValue) || '',
 effectDesc: (it && it.effectDesc) || '',
 armor: !!(it && it.armor),
 armorEquipped: !!(it && it.armorEquipped),
-armorParts: Object.assign({ cabeca: 0, tronco: 0, braco_esq: 0, braco_dir: 0, perna_esq: 0, perna_dir: 0 }, (it && it.armorParts) || {})
+armorParts: Object.assign({ cabeca: 0, tronco: 0, braco_esq: 0, braco_dir: 0, perna_esq: 0, perna_dir: 0 }, (it && it.armorParts) || {}),
+backpack: !!(it && it.backpack),
+backpackEquipped: !!(it && it.backpackEquipped),
+backpackBonus: Math.max(0, parseFloat(it && it.backpackBonus) || 0)
 };
 }
 const ARMOR_PARTS_LABELS_V = { cabeca: 'Cabeça', tronco: 'Tronco', braco_esq: 'Braço Esq.', braco_dir: 'Braço Dir.', perna_esq: 'Perna Esq.', perna_dir: 'Perna Dir.' };
@@ -143,9 +146,15 @@ const parts = [];
 const b = carryConBonusV(s);
 if (b) parts.push('Constituição +' + b + ' por traço');
 if (carryMultiplierV(s) > 1) parts.push('dobrada por traço');
+const bp = s ? backpackBonusTotalV(s.inventoryItems) : 0;
+if (bp) parts.push('Mochila +' + bp);
 return parts.length ? ' · ' + parts.join(' · ') : '';
 }
-function carryCapacityV(constTotal, s) { return (15 + attrModV(constTotal + carryConBonusV(s))) * carryMultiplierV(s); }
+// Mochila equipada soma o bônus dela à capacidade (depois do multiplicador de traço) — mesma regra do editor (backpackBonusTotal).
+function backpackBonusTotalV(items) {
+return (items || []).reduce((sum, it) => (it && it.backpack && it.backpackEquipped) ? sum + Math.max(0, parseFloat(it.backpackBonus) || 0) : sum, 0);
+}
+function carryCapacityV(constTotal, s) { return (15 + attrModV(constTotal + carryConBonusV(s))) * carryMultiplierV(s) + (s ? backpackBonusTotalV(s.inventoryItems) : 0); }
 function inventoryTotalWeightV(items) {
 return items.reduce((sum, it) => {
 const w = parseFloat(it.weight) || 0;
@@ -183,6 +192,9 @@ ${(it.effectValue || it.effectDesc) ? `<span class="item-effect-detail">${it.eff
 ` : ''}${it.armor ? `
 <span class="effect-tag armor">🛡️ Armadura${it.armorEquipped ? ' (equipada)' : ' (guardada)'}</span>
 ${armorPartsSummaryV(it.armorParts) ? `<span class="item-effect-detail">${escapeHtml(armorPartsSummaryV(it.armorParts))}</span>` : ''}
+` : ''}${it.backpack ? `
+<span class="effect-tag backpack">🎒 Mochila${it.backpackEquipped ? ' (equipada)' : ' (guardada)'}</span>
+${it.backpackBonus ? `<span class="item-effect-detail">+${escapeHtml(String(it.backpackBonus))} de capacidade de carga</span>` : ''}
 ` : ''}</td><td>${it.weight}</td><td>${it.qty}</td><td>${(it.weight * it.qty)}</td></tr>`).join('')}</tbody>
 </table>`
 : '<p class="hint" style="margin:0;">Nada registrado ainda.</p>';

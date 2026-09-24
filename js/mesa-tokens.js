@@ -275,16 +275,21 @@ function carryConBonusQuick(sheet) { return traitTextsQuick(sheet).reduce((sum, 
 function carryNoteQuick(sheet) {
 const b = carryConBonusQuick(sheet);
 return (b ? ` <small title="Constituição +${b} por traço, só para a capacidade de carga">+${b} Con</small>` : '')
-+ (carryMultiplierQuick(sheet) > 1 ? ' <small title="Capacidade dobrada por traço">×2</small>' : '');
++ (carryMultiplierQuick(sheet) > 1 ? ' <small title="Capacidade dobrada por traço">×2</small>' : '')
++ (backpackBonusTotalQuick(sheet.inventoryItems) ? ` <small title="Bônus da mochila equipada">🎒 +${backpackBonusTotalQuick(sheet.inventoryItems)}</small>` : '');
+}
+// Mochila equipada soma o bônus dela à capacidade (depois do multiplicador de traço) — mesma regra do editor (backpackBonusTotal).
+function backpackBonusTotalQuick(items) {
+return (items || []).reduce((sum, it) => (it && it.backpack && it.backpackEquipped) ? sum + Math.max(0, parseFloat(it.backpackBonus) || 0) : sum, 0);
 }
 function carryCapacityQuick(sheet) {
 const attrs = sheet.attributes || {};
 const traitBonus = traitAttrBonusesQuick(sheet).constituicao || 0;
 const manual = (sheet.attrManualBonus && sheet.attrManualBonus.constituicao) || 0;
-return (15 + attrModQuick((attrs.constituicao || 0) + traitBonus + manual + carryConBonusQuick(sheet))) * carryMultiplierQuick(sheet);
+return (15 + attrModQuick((attrs.constituicao || 0) + traitBonus + manual + carryConBonusQuick(sheet))) * carryMultiplierQuick(sheet) + backpackBonusTotalQuick(sheet.inventoryItems);
 }
 function ensureInventoryItemShapeQuick(it) {
-if (typeof it === 'string') return { name: it, weight: 0, qty: 1, consumable: false, effectType: '', effectValue: '', effectDesc: '', armor: false, armorEquipped: false, armorParts: {} };
+if (typeof it === 'string') return { name: it, weight: 0, qty: 1, consumable: false, effectType: '', effectValue: '', effectDesc: '', armor: false, armorEquipped: false, armorParts: {}, backpack: false, backpackEquipped: false, backpackBonus: 0 };
 return {
 name: (it && it.name) || '',
 weight: (it && it.weight !== undefined && it.weight !== null) ? it.weight : 0,
@@ -295,7 +300,10 @@ effectValue: (it && it.effectValue) || '',
 effectDesc: (it && it.effectDesc) || '',
 armor: !!(it && it.armor),
 armorEquipped: !!(it && it.armorEquipped),
-armorParts: Object.assign({ cabeca: 0, tronco: 0, braco_esq: 0, braco_dir: 0, perna_esq: 0, perna_dir: 0 }, (it && it.armorParts) || {})
+armorParts: Object.assign({ cabeca: 0, tronco: 0, braco_esq: 0, braco_dir: 0, perna_esq: 0, perna_dir: 0 }, (it && it.armorParts) || {}),
+backpack: !!(it && it.backpack),
+backpackEquipped: !!(it && it.backpackEquipped),
+backpackBonus: Math.max(0, parseFloat(it && it.backpackBonus) || 0)
 };
 }
 const CONSUMABLE_EFFECT_LABELS_Q = { cura: '💚 Cura', dano: '⚔️ Dano', buff: '✨ Buff', debuff: '☠️ Debuff', estamina: '🏃 Recuperar Estamina', energia: '⚡ Recuperar Energia' };
@@ -344,7 +352,7 @@ const sheet = (tok && tok.sheetId) ? mySheets.find(s => s.id === tok.sheetId) : 
 if (!sheet) { box.innerHTML = ''; return; }
 if (box.contains(document.activeElement)) return;
 const items = (sheet.inventoryItems || []).map(ensureInventoryItemShapeQuick);
-if (!items.length) items.push({ name: '', weight: 0, qty: 1, consumable: false, effectType: '', effectValue: '', effectDesc: '', armor: false, armorEquipped: false, armorParts: {} });
+if (!items.length) items.push({ name: '', weight: 0, qty: 1, consumable: false, effectType: '', effectValue: '', effectDesc: '', armor: false, armorEquipped: false, armorParts: {}, backpack: false, backpackEquipped: false, backpackBonus: 0 });
 const capacity = carryCapacityQuick(sheet);
 const total = inventoryTotalWeightQuick(items);
 const st = weightStatusQuick(total, capacity);
@@ -380,8 +388,9 @@ ${items.map((it, i) => `
 <button type="button" class="skill-remove" data-mi-remove="${i}" ${items.length <= 1 ? 'style="visibility:hidden;"' : ''}>✕</button>
 </div>
 <div class="item-type-row">
-<label class="item-type-chip"><input type="checkbox" data-mi-consumable="${i}" ${it.consumable ? 'checked' : ''} ${it.armor ? 'disabled title="Um item Armadura não pode ser Consumível"' : ''}> 🧪 Consumível</label>
-<label class="item-type-chip armor"><input type="checkbox" data-mi-armor="${i}" ${it.armor ? 'checked' : ''} ${it.consumable ? 'disabled title="Um item Consumível não pode ser Armadura"' : ''}> 🛡️ Armadura</label>
+<label class="item-type-chip"><input type="checkbox" data-mi-consumable="${i}" ${it.consumable ? 'checked' : ''} ${(it.armor || it.backpack) ? 'disabled title="Um item Armadura ou Mochila não pode ser Consumível"' : ''}> 🧪 Consumível</label>
+<label class="item-type-chip armor"><input type="checkbox" data-mi-armor="${i}" ${it.armor ? 'checked' : ''} ${(it.consumable || it.backpack) ? 'disabled title="Um item Consumível ou Mochila não pode ser Armadura"' : ''}> 🛡️ Armadura</label>
+<label class="item-type-chip backpack"><input type="checkbox" data-mi-backpack="${i}" ${it.backpack ? 'checked' : ''} ${(it.consumable || it.armor) ? 'disabled title="Um item Consumível ou Armadura não pode ser Mochila"' : ''}> 🎒 Mochila</label>
 </div>
 ${it.consumable ? `
 <div class="item-detail inv-effect-fields">
@@ -400,6 +409,14 @@ ${it.consumable ? `
 <span class="tc-meta">${CONSUMABLE_EFFECT_LABELS_Q[it.effectType] || ''}</span>
 <button type="button" class="inv-use-btn" data-mi-use="${i}" ${it.qty > 0 ? '' : 'disabled'} title="Usa 1 unidade: rola o dado do efeito (se houver) e anuncia na mesa para todo mundo ver">Usar</button>
 </div>
+</div>` : ''}
+${it.backpack ? `
+<div class="item-detail inv-backpack-fields">
+<label class="item-equip-toggle"><input type="checkbox" data-mi-backpack-equipped="${i}" ${it.backpackEquipped ? 'checked' : ''}> <span>Equipada agora</span></label>
+<label class="inv-backpack-bonus">
+<span>🎒 Capacidade extra de peso</span>
+<input type="number" min="0" step="0.5" class="inv-backpack-bonus-input" data-mi-backpack-bonus="${i}" value="${it.backpackBonus || 0}">
+</label>
 </div>` : ''}
 ${it.armor ? `
 <div class="item-detail inv-armor-fields">
@@ -463,6 +480,23 @@ box.querySelectorAll('[data-mi-armor]').forEach(inp => {
 inp.addEventListener('click', (e) => e.stopPropagation());
 inp.addEventListener('change', () => { items[parseInt(inp.dataset.miArmor)].armor = inp.checked; commit(); });
 });
+box.querySelectorAll('[data-mi-backpack]').forEach(inp => {
+inp.addEventListener('click', (e) => e.stopPropagation());
+inp.addEventListener('change', () => {
+const it = items[parseInt(inp.dataset.miBackpack)];
+it.backpack = inp.checked;
+if (!inp.checked) it.backpackEquipped = false;
+commit();
+});
+});
+box.querySelectorAll('[data-mi-backpack-equipped]').forEach(inp => {
+inp.addEventListener('click', (e) => e.stopPropagation());
+inp.addEventListener('change', () => { items[parseInt(inp.dataset.miBackpackEquipped)].backpackEquipped = inp.checked; commit(); });
+});
+box.querySelectorAll('[data-mi-backpack-bonus]').forEach(inp => {
+inp.addEventListener('click', (e) => e.stopPropagation());
+inp.addEventListener('change', () => { items[parseInt(inp.dataset.miBackpackBonus)].backpackBonus = Math.max(0, parseFloat(inp.value) || 0); commit(); });
+});
 box.querySelectorAll('[data-mi-armor-equipped]').forEach(inp => {
 inp.addEventListener('click', (e) => e.stopPropagation());
 inp.addEventListener('change', () => { items[parseInt(inp.dataset.miArmorEquipped)].armorEquipped = inp.checked; commit(); });
@@ -481,7 +515,7 @@ btn.addEventListener('click', (e) => { e.stopPropagation(); repairMyArmorPart(sh
 });
 const addBtn = box.querySelector('[data-mi-add]');
 if (addBtn) addBtn.addEventListener('click', () => {
-items.push({ name: '', weight: 0, qty: 1, consumable: false, effectType: '', effectValue: '', effectDesc: '', armor: false, armorEquipped: false, armorParts: {} });
+items.push({ name: '', weight: 0, qty: 1, consumable: false, effectType: '', effectValue: '', effectDesc: '', armor: false, armorEquipped: false, armorParts: {}, backpack: false, backpackEquipped: false, backpackBonus: 0 });
 commit();
 });
 }

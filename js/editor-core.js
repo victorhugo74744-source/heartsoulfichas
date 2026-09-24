@@ -308,15 +308,22 @@ return bonus;
 function carryConBonus() {
 return traitTextsList().reduce((sum, t) => sum + textCarryConBonus(t), 0);
 }
+// Mochila: item de inventário marcado como "Mochila" e "Equipada" soma o seu bônus (backpackBonus) direto à capacidade de carga.
+// O bônus é somado DEPOIS da multiplicação por traço (não dobra junto), e só vale enquanto a mochila estiver equipada.
+function backpackBonusTotal(items) {
+return (items || []).reduce((sum, it) => (it && it.backpack && it.backpackEquipped) ? sum + Math.max(0, parseFloat(it.backpackBonus) || 0) : sum, 0);
+}
 function carryCapacityNote() {
 const parts = [];
 const b = carryConBonus();
 if (b) parts.push('Constituição +' + b + ' por traço');
 if (carryCapacityMultiplier() > 1) parts.push('dobrada por traço');
+const bp = backpackBonusTotal(state.inventoryItems);
+if (bp) parts.push('Mochila +' + bp);
 return parts.length ? ' · ' + parts.join(' · ') : '';
 }
 function carryCapacity() {
-return (15 + attrMod(attrTotalValue('constituicao') + carryConBonus())) * carryCapacityMultiplier();
+return (15 + attrMod(attrTotalValue('constituicao') + carryConBonus())) * carryCapacityMultiplier() + backpackBonusTotal(state.inventoryItems);
 }
 function inventoryTotalWeight() {
 return (state.inventoryItems || []).reduce((sum, it) => {

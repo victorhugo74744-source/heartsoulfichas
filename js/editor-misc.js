@@ -76,7 +76,7 @@ const ARMOR_PARTS_LIST = [
 ['perna_esq', '🥾 Perna Esq.'], ['perna_dir', '🥾 Perna Dir.']
 ];
 function ensureInventoryItemShape(it) {
-if (typeof it === 'string') return { name: it, weight: 0, qty: 1, consumable: false, effectType: '', effectValue: '', effectDesc: '', armor: false, armorEquipped: false, armorParts: {} };
+if (typeof it === 'string') return { name: it, weight: 0, qty: 1, consumable: false, effectType: '', effectValue: '', effectDesc: '', armor: false, armorEquipped: false, armorParts: {}, backpack: false, backpackEquipped: false, backpackBonus: 0 };
 return {
 name: (it && it.name) || '',
 weight: (it && it.weight !== undefined && it.weight !== null) ? it.weight : 0,
@@ -87,7 +87,10 @@ effectValue: (it && it.effectValue) || '',
 effectDesc: (it && it.effectDesc) || '',
 armor: !!(it && it.armor),
 armorEquipped: !!(it && it.armorEquipped),
-armorParts: Object.assign({ cabeca: 0, tronco: 0, braco_esq: 0, braco_dir: 0, perna_esq: 0, perna_dir: 0 }, (it && it.armorParts) || {})
+armorParts: Object.assign({ cabeca: 0, tronco: 0, braco_esq: 0, braco_dir: 0, perna_esq: 0, perna_dir: 0 }, (it && it.armorParts) || {}),
+backpack: !!(it && it.backpack),
+backpackEquipped: !!(it && it.backpackEquipped),
+backpackBonus: Math.max(0, parseFloat(it && it.backpackBonus) || 0)
 };
 }
 function recalcArmorResources() {
@@ -106,7 +109,7 @@ if (!cur || cur.max !== totals[k]) state.resources.armor[k] = { max: totals[k], 
 function initInventoryUI() {
 const box = document.getElementById('fInventory');
 if (!box) return;
-if (!state.inventoryItems || !state.inventoryItems.length) state.inventoryItems = [{ name: '', weight: 0, qty: 1, consumable: false, effectType: '', effectValue: '', effectDesc: '', armor: false, armorEquipped: false, armorParts: {} }];
+if (!state.inventoryItems || !state.inventoryItems.length) state.inventoryItems = [{ name: '', weight: 0, qty: 1, consumable: false, effectType: '', effectValue: '', effectDesc: '', armor: false, armorEquipped: false, armorParts: {}, backpack: false, backpackEquipped: false, backpackBonus: 0 }];
 state.inventoryItems = state.inventoryItems.map(ensureInventoryItemShape);
 recalcArmorResources();
 renderInventoryUI();
@@ -125,8 +128,9 @@ box.innerHTML = items.map((it, i) => `
 <button type="button" class="skill-remove" data-inv-remove="${i}" ${items.length <= 1 ? 'style="visibility:hidden;"' : ''}>✕</button>
 </div>
 <div class="item-type-row">
-<label class="item-type-chip"><input type="checkbox" data-inv-consumable="${i}" ${it.consumable ? 'checked' : ''} ${it.armor ? 'disabled title="Um item Armadura não pode ser Consumível"' : ''}> 🧪 Consumível</label>
-<label class="item-type-chip armor"><input type="checkbox" data-inv-armor="${i}" ${it.armor ? 'checked' : ''} ${it.consumable ? 'disabled title="Um item Consumível não pode ser Armadura"' : ''}> 🛡️ Armadura</label>
+<label class="item-type-chip"><input type="checkbox" data-inv-consumable="${i}" ${it.consumable ? 'checked' : ''} ${(it.armor || it.backpack) ? 'disabled title="Um item Armadura ou Mochila não pode ser Consumível"' : ''}> 🧪 Consumível</label>
+<label class="item-type-chip armor"><input type="checkbox" data-inv-armor="${i}" ${it.armor ? 'checked' : ''} ${(it.consumable || it.backpack) ? 'disabled title="Um item Consumível ou Mochila não pode ser Armadura"' : ''}> 🛡️ Armadura</label>
+<label class="item-type-chip backpack"><input type="checkbox" data-inv-backpack="${i}" ${it.backpack ? 'checked' : ''} ${(it.consumable || it.armor) ? 'disabled title="Um item Consumível ou Armadura não pode ser Mochila"' : ''}> 🎒 Mochila</label>
 </div>
 ${it.consumable ? `
 <div class="item-detail inv-effect-fields">
@@ -136,6 +140,15 @@ ${CONSUMABLE_EFFECT_TYPES.map(([v, label]) => `<option value="${v}" ${it.effectT
 </select>
 <input type="text" class="inv-effect-value" data-inv-effect-value="${i}" placeholder="Dado/valor (ex.: 1d8+2)" value="${escapeHtml(it.effectValue)}" title="Opcional — notação de dado usada na rolagem da mesa (ex.: 1d8+2). Deixe em branco se o efeito não tem um número pra rolar (comum em Buff/Debuff).">
 <input type="text" class="inv-effect-desc" data-inv-effect-desc="${i}" placeholder="Descrição do efeito (ex.: +2 Força por 3 rodadas)" value="${escapeHtml(it.effectDesc)}">
+</div>` : ''}
+${it.backpack ? `
+<div class="item-detail inv-backpack-fields">
+<label class="item-equip-toggle"><input type="checkbox" data-inv-backpack-equipped="${i}" ${it.backpackEquipped ? 'checked' : ''}> <span>Equipada agora</span></label>
+<label class="inv-backpack-bonus">
+<span>🎒 Capacidade extra de peso</span>
+<input type="number" min="0" step="0.5" class="inv-backpack-bonus-input" data-inv-backpack-bonus="${i}" value="${it.backpackBonus || 0}">
+</label>
+<p class="hint" style="margin:6px 0 0;">Soma à Capacidade de Carga enquanto estiver equipada. O peso da própria mochila continua contando no peso total.</p>
 </div>` : ''}
 ${it.armor ? `
 <div class="item-detail inv-armor-fields">
@@ -204,6 +217,26 @@ recalcArmorResources();
 renderArmorParts();
 });
 });
+box.querySelectorAll('[data-inv-backpack]').forEach(inp => {
+inp.addEventListener('change', () => {
+const it = items[parseInt(inp.dataset.invBackpack)];
+it.backpack = inp.checked;
+if (!inp.checked) it.backpackEquipped = false;
+renderInventoryUI();
+});
+});
+box.querySelectorAll('[data-inv-backpack-equipped]').forEach(inp => {
+inp.addEventListener('change', () => {
+items[parseInt(inp.dataset.invBackpackEquipped)].backpackEquipped = inp.checked;
+renderInventoryWeightSummary();
+});
+});
+box.querySelectorAll('[data-inv-backpack-bonus]').forEach(inp => {
+inp.addEventListener('input', () => {
+items[parseInt(inp.dataset.invBackpackBonus)].backpackBonus = Math.max(0, parseFloat(inp.value) || 0);
+renderInventoryWeightSummary();
+});
+});
 box.querySelectorAll('[data-inv-remove]').forEach(btn => {
 btn.addEventListener('click', () => {
 if (items.length <= 1) return;
@@ -215,7 +248,7 @@ renderArmorParts();
 });
 const addBtn = box.querySelector('[data-inv-add]');
 if (addBtn) addBtn.addEventListener('click', () => {
-items.push({ name: '', weight: 0, qty: 1, consumable: false, effectType: '', effectValue: '', effectDesc: '', armor: false, armorEquipped: false, armorParts: {} });
+items.push({ name: '', weight: 0, qty: 1, consumable: false, effectType: '', effectValue: '', effectDesc: '', armor: false, armorEquipped: false, armorParts: {}, backpack: false, backpackEquipped: false, backpackBonus: 0 });
 renderInventoryUI();
 const nameInputs = box.querySelectorAll('[data-inv-name]');
 nameInputs[nameInputs.length - 1].focus();
