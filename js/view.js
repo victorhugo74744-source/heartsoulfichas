@@ -542,9 +542,9 @@ return `${desc ? `<p class="sheet-list">${escapeHtml(desc)}</p>` : ''}${atributo
 </div>` : ''}
 ${(s.history || (s.inventoryItems && s.inventoryItems.length) || (s.notes && s.notes.length)) ? `<div class="panel" id="sec-detalhes">
 <h2>Detalhes</h2>
-${s.history ? `<div class="sheet-section-title" style="margin-top:0;">História</div><p class="sheet-list" style="white-space:pre-wrap;">${escapeHtml(s.history)}</p>` : ''}
-<div class="sheet-section-title" style="${s.history ? '' : 'margin-top:0;'}">Inventário</div>
+<div class="sheet-section-title" style="margin-top:0;">Inventário</div>
 ${renderInventoryView(s.inventoryItems, constTotalV, s)}
+${s.history ? `<div class="sheet-section-title">História</div><p class="sheet-list" style="white-space:pre-wrap;">${escapeHtml(s.history)}</p>` : ''}
 <div class="sheet-section-title">Anotações</div>
 ${renderLineListView(s.notes)}
 </div>` : ''}
