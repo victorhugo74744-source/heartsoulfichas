@@ -76,7 +76,7 @@ const ARMOR_PARTS_LIST = [
 ['perna_esq', '🥾 Perna Esq.'], ['perna_dir', '🥾 Perna Dir.']
 ];
 function ensureInventoryItemShape(it) {
-if (typeof it === 'string') return { name: it, weight: 0, qty: 1, consumable: false, effectType: '', effectValue: '', effectDesc: '', armor: false, armorEquipped: false, armorParts: {}, backpack: false, backpackEquipped: false, backpackBonus: 0 };
+if (typeof it === 'string') return { name: it, weight: 0, qty: 1, consumable: false, effectType: '', effectValue: '', effectDesc: '', armor: false, armorEquipped: false, armorParts: {}, backpack: false, backpackEquipped: false, backpackBonus: 0, description: '', image: '' };
 return {
 name: (it && it.name) || '',
 weight: (it && it.weight !== undefined && it.weight !== null) ? it.weight : 0,
@@ -90,9 +90,36 @@ armorEquipped: !!(it && it.armorEquipped),
 armorParts: Object.assign({ cabeca: 0, tronco: 0, braco_esq: 0, braco_dir: 0, perna_esq: 0, perna_dir: 0 }, (it && it.armorParts) || {}),
 backpack: !!(it && it.backpack),
 backpackEquipped: !!(it && it.backpackEquipped),
-backpackBonus: Math.max(0, parseFloat(it && it.backpackBonus) || 0)
+backpackBonus: Math.max(0, parseFloat(it && it.backpackBonus) || 0),
+description: (it && it.description) || '',
+image: (it && it.image) || ''
 };
 }
+const INV_ITEM_IMAGE_MAX_DIM = 240;
+function resizeImageFileToDataURL(file, maxDim, quality) {
+return new Promise((resolve, reject) => {
+const reader = new FileReader();
+reader.onload = (e) => {
+const img = new Image();
+img.onload = () => {
+let { width, height } = img;
+if (width > maxDim || height > maxDim) {
+if (width > height) { height = Math.round(height * maxDim / width); width = maxDim; }
+else { width = Math.round(width * maxDim / height); height = maxDim; }
+}
+const canvas = document.createElement('canvas');
+canvas.width = width; canvas.height = height;
+canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+resolve(canvas.toDataURL('image/jpeg', quality));
+};
+img.onerror = reject;
+img.src = e.target.result;
+};
+reader.onerror = reject;
+reader.readAsDataURL(file);
+});
+}
+const inventoryAccCollapsed = {};
 function recalcArmorResources() {
 if (!state.resources) return;
 if (!state.resources.armor) state.resources.armor = emptyResources().armor;
@@ -127,6 +154,13 @@ box.innerHTML = items.map((it, i) => `
 <label class="inv-field inv-field-qty"><span>Qtd.</span><input type="number" class="inv-qty" data-inv-qty="${i}" placeholder="Qtd" min="0" step="1" value="${it.qty}"></label>
 <button type="button" class="skill-remove" data-inv-remove="${i}" ${items.length <= 1 ? 'style="visibility:hidden;"' : ''}>✕</button>
 </div>
+<div class="inv-item-acc${inventoryAccCollapsed[i] ? ' collapsed' : ''}" data-inv-acc="${i}">
+<button type="button" class="inv-item-acc-head" data-inv-acc-toggle="${i}">
+<span class="iah-icon">🗂️</span>
+<span class="iah-title">Tipo, imagem e descrição</span>
+<span class="iah-chevron">▾</span>
+</button>
+<div class="inv-item-acc-body">
 <div class="item-type-row">
 <label class="item-type-chip"><input type="checkbox" data-inv-consumable="${i}" ${it.consumable ? 'checked' : ''} ${(it.armor || it.backpack) ? 'disabled title="Um item Armadura ou Mochila não pode ser Consumível"' : ''}> 🧪 Consumível</label>
 <label class="item-type-chip armor"><input type="checkbox" data-inv-armor="${i}" ${it.armor ? 'checked' : ''} ${(it.consumable || it.backpack) ? 'disabled title="Um item Consumível ou Mochila não pode ser Armadura"' : ''}> 🛡️ Armadura</label>
@@ -162,6 +196,24 @@ ${ARMOR_PARTS_LIST.map(([k, label]) => `
 </label>`).join('')}
 </div>
 </div>` : ''}
+<div class="inv-extra-row">
+<div class="inv-image-field">
+<span>Imagem do item</span>
+<div class="inv-image-uploader">
+${it.image ? `<img src="${it.image}" alt="Imagem de ${escapeHtml(it.name || 'item')}" class="inv-image-preview">` : `<div class="inv-image-placeholder">📦</div>`}
+<div class="inv-image-controls">
+<input type="file" accept="image/*" data-inv-image="${i}">
+${it.image ? `<button type="button" class="btn secondary small" data-inv-image-remove="${i}" style="width:auto;">Remover imagem</button>` : ''}
+</div>
+</div>
+</div>
+<label class="inv-desc-field">
+<span>Descrição</span>
+<textarea class="auto-expand" data-inv-desc="${i}" placeholder="Aparência, história ou detalhes de uso do item…">${escapeHtml(it.description)}</textarea>
+</label>
+</div>
+</div>
+</div>
 <div class="inv-card-foot">
 <span class="inv-card-kind">${it.armor ? '🛡️ Armadura' : (it.backpack ? '🎒 Mochila' : (it.consumable ? '🧪 Consumível' : '📦 Item comum'))}</span>
 <span>Subtotal <b data-inv-subtotal="${i}">${Math.round((parseFloat(it.weight) || 0) * (parseInt(it.qty, 10) || 0) * 100) / 100}</b></span>
@@ -254,6 +306,43 @@ items.splice(parseInt(btn.dataset.invRemove), 1);
 renderInventoryUI();
 recalcArmorResources();
 renderArmorParts();
+});
+});
+box.querySelectorAll('[data-inv-acc-toggle]').forEach(head => {
+head.addEventListener('click', () => {
+const idx = parseInt(head.dataset.invAccToggle);
+const acc = box.querySelector(`[data-inv-acc="${idx}"]`);
+if (!acc) return;
+const collapsed = acc.classList.toggle('collapsed');
+inventoryAccCollapsed[idx] = collapsed;
+});
+});
+box.querySelectorAll('textarea[data-inv-desc]').forEach(ta => {
+autoExpandTextarea(ta);
+ta.addEventListener('input', () => {
+items[parseInt(ta.dataset.invDesc)].description = ta.value;
+autoExpandTextarea(ta);
+});
+});
+box.querySelectorAll('[data-inv-image]').forEach(inp => {
+inp.addEventListener('change', () => {
+const idx = parseInt(inp.dataset.invImage);
+const file = inp.files && inp.files[0];
+if (!file) return;
+if (!file.type.startsWith('image/')) return;
+resizeImageFileToDataURL(file, INV_ITEM_IMAGE_MAX_DIM, 0.78).then(dataUrl => {
+items[idx].image = dataUrl;
+inventoryAccCollapsed[idx] = false;
+renderInventoryUI();
+}).catch(() => {  });
+});
+});
+box.querySelectorAll('[data-inv-image-remove]').forEach(btn => {
+btn.addEventListener('click', () => {
+const idx = parseInt(btn.dataset.invImageRemove);
+items[idx].image = '';
+inventoryAccCollapsed[idx] = false;
+renderInventoryUI();
 });
 });
 const addBtn = box.querySelector('[data-inv-add]');
