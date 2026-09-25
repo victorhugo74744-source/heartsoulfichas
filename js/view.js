@@ -442,11 +442,11 @@ return `<div class="sheet-item ${malign ? 'malign' : 'benign'}"><div class="si-h
 : '<p class="hint" style="margin:0;">Nenhum traço adicional.</p>';
 const traitLimit = 6 + (s.traitBonusFromInspiration || 0);
 const abilitiesHtml = (s.abilities || []).length
-? s.abilities.map(a => `<div class="sheet-item"><div class="si-head"><span class="si-name">${escapeHtml(a.name)}</span>${a.actionType ? `<span class="atype">${escapeHtml(a.actionType)}</span>` : ''}${abilityCostLabelV(a) ? `<span class="si-meta">${escapeHtml(abilityCostLabelV(a))}</span>` : ''}</div>${a.desc ? `<div class="si-desc">${escapeHtml(a.desc)}</div>` : ''}</div>`).join('')
+? s.abilities.map(a => `<div class="sheet-item"><div class="si-head"><span class="si-name">${escapeHtml(a.name)}</span>${a.actionType ? `<span class="atype">${escapeHtml(a.actionType)}</span>` : ''}${abilityCostLabelV(a) ? `<span class="si-meta">${escapeHtml(abilityCostLabelV(a))}</span>` : ''}</div>${a.desc ? `<div class="si-desc">${formatAbilityDesc(a.desc)}</div>` : ''}</div>`).join('')
 : '<p class="hint" style="margin:0;">Nenhuma habilidade registrada.</p>';
 const techniqueCostLabelV = (t) => t.cost || (t.costAmount && t.costType ? `${t.costAmount} ${t.costType}` : '');
 const techniquesHtml = (s.techniques || []).length
-? s.techniques.map(t => `<div class="sheet-item"><div class="si-head"><span class="si-name">${escapeHtml(t.name)}</span>${t.actionType ? `<span class="atype">${escapeHtml(t.actionType)}</span>` : ''}${techniqueCostLabelV(t) ? `<span class="si-meta">${escapeHtml(techniqueCostLabelV(t))}</span>` : ''}</div>${t.desc ? `<div class="si-desc">${escapeHtml(t.desc)}</div>` : ''}</div>`).join('')
+? s.techniques.map(t => `<div class="sheet-item"><div class="si-head"><span class="si-name">${escapeHtml(t.name)}</span>${t.actionType ? `<span class="atype">${escapeHtml(t.actionType)}</span>` : ''}${techniqueCostLabelV(t) ? `<span class="si-meta">${escapeHtml(techniqueCostLabelV(t))}</span>` : ''}</div>${t.desc ? `<div class="si-desc">${formatAbilityDesc(t.desc)}</div>` : ''}</div>`).join('')
 : '<p class="hint" style="margin:0;">Nenhuma técnica registrada.</p>';
 const res = s.resources || {};
 const hp = res.hp || {};

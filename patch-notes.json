@@ -1,5 +1,17 @@
 [
   {
+    "id": "2026-09-25-formatacao-descricao-habilidades-tecnicas",
+    "date": "2026-09-25",
+    "title": "Parágrafos e tópicos na descrição de Habilidades e Técnicas",
+    "tags": [
+      "Sistema"
+    ],
+    "changes": [
+      "A descrição de Habilidades e Técnicas (no Ficha Editor) agora aceita formatação: deixe uma linha em branco para separar parágrafos, e comece uma linha com \"-\" para criar uma lista de tópicos.",
+      "A formatação aparece tanto na lista do Ficha Editor quanto na ficha de leitura (ficha-view.html)."
+    ]
+  },
+  {
     "id": "2026-09-04-sistema-consumiveis-inventario",
     "date": "2026-09-04",
     "title": "Sistema de consumíveis no Inventário (Cura, Dano, Buff e Debuff)",

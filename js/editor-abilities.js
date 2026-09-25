@@ -28,7 +28,7 @@ ${costLabel ? `<span class="tcost">${escapeHtml(costLabel)}</span>` : ''}
 <button type="button" class="skill-remove" data-edit-ability="${i}" title="Editar" style="margin-left:auto;">✎</button>
 <button type="button" class="skill-remove" data-remove-ability="${i}" title="Remover">✕</button>
 </div>
-${a.desc ? `<div class="ability-desc">${escapeHtml(a.desc)}</div>` : ''}
+${a.desc ? `<div class="ability-desc">${formatAbilityDesc(a.desc)}</div>` : ''}
 </div>`;
 }).join('');
 }
@@ -462,7 +462,7 @@ ${costLabel ? `<span class="tcost">${escapeHtml(costLabel)}</span>` : ''}
 <button type="button" class="skill-remove" data-edit-technique="${i}" title="Editar" style="margin-left:auto;">✎</button>
 <button type="button" class="skill-remove" data-remove-technique="${i}" title="Remover">✕</button>
 </div>
-${t.desc ? `<div class="ability-desc">${escapeHtml(t.desc)}</div>` : ''}
+${t.desc ? `<div class="ability-desc">${formatAbilityDesc(t.desc)}</div>` : ''}
 </div>`;
 }).join('');
 }

@@ -45,6 +45,32 @@ return String(str)
 .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
 .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 }
+function formatAbilityDesc(text) {
+if (!text) return '';
+const lines = String(text).replace(/\r\n/g, '\n').split('\n');
+const blocks = [];
+let curList = null;
+let curPara = null;
+lines.forEach(raw => {
+const line = raw.trim();
+const li = line.match(/^[-•]\s+(.+)$/);
+if (!line) {
+curList = null; curPara = null;
+} else if (li) {
+if (!curList) { curList = { kind: 'list', items: [] }; blocks.push(curList); }
+curList.items.push(li[1]);
+curPara = null;
+} else {
+if (!curPara) { curPara = { kind: 'p', lines: [] }; blocks.push(curPara); }
+curPara.lines.push(line);
+curList = null;
+}
+});
+return blocks.map(b => b.kind === 'list'
+? `<ul class="ability-desc-list">${b.items.map(it => `<li>${escapeHtml(it)}</li>`).join('')}</ul>`
+: `<p class="ability-desc-p">${escapeHtml(b.lines.join(' '))}</p>`
+).join('');
+}
 function raceTraitNameDesc(str) {
 if (!str) return { name: '', desc: '' };
 const idx = str.indexOf(':');

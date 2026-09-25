@@ -65,3 +65,4 @@
 }
 .inv-card-thumb{width:56px;height:56px;object-fit:cover;border-radius:8px;flex-shrink:0;border:1px solid var(--hairline-soft)}
 .inv-card-desc{margin:2px 0 0;font-size:13.5px;color:var(--ink-dim);font-style:italic;line-height:1.5}
+.ability-desc-p{margin:0 0 8px}.ability-desc-p:last-child{margin-bottom:0}.ability-desc-list{list-style:none;margin:0 0 8px;padding:0;display:flex;flex-direction:column;gap:4px}.ability-desc-list:last-child{margin-bottom:0}.ability-desc-list li{padding-left:14px;position:relative}.ability-desc-list li::before{content:'•';position:absolute;left:0;color:var(--seal-bright)}.si-desc .ability-desc-p,.si-desc .ability-desc-list{}
