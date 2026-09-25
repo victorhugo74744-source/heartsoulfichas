@@ -96,7 +96,7 @@ if (!cleaned.length) return '<p class="hint" style="margin:0;">Nada registrado a
 return `<div class="sheet-line-list">${cleaned.map(v => `<div class="li">${escapeHtml(v)}</div>`).join('')}</div>`;
 }
 function ensureInventoryItemShapeV(it) {
-if (typeof it === 'string') return { name: it, weight: 0, qty: 1, consumable: false, effectType: '', effectValue: '', effectDesc: '', armor: false, armorEquipped: false, armorParts: {}, backpack: false, backpackEquipped: false, backpackBonus: 0 };
+if (typeof it === 'string') return { name: it, weight: 0, qty: 1, consumable: false, effectType: '', effectValue: '', effectDesc: '', armor: false, armorEquipped: false, armorParts: {}, backpack: false, backpackEquipped: false, backpackBonus: 0, description: '', image: '' };
 return {
 name: (it && it.name) || '',
 weight: (it && it.weight !== undefined && it.weight !== null) ? it.weight : 0,
@@ -110,7 +110,9 @@ armorEquipped: !!(it && it.armorEquipped),
 armorParts: Object.assign({ cabeca: 0, tronco: 0, braco_esq: 0, braco_dir: 0, perna_esq: 0, perna_dir: 0 }, (it && it.armorParts) || {}),
 backpack: !!(it && it.backpack),
 backpackEquipped: !!(it && it.backpackEquipped),
-backpackBonus: Math.max(0, parseFloat(it && it.backpackBonus) || 0)
+backpackBonus: Math.max(0, parseFloat(it && it.backpackBonus) || 0),
+description: (it && it.description) || '',
+image: (it && it.image) || ''
 };
 }
 const ARMOR_PARTS_LABELS_V = { cabeca: 'Cabeça', tronco: 'Tronco', braco_esq: 'Braço Esq.', braco_dir: 'Braço Dir.', perna_esq: 'Perna Esq.', perna_dir: 'Perna Dir.' };
@@ -184,10 +186,10 @@ const total = inventoryTotalWeightV(items);
 const st = weightStatusV(total, capacity);
 const tagClass = st.key === 'normal' ? 'benign' : (st.key === 'pesada' ? 'info' : 'malign');
 const listHtml = items.length
-? `<div class="inv-card-grid">${items.map(it => `
+? `<div class="inv-card-list">${items.map(it => `
 <article class="inv-card${it.armor ? ' is-armor' : (it.backpack ? ' is-backpack' : (it.consumable ? ' is-consumable' : ''))}">
 <div class="inv-card-head">
-<span class="inv-card-icon">${it.armor ? '🛡️' : (it.backpack ? '🎒' : (it.consumable ? '🧪' : '📦'))}</span>
+${it.image ? `<img src="${it.image}" alt="Imagem de ${escapeHtml(it.name)}" class="inv-card-thumb">` : `<span class="inv-card-icon">${it.armor ? '🛡️' : (it.backpack ? '🎒' : (it.consumable ? '🧪' : '📦'))}</span>`}
 <div class="inv-card-name">${escapeHtml(it.name)}</div>
 <span class="inv-card-qty" title="Quantidade">×${it.qty}</span>
 </div>
@@ -201,6 +203,7 @@ ${armorPartsSummaryV(it.armorParts) ? `<span class="item-effect-detail">${escape
 <div class="inv-card-tags"><span class="effect-tag backpack">🎒 Mochila${it.backpackEquipped ? ' (equipada)' : ' (guardada)'}</span></div>
 ${it.backpackBonus ? `<span class="item-effect-detail">+${escapeHtml(String(it.backpackBonus))} de capacidade de carga</span>` : ''}
 ` : ''}
+${it.description ? `<p class="inv-card-desc">${escapeHtml(it.description)}</p>` : ''}
 <div class="inv-card-foot">
 <span>Peso un. <b>${it.weight}</b></span>
 <span>Subtotal <b>${Math.round(it.weight * it.qty * 100) / 100}</b></span>

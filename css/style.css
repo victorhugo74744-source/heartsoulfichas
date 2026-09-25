@@ -8,8 +8,8 @@
 .inv-backpack-bonus input{width:90px;margin:0}
 .effect-tag.backpack{background:rgba(201,161,92,.16);color:#e0c48d}
 /* ===== Inventário em cards (editor, ficha e mesa) ===== */
-#fInventory{display:grid;grid-template-columns:repeat(auto-fill,minmax(310px,1fr));gap:12px;align-items:start}
-#fInventory .line-list-add{grid-column:1/-1;justify-self:start}
+#fInventory{display:flex;flex-direction:column;gap:12px}
+#fInventory .line-list-add{align-self:flex-start}
 #fInventory .inventory-item-block{margin:0}
 .inventory-item-block{position:relative;border-radius:8px;padding:14px 16px;box-shadow:0 2px 10px rgba(0,0,0,.28);transition:box-shadow .15s,transform .15s}
 .inventory-item-block:hover{box-shadow:0 4px 14px rgba(0,0,0,.4)}
@@ -21,7 +21,7 @@
 .inv-card-foot b{font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:normal;color:var(--gold)}
 .inv-card-kind{padding:1px 9px;border-radius:20px;background:var(--bg-alt);border:1px solid var(--hairline-soft);font-size:11px}
 .my-inventory-box .inventory-item-block{padding:10px 12px}
-.inv-card-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(215px,1fr));gap:12px}
+.inv-card-list{display:flex;flex-direction:column;gap:12px}
 .inv-card{display:flex;flex-direction:column;gap:7px;padding:13px 15px;background:var(--panel-2);border:1px solid var(--hairline-soft);border-top:3px solid var(--hairline);border-radius:8px;box-shadow:0 2px 10px rgba(0,0,0,.28);min-width:0}
 .inv-card.is-consumable{border-top-color:var(--benign)}
 .inv-card.is-armor{border-top-color:var(--steel)}
@@ -34,7 +34,6 @@
 .inv-card .item-effect-detail{font-size:12px;line-height:1.35}
 .inv-card .inv-card-foot{margin-top:auto}
 @media (max-width:520px){
-#fInventory,.inv-card-grid{grid-template-columns:1fr}
 .inv-field-name{grid-area:name}
 .inv-field-weight{grid-area:weight}
 .inv-field-qty{grid-area:qty}
@@ -64,3 +63,5 @@
 .inv-extra-row{grid-template-columns:1fr}
 .inv-image-field{max-width:180px}
 }
+.inv-card-thumb{width:34px;height:34px;object-fit:cover;border-radius:6px;flex-shrink:0;border:1px solid var(--hairline-soft)}
+.inv-card-desc{margin:2px 0 0;font-size:13.5px;color:var(--ink-dim);font-style:italic;line-height:1.5}
